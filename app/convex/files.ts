@@ -1,7 +1,8 @@
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import {
-  mutation,
+  action,
+  internalAction,
   query,
   internalMutation,
   internalQuery,
@@ -11,7 +12,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { authorized, identity, loadState, newId, persist } from "./store";
 import { addTaskArtifact, taskFor } from "../shared/domain";
-import { sha256 } from "./crypto";
+import { sha256, randomToken } from "./crypto";
 import { checkFile } from "../shared/artifacts";
 
 const placement = v.union(v.literal("description"), v.literal("task"));
@@ -39,8 +40,9 @@ async function prepareTransfer(
   ctx: MutationCtx,
   args: Transfer,
   subject: string,
+  hash: string,
   mcpTokenId?: Id<"mcpTokens">,
-) {
+): Promise<{ url: string; expiresAt: number; maxBytes: number }> {
   await authorized(ctx, args.workspaceId, subject);
   const state = await loadState(ctx, args.workspaceId);
   taskFor(state, args.taskId, subject);
@@ -78,8 +80,7 @@ async function prepareTransfer(
     throw new ConvexError(
       "Finish your current transfers before starting more.",
     );
-  const token = newId() + newId(),
-    expiresAt = Date.now() + 10 * 60 * 1000;
+  const expiresAt = Date.now() + 10 * 60 * 1000;
   const ticketId = await ctx.db.insert("fileTickets", {
     workspaceId: args.workspaceId,
     subject,
@@ -90,7 +91,7 @@ async function prepareTransfer(
     size,
     contentType,
     placement: artifact?.placement ?? args.placement ?? "task",
-    hash: await sha256(token),
+    hash,
     expiresAt,
     ...(mcpTokenId ? { mcpTokenId } : {}),
   });
@@ -99,20 +100,51 @@ async function prepareTransfer(
   });
   return {
     url: process.env.CONVEX_SITE_URL + "/task-files",
-    token,
     expiresAt,
     maxBytes: 20 * 1024 * 1024,
   };
 }
-export const prepare = mutation({
+type PreparedTransfer = {
+  url: string;
+  expiresAt: number;
+  maxBytes: number;
+  token: string;
+};
+export const prepare = action({
   args: transferArgs,
-  handler: async (ctx, args) =>
-    prepareTransfer(ctx, args, (await identity(ctx)).subject),
+  handler: async (ctx, args): Promise<PreparedTransfer> => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new ConvexError("Sign in first.");
+    return ctx.runAction(internal.files.prepareFor, {
+      ...args,
+      subject: user.subject,
+    });
+  },
 });
-export const prepareFor = internalMutation({
-  args: { ...transferArgs, subject: v.string(), mcpTokenId: v.id("mcpTokens") },
+export const prepareFor = internalAction({
+  args: {
+    ...transferArgs,
+    subject: v.string(),
+    mcpTokenId: v.optional(v.id("mcpTokens")),
+  },
+  handler: async (ctx, args): Promise<PreparedTransfer> => {
+    const token = randomToken();
+    const result = await ctx.runMutation(internal.files.createTransfer, {
+      ...args,
+      hash: await sha256(token),
+    });
+    return { ...result, token };
+  },
+});
+export const createTransfer = internalMutation({
+  args: {
+    ...transferArgs,
+    subject: v.string(),
+    hash: v.string(),
+    mcpTokenId: v.optional(v.id("mcpTokens")),
+  },
   handler: (ctx, args) =>
-    prepareTransfer(ctx, args, args.subject, args.mcpTokenId),
+    prepareTransfer(ctx, args, args.subject, args.hash, args.mcpTokenId),
 });
 export const expire = internalMutation({
   args: { ticketId: v.id("fileTickets") },

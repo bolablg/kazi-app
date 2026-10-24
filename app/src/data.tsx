@@ -399,7 +399,7 @@ export function LiveProvider({
     mint = useAction(api.tokens.mint),
     revoke = useMutation(api.tokens.revoke);
   const release = useAction(api.commands.release);
-  const prepareFile = useMutation(api.files.prepare);
+  const prepareFile = useAction(api.files.prepare);
   const convex = useConvex(),
     createFeed = useAction(api.calendar.createFeed),
     revokeFeed = useMutation(api.calendar.revokeFeed);
