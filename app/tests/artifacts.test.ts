@@ -46,7 +46,7 @@ afterEach(() => {
 });
 it("stores private task files, posts attachment-only comments, and downloads through one-use access checks", async () => {
   const { t, a, workspaceId, taskId } = await setup();
-  const transfer = await a.mutation(api.files.prepare, {
+  const transfer = await a.action(api.files.prepare, {
     workspaceId,
     taskId,
     kind: "upload",
@@ -106,7 +106,7 @@ it("stores private task files, posts attachment-only comments, and downloads thr
       })
     ).status,
   ).toBe(400);
-  const download = await a.mutation(api.files.prepare, {
+  const download = await a.action(api.files.prepare, {
     workspaceId,
     taskId,
     kind: "download",
@@ -126,7 +126,7 @@ it("stores private task files, posts attachment-only comments, and downloads thr
       })
     ).status,
   ).toBe(400);
-  const detached = await a.mutation(api.files.prepare, {
+  const detached = await a.action(api.files.prepare, {
     workspaceId,
     taskId,
     kind: "download",
@@ -229,7 +229,7 @@ it("allows accessible cross-project dependencies in one team, rejects cycles, an
     command: JSON.stringify({ ...capture, projectId: privateProject }),
   });
   await expect(
-    b.mutation(api.files.prepare, {
+    b.action(api.files.prepare, {
       workspaceId,
       taskId: privateTask,
       kind: "upload",
@@ -275,7 +275,7 @@ it("rejects cross-task attachments and cross-team access, and notifies the owner
     }),
   ).rejects.toThrow("unavailable");
   await expect(
-    b.mutation(api.files.prepare, {
+    b.action(api.files.prepare, {
       workspaceId,
       taskId,
       kind: "upload",
@@ -347,7 +347,7 @@ it("validates filenames, file sizes, HTTPS links, and exact uploaded byte counts
     { name: "empty.txt", size: 0 },
   ])
     await expect(
-      a.mutation(api.files.prepare, {
+      a.action(api.files.prepare, {
         workspaceId,
         taskId,
         kind: "upload",
@@ -366,7 +366,7 @@ it("validates filenames, file sizes, HTTPS links, and exact uploaded byte counts
       }),
     }),
   ).rejects.toThrow();
-  const ticket = await a.mutation(api.files.prepare, {
+  const ticket = await a.action(api.files.prepare, {
     workspaceId,
     taskId,
     kind: "upload",
@@ -396,7 +396,7 @@ it("validates filenames, file sizes, HTTPS links, and exact uploaded byte counts
 });
 it("rechecks project access and expiration when an upload is used", async () => {
   const { t, a, workspaceId, taskId } = await setup();
-  const ticket = await a.mutation(api.files.prepare, {
+  const ticket = await a.action(api.files.prepare, {
     workspaceId,
     taskId,
     kind: "upload",
@@ -422,7 +422,7 @@ it("rechecks project access and expiration when an upload is used", async () => 
     ).status,
   ).toBe(400);
   const fresh = await setup();
-  const expiring = await fresh.a.mutation(api.files.prepare, {
+  const expiring = await fresh.a.action(api.files.prepare, {
     workspaceId: fresh.workspaceId,
     taskId: fresh.taskId,
     kind: "upload",

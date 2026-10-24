@@ -346,7 +346,7 @@ const mcp = httpAction(async (ctx, request) => {
           requireScope(
             operation === "prepare_task_upload" ? "tasks:write" : "read",
           );
-          return ctx.runMutation(internal.files.prepareFor, {
+          return ctx.runAction(internal.files.prepareFor, {
             workspaceId,
             subject: principal.subject,
             mcpTokenId: principal.tokenId,
