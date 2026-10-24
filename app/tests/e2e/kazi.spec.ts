@@ -61,7 +61,7 @@ test("creates a project and assigns work on its board", async ({ page }) => {
   await dialog
     .getByLabel("What needs to get done?")
     .fill("Draft the welcome issue");
-  await dialog.getByLabel("Assignee").selectOption("demo-amira");
+  await dialog.getByLabel("Worker").selectOption("demo-amira");
   await dialog.getByLabel("Estimated minutes").fill("90");
   await dialog.getByRole("button", { name: "Create task" }).click();
   await page.getByRole("button", { name: "Board", exact: true }).click();

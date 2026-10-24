@@ -260,6 +260,21 @@ export const activityV = v.object({
   message: v.string(),
   at: v.number(),
   kind: v.union(v.literal("change"), v.literal("comment"), v.literal("policy")),
+  attachmentIds: v.optional(v.array(v.string())),
+});
+export const artifactV = v.object({
+  id: v.string(),
+  taskId: v.string(),
+  name: v.string(),
+  kind: v.union(v.literal("file"), v.literal("link")),
+  placement: v.union(v.literal("description"), v.literal("task")),
+  url: v.optional(v.string()),
+  storageId: v.optional(v.string()),
+  size: v.optional(v.number()),
+  contentType: v.optional(v.string()),
+  createdBy: v.string(),
+  createdAt: v.number(),
+  removedAt: v.optional(v.number()),
 });
 export const invitationV = v.object({
   id: v.string(),

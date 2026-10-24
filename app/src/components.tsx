@@ -1,4 +1,5 @@
-import { TaskHistory } from "./TaskHistory";
+import { TaskArtifacts, TaskConversation } from "./TaskCollaboration";
+import { PrioritySelect } from "./PrioritySelect";
 import { resourceRole } from "../shared/teams";
 import { canEditTask, isArchivedTask } from "../shared/workflow";
 import { standaloneTaskPath } from "../shared/ids";
@@ -25,7 +26,6 @@ import {
   Clock3,
   ChevronDown,
   Flag,
-  MessageSquare,
   CornerDownLeft,
   AlertCircle,
   ChevronRight,
@@ -468,12 +468,8 @@ export function TaskForm({
             </select>
           </label>
           <label>
-            Task owner
-            <select
-              name="ownerId"
-              aria-label="Task owner"
-              defaultValue={actorId}
-            >
+            Owner
+            <select name="ownerId" aria-label="Owner" defaultValue={actorId}>
               {availableMembers.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -485,7 +481,7 @@ export function TaskForm({
             Worker
             <select
               name="assigneeId"
-              aria-label="Assignee"
+              aria-label="Worker"
               defaultValue={actorId}
             >
               {availableMembers.map((m) => (
@@ -528,11 +524,7 @@ export function TaskForm({
           </label>
           <label>
             Priority
-            <select name="priority" defaultValue="medium">
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+            <PrioritySelect />
           </label>
         </div>
         <TaskLabelField />
@@ -702,10 +694,7 @@ export function TaskDetail({
   const team = state.resourceTeams?.[task.id],
     taskMembers =
       (team ? state.teamMemberships?.[team] : state.members) ?? state.members;
-  const children = state.tasks.filter((t) => t.parentId === task.id),
-    activity = state.activities
-      .filter((a) => a.taskId === task.id)
-      .sort((a, b) => b.at - a.at);
+  const children = state.tasks.filter((t) => t.parentId === task.id);
   const patch = (patch: Extract<Command, { type: "update_task" }>["patch"]) =>
     run(
       () => dispatch({ type: "update_task", id: task.id, patch }),
@@ -803,6 +792,7 @@ export function TaskDetail({
                 placeholder="What needs to happen? Add the context and the outcome you want."
               />
             </label>
+            <TaskArtifacts task={task} placement="description" />
             {task.status === "to_validate" && (
               <TaskValidation key={task.id} task={task} />
             )}
@@ -827,10 +817,10 @@ export function TaskDetail({
                   </label>
                   <label>
                     <span title="Requests the work and validates its result">
-                      Task owner
+                      Owner
                     </span>
                     <select
-                      aria-label="Task owner"
+                      aria-label="Owner"
                       name="ownerId"
                       defaultValue={
                         task.ownerId ??
@@ -851,7 +841,7 @@ export function TaskDetail({
                     </span>
                     <select
                       name="assigneeId"
-                      aria-label="Assignee"
+                      aria-label="Worker"
                       defaultValue={task.assigneeId ?? "unassigned"}
                     >
                       <option value="unassigned">Unassigned</option>
@@ -864,11 +854,7 @@ export function TaskDetail({
                   </label>
                   <label>
                     <span>Priority</span>
-                    <select name="priority" defaultValue={task.priority}>
-                      {["high", "medium", "low"].map((p) => (
-                        <option key={p}>{p}</option>
-                      ))}
-                    </select>
+                    <PrioritySelect defaultValue={task.priority} />
                   </label>
                   <label>
                     <span>Project</span>
@@ -962,6 +948,8 @@ export function TaskDetail({
               </button>
             </div>
           </form>
+          <TaskArtifacts task={task} placement="task" />
+          <TaskConversation key={"conversation:" + task.id} task={task} />
           <div className="detail-section">
             <div className="section-line">
               <h3>Progress check-in</h3>
@@ -1039,65 +1027,6 @@ export function TaskDetail({
               )}
             </div>
           )}
-          <div className="detail-section">
-            <h3>Activity & notes</h3>
-            <form
-              className="comment-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const f = new FormData(form);
-                const r = await run(() =>
-                  dispatch({
-                    type: "comment",
-                    id: task.id,
-                    body: String(f.get("comment")),
-                  }),
-                );
-                if (r) form.reset();
-              }}
-            >
-              <input
-                aria-label="Add a comment"
-                name="comment"
-                required
-                placeholder="Leave a note for your future self or your team…"
-              />
-              <button className="icon-button" aria-label="Post comment">
-                <MessageSquare size={17} />
-              </button>
-            </form>
-            <div className="activity-list">
-              {activity.slice(0, 20).map((a) => (
-                <div className="activity-item" key={a.id}>
-                  <Avatar
-                    name={
-                      state.members.find((m) => m.id === a.actorId)?.name ??
-                      "Former member"
-                    }
-                    small
-                  />
-                  <div>
-                    <strong>
-                      {state.members.find((m) => m.id === a.actorId)?.name ??
-                        "Former member"}
-                    </strong>
-                    <p>{a.message}</p>
-                  </div>
-                  <time>
-                    {new Date(a.at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </time>
-                </div>
-              ))}
-              {!activity.length && (
-                <p className="muted">Your next update will appear here.</p>
-              )}
-            </div>
-          </div>
-          <TaskHistory taskId={task.id} />
         </div>
       </article>
       <TaskForm
@@ -1197,19 +1126,30 @@ function DependencyField({
   const choices = state.tasks.filter(
     (candidate) =>
       candidate.id !== task.id &&
-      candidate.projectId === task.projectId &&
+      state.resourceTeams?.[candidate.id] === state.resourceTeams?.[task.id] &&
       !isArchivedTask(candidate),
   );
   return (
     <section className="dependency-editor">
       <h3>Dependencies</h3>
-      <p>Finish these tasks before starting this one.</p>
+      <p>
+        Finish these tasks before starting this one. Choose tasks from any
+        project you can access in the same team.
+      </p>
       <div className="dependency-graph">
         <div className="dependency-inputs">
           {selected.length ? (
             selected.map((id) => {
               const item = state.tasks.find((t) => t.id === id);
-              if (!item) return null;
+              if (!item)
+                return (
+                  <div className="dependency-node" key={id}>
+                    <input type="hidden" name="dependency" value={id} />
+                    <span className="muted">
+                      Restricted or unavailable prerequisite
+                    </span>
+                  </div>
+                );
               const signal =
                 item.status === "done"
                   ? "complete"
@@ -1226,7 +1166,14 @@ function DependencyField({
                     onClick={() => openTask(id)}
                   >
                     <strong>{item.title}</strong>
-                    <small>{statusLabels[item.status]}</small>
+                    <small>
+                      {
+                        state.projects.find((p) => p.id === item.projectId)
+                          ?.title
+                      }
+                      {" · "}
+                      {statusLabels[item.status]}
+                    </small>
                   </button>
                   <button
                     type="button"
@@ -1266,7 +1213,9 @@ function DependencyField({
           .filter((candidate) => !selected.includes(candidate.id))
           .map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
-              {candidate.title} · {statusLabels[candidate.status]}
+              {candidate.title} ·{" "}
+              {state.projects.find((p) => p.id === candidate.projectId)?.title}{" "}
+              · {statusLabels[candidate.status]}
             </option>
           ))}
       </select>
