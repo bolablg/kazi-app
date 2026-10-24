@@ -7,7 +7,7 @@ if (
   !env.VITE_CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_")
 )
   throw new Error(
-    "Production deployment requires an HTTPS Convex URL and a production Clerk publishable key. Review the Free plan and domain setup in docs/DEPLOYMENT.md first.",
+    "Production deployment requires an HTTPS Convex URL and a production Clerk publishable key. Configure the production environment before deploying.",
   );
 console.log(
   "Production frontend environment is configured. Verify account eligibility and free-plan hard caps before deployment.",

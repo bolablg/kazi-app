@@ -38,13 +38,13 @@ Live history uses a workspace/time index and cursor pagination (100 records per 
 
 ## Industry references
 
-The implementation takes metric definitions from primary product documentation:
+Further reading on the metrics used in Kazi:
 
 - [Linear Insights](https://linear.app/docs/insights): lead/cycle time, issue counts, estimates, and filtered reporting. Kazi includes sample counts and omits unknown starts.
 - [Atlassian flow metrics](https://www.atlassian.com/agile/project-management/kanban-metrics/): throughput, work in progress, lead time, and cycle time. Kazi exposes current bottlenecks and creation-versus-completion trends.
 - [Asana reporting](https://help.asana.com/s/article/universal-reporting?language=en_US): task/project/goal reporting with scopes and filters. Kazi connects current project progress to explicit milestones and completed work.
 
-Predictive completion dates, cumulative-flow history, business outcome/OKR scoring, and actual activity monitoring are not presented without the required data. Existing hosted connection and launch gates remain in [TEST_REPORT.md](TEST_REPORT.md); the local backend is documented in [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md).
+Predictive completion dates, cumulative-flow history, business outcome/OKR scoring, and actual activity monitoring are not presented without the required data.
 
 ## Stage duration and backlog review
 

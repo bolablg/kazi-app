@@ -19,9 +19,9 @@ Personal work lives in a separate workspace. Team owners do not gain access to a
 
 ## Capture, effort and progress
 
-Initial onboarding creates a personal workspace and Inbox. Every command chooses an explicit authorized workspace. An omitted project uses its persisted default Inbox. The default Inbox cannot be archived. Team Inbox is visibly shared; a guest without project access cannot capture into it.
+Your account starts with a personal space and a Personal planning project. Tasks without a selected project go into Personal planning, which cannot be archived. Personal planning in a shared team follows that team’s access rules; guests need project access before they can add work there.
 
-Tasks have one assignee or an explicit Unassigned state, plus priority, state, deadlines, estimates, labels, dependencies and subtasks. Overdue is an indicator, not a task state. Explicit completion and reopening generate activity. Calendar time and timer logs do not complete work. Remaining effort updates override estimate-minus-logged-time arithmetic. Parents with children are excluded from planning workload so effort is counted once.
+Tasks have an owner and a worker, who can be the same person. A worker can also be unassigned. Tasks include priority, stage, deadlines, estimates, labels, dependencies, and subtasks. Overdue is an indicator, not a task state. Explicit completion and reopening generate activity. Scheduling time does not complete a task. Remaining-effort estimates can be updated as work progresses. Parents with children are excluded from planning workload so effort is counted once.
 
 Comments/title changes do not reset the meaningful-progress timestamp. Progress check-ins, remaining-effort updates, and completion/reopening do. Reassignment increments task revision and notifies the new assignee; member removal unassigns their tasks and revokes future workspace/job access while preserving historical actor IDs.
 
@@ -31,9 +31,9 @@ Review defaults ON. The current revision, alternatives, original deadline, recov
 
 Turning review OFF is a deliberate authenticated personal setting change with an audit record. It authorizes eligible automatic recovery within saved hours, daily cap, session limits and horizon. Project owners can add a project review requirement; a project override cannot remove anyone’s personal requirement. Automatic jobs re-read current policy and membership before effects. Teammates opt into free/busy sharing separately and retain control over their own approval.
 
-The local demonstration simulates automatic scheduling when a saved OFF policy permits its queued synthetic recovery proposal. Real automatic jobs are durable Convex functions. No browser tab is needed by the connected backend.
+Automatic recovery runs in the background using your saved policy. You do not need to keep a browser tab open.
 
-Accepted Plan 1 stays unchanged when Plan 2 is generated or applied. Original Google reservations remain busy. The owner can explicitly select future reservations to release; past events cannot be released by this workflow. A moved or canceled external event is reconciled visibly, not overwritten to force it back to an old snapshot.
+Accepted Plan 1 stays unchanged when Plan 2 is generated or applied. Existing reservations remain busy until their owner explicitly releases future sessions. Past sessions cannot be released through this workflow.
 
 ## Notifications
 
@@ -43,6 +43,6 @@ Capacity claims are made only from confirmed fresh availability. Missing data is
 
 ## Offline and installation
 
-The service worker precaches the application shell, icons and scripts. It does not cache Clerk/Convex responses. A loaded live subscription may retain its in-memory last view after a network drop, marked read-only. A cold offline start cannot perform initial authentication or obtain private server data. Reconnect to mutate, approve, or confirm calendar writes. Demo fixture persistence is separate from live account data.
+The service worker precaches the application shell, icons and scripts. It does not cache Clerk/Convex responses. A loaded live subscription may retain its in-memory last view after a network drop, marked read-only. A cold offline start cannot perform initial authentication or obtain private server data. Reconnect to mutate, approve, or confirm calendar writes.
 
 Install through the browser’s install action or supported mobile Add to Home Screen flow. Updates are prompted, then activated deliberately. Sign-out/account changes discard the mounted live provider/subscription; no private live browser disk cache exists. Browser Web Push remains unconfigured. Optional Resend delivery is available for invitations; task review and other alerts are in-app and do not require email.
