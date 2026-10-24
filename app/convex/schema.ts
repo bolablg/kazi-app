@@ -13,6 +13,7 @@ import {
   invitationV,
   calendarV,
   reportEventV,
+  artifactV,
 } from "./validators";
 const scoped = { workspaceId: v.id("workspaces"), key: v.string() };
 export default defineSchema({
@@ -102,7 +103,34 @@ export default defineSchema({
     .index("by_recipient", ["workspaceId", "recipientId"]),
   activities: defineTable({ ...scoped, data: activityV })
     .index("by_workspace", ["workspaceId"])
+    .index("by_key", ["workspaceId", "key"])
+    .index("by_task", ["workspaceId", "data.taskId", "data.at"])
+    .index("by_task_kind", [
+      "workspaceId",
+      "data.taskId",
+      "data.kind",
+      "data.at",
+    ]),
+  taskArtifacts: defineTable({ ...scoped, data: artifactV })
+    .index("by_workspace", ["workspaceId"])
     .index("by_key", ["workspaceId", "key"]),
+  fileTickets: defineTable({
+    workspaceId: v.id("workspaces"),
+    subject: v.string(),
+    taskId: v.string(),
+    hash: v.string(),
+    kind: v.union(v.literal("upload"), v.literal("download")),
+    artifactId: v.string(),
+    name: v.string(),
+    size: v.number(),
+    contentType: v.string(),
+    placement: v.union(v.literal("description"), v.literal("task")),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    mcpTokenId: v.optional(v.id("mcpTokens")),
+  })
+    .index("by_hash", ["hash"])
+    .index("by_subject", ["subject", "expiresAt"]),
   invitations: defineTable({
     ...scoped,
     tokenHash: v.string(),
