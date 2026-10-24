@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env*
+!.env.example
+.vercel/
+.agents/
+.codex/
+.dev.vars
+.wrangler/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.DS_Store
+
+# Local Convex state and development-only signing keys
+.convex/

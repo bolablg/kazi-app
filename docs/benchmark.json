@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-24T07:24:06.069Z",
+  "node": "v25.8.1",
+  "platform": "darwin arm64",
+  "cpu": "Apple M2",
+  "tasks": 100,
+  "people": 3,
+  "samples": 25,
+  "meanMs": 12.59,
+  "p95Ms": 14.61,
+  "maxMs": 14.98,
+  "scheduledMinutes": 4500,
+  "unscheduledMinutes": 0,
+  "providerNetworkExcluded": true
+}

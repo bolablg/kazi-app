@@ -1,0 +1,1633 @@
+import {
+  isArchivedTask,
+  isOpenTask,
+  isSchedulableTask,
+  isCommittedTask,
+} from "./workflow";
+import { Temporal } from "@js-temporal/polyfill";
+import { stableId } from "./ids";
+import {
+  type State,
+  type Context,
+  type Command,
+  type Task,
+  type Session,
+  type Project,
+  type Member,
+  type Proposal,
+  commandSchema,
+  defaults,
+  defaultAgingDays,
+  fail,
+} from "./model";
+import {
+  allocate,
+  addDays,
+  dateInZone,
+  deadlineAt,
+  localInstant,
+  MINUTE,
+} from "./scheduler";
+
+export function actor(s: State, id: string): Member {
+  return (
+    s.members.find((m) => m.id === id) ??
+    fail("FORBIDDEN", "You no longer have access to this workspace.")
+  );
+}
+export function canSeeProject(s: State, p: Project, userId: string): boolean {
+  const m = s.members.find((m) => m.id === userId);
+  if (!m) return false;
+  return (
+    m.role === "owner" ||
+    m.role === "admin" ||
+    p.ownerId === userId ||
+    p.memberIds.includes(userId) ||
+    (!p.private && m.role !== "guest")
+  );
+}
+export function projectFor(s: State, id: string, userId: string): Project {
+  const p = s.projects.find((p) => p.id === id);
+  if (!p || !canSeeProject(s, p, userId))
+    fail(
+      "FORBIDDEN",
+      "This resource is unavailable or you do not have access.",
+    );
+  return p;
+}
+export function taskFor(s: State, id: string, userId: string): Task {
+  const t = s.tasks.find((t) => t.id === id);
+  if (!t)
+    fail(
+      "FORBIDDEN",
+      "This resource is unavailable or you do not have access.",
+    );
+  projectFor(s, t.projectId, userId);
+  return t;
+}
+function manager(s: State, userId: string) {
+  return ["owner", "admin"].includes(actor(s, userId).role);
+}
+function canManage(s: State, p: Project, id: string) {
+  return manager(s, id) || p.ownerId === id;
+}
+function editable(s: State, t: Task, id: string) {
+  const p = projectFor(s, t.projectId, id);
+  if (
+    !canManage(s, p, id) &&
+    t.assigneeId !== id &&
+    (t.ownerId ?? p.ownerId) !== id
+  )
+    fail(
+      "FORBIDDEN",
+      "Only the assignee or a project manager can change this task.",
+    );
+}
+export function visibleState(s: State, userId: string): State {
+  actor(s, userId);
+  const projects = s.projects.filter((p) => canSeeProject(s, p, userId)),
+    projectIds = new Set(projects.map((p) => p.id));
+  const tasks = s.tasks.filter((t) => projectIds.has(t.projectId)),
+    taskIds = new Set(tasks.map((t) => t.id));
+  const proposals = s.proposals.filter(
+    (p) =>
+      (p.projectId ? projectIds.has(p.projectId) : p.createdBy === userId) &&
+      Object.keys(p.taskRevisions).every((id) => taskIds.has(id)),
+  );
+  const versions = s.versions.filter(
+    (v) =>
+      (v.projectId ? projectIds.has(v.projectId) : v.createdBy === userId) &&
+      v.taskSnapshot.every((t) => taskIds.has(t.id)),
+  );
+  return {
+    ...s,
+    projects,
+    tasks,
+    taskDueAt: Object.fromEntries(
+      tasks
+        .filter((t) => t.deadline)
+        .map((t) => [
+          t.id,
+          deadlineAt(
+            t.deadline,
+            s.members.find((m) => m.id === t.assigneeId)?.preferences
+              .timezone ?? actor(s, userId).preferences.timezone,
+          ),
+        ]),
+    ),
+    proposals,
+    versions,
+    attempts: s.attempts.filter((a) =>
+      versions.some((v) => v.id === a.versionId),
+    ),
+    iterations: s.iterations.filter((i) =>
+      versions.some((v) => v.id === i.versionId),
+    ),
+    notifications: s.notifications.filter(
+      (n) => n.recipientId === userId && (!n.taskId || taskIds.has(n.taskId)),
+    ),
+    activities: s.activities.filter(
+      (a) =>
+        (!a.taskId || taskIds.has(a.taskId)) &&
+        (!a.projectId || projectIds.has(a.projectId)),
+    ),
+    legacyResourceIds: s.legacyResourceIds
+      ? {
+          projects: Object.fromEntries(
+            Object.entries(s.legacyResourceIds.projects).filter(([, id]) =>
+              projectIds.has(id),
+            ),
+          ),
+          tasks: Object.fromEntries(
+            Object.entries(s.legacyResourceIds.tasks).filter(([, id]) =>
+              taskIds.has(id),
+            ),
+          ),
+          plans: Object.fromEntries(
+            Object.entries(s.legacyResourceIds.plans).filter(([, id]) =>
+              proposals.some((p) => p.id === id),
+            ),
+          ),
+        }
+      : undefined,
+    lifecycleEvents: (s.lifecycleEvents ?? []).filter(
+      (event) =>
+        projectIds.has(event.projectId) &&
+        (event.entityType === "project" || taskIds.has(event.entityId)),
+    ),
+    reportEvents: (s.reportEvents ?? []).filter(
+      (e) => taskIds.has(e.taskId) && projectIds.has(e.projectId),
+    ),
+    invitations: manager(s, userId)
+      ? s.invitations.map((i) => ({ ...i, tokenHash: "" }))
+      : [],
+    members: s.members.map((m) =>
+      m.id === userId
+        ? {
+            ...m,
+            favoriteProjectIds: m.favoriteProjectIds?.filter((id) =>
+              projectIds.has(id),
+            ),
+          }
+        : { ...m, preferences: { ...defaults }, favoriteProjectIds: undefined },
+    ),
+    calendars: s.calendars.filter((c) => c.ownerId === userId),
+    busy: s.busy.filter((b) => b.ownerId === userId),
+  };
+}
+function audit(
+  s: State,
+  c: Context,
+  message: string,
+  taskId?: string,
+  projectId?: string,
+  kind: "change" | "comment" | "policy" = "change",
+) {
+  s.activities.unshift({
+    id: c.id(),
+    actorId: c.actorId,
+    taskId,
+    projectId,
+    message,
+    at: c.now,
+    kind,
+  });
+}
+function notify(
+  s: State,
+  c: Context,
+  recipientId: string,
+  key: string,
+  title: string,
+  body: string,
+  kind: State["notifications"][number]["kind"],
+  taskId?: string,
+  proposalId?: string,
+) {
+  if (
+    s.notifications.some((n) => n.key === key && n.recipientId === recipientId)
+  )
+    return;
+  const m = s.members.find((m) => m.id === recipientId);
+  if (!m) return;
+  const local = new Intl.DateTimeFormat("en-US", {
+    timeZone: m.preferences.timezone,
+    hour: "numeric",
+    hourCycle: "h23",
+  }).format(c.now);
+  const hour = Number(local),
+    p = m.preferences;
+  const quiet =
+    p.quietStart > p.quietEnd
+      ? hour >= p.quietStart || hour < p.quietEnd
+      : hour >= p.quietStart && hour < p.quietEnd;
+  let deliveryAt = c.now;
+  if (quiet) {
+    const day = dateInZone(c.now, p.timezone),
+      next = hour >= p.quietStart ? addDays(day, 1) : day;
+    deliveryAt = localInstant(next, p.quietEnd, p.timezone);
+  }
+  s.notifications.unshift({
+    id: c.id(),
+    recipientId,
+    key,
+    title,
+    body,
+    kind,
+    taskId,
+    proposalId,
+    createdAt: c.now,
+    deliveryAt,
+    read: false,
+  });
+}
+function validateTask(s: State, t: Task, c: Context) {
+  const p = projectFor(s, t.projectId, c.actorId);
+  if (p.archived)
+    fail("ARCHIVED", "Restore this project before changing its tasks.");
+  if (t.assigneeId) {
+    const assignee = actor(s, t.assigneeId);
+    if (!canSeeProject(s, p, assignee.id))
+      fail("ASSIGNEE", "The assignee needs access to this project first.");
+  }
+  for (const id of t.collaborators)
+    if (!canSeeProject(s, p, actor(s, id).id))
+      fail("COLLABORATOR", "A collaborator needs project access.");
+  for (const dep of t.dependencies) {
+    const d = taskFor(s, dep, c.actorId);
+    if (d.id === t.id)
+      fail("DEPENDENCY_CYCLE", "A task cannot depend on itself.");
+  }
+  if (t.parentId) {
+    const parent = taskFor(s, t.parentId, c.actorId);
+    if (
+      parent.projectId !== t.projectId ||
+      parent.id === t.id ||
+      parent.parentId
+    )
+      fail(
+        "PARENT",
+        "Subtasks must have a top-level parent in the same project.",
+      );
+  }
+  if (t.ownerId) {
+    const owner = actor(s, t.ownerId);
+    if (!canSeeProject(s, projectFor(s, t.projectId, c.actorId), owner.id))
+      fail("OWNER", "The task owner needs access to this project.");
+  }
+  if (t.reviewDate) Temporal.PlainDate.from(t.reviewDate);
+  if (t.brainstorm && t.status !== "backlog") t.brainstorm = false;
+  if (t.brainstorm && !t.reviewDate)
+    t.reviewDate = addDays(
+      dateInZone(c.now, actor(s, t.ownerId ?? c.actorId).preferences.timezone),
+      actor(s, t.ownerId ?? c.actorId).preferences.agingDays?.backlog ??
+        defaultAgingDays.backlog,
+    );
+  if (t.startDate) {
+    Temporal.PlainDate.from(t.startDate);
+    if (
+      t.deadline &&
+      localInstant(
+        t.startDate,
+        0,
+        actor(s, t.assigneeId ?? c.actorId).preferences.timezone,
+      ) >=
+        deadlineAt(
+          t.deadline,
+          actor(s, t.assigneeId ?? c.actorId).preferences.timezone,
+        )
+    )
+      fail("DATES", "The planned start must be on or before the deadline.");
+  }
+  if (t.deadline)
+    deadlineAt(
+      t.deadline,
+      actor(s, t.assigneeId ?? c.actorId).preferences.timezone,
+    );
+  const visit = (id: string, path: Set<string>) => {
+    if (path.has(id))
+      fail("DEPENDENCY_CYCLE", "Remove the circular dependency before saving.");
+    const item = id === t.id ? t : s.tasks.find((x) => x.id === id);
+    if (item) {
+      const next = new Set(path).add(id);
+      item.dependencies.forEach((d) => visit(d, next));
+    }
+  };
+  visit(t.id, new Set());
+}
+function proposalFor(
+  s: State,
+  id: string,
+  c: Context,
+  revision: number,
+): Proposal {
+  const p = s.proposals.find((p) => p.id === id);
+  if (!p) fail("FORBIDDEN", "This proposal is unavailable.");
+  if (p.projectId) projectFor(s, p.projectId, c.actorId);
+  else if (p.createdBy !== c.actorId)
+    fail("FORBIDDEN", "This proposal is private.");
+  if (p.revision !== revision)
+    fail("REVISION", "This proposal changed. Review the current revision.");
+  return p;
+}
+
+export function execute(
+  state: State,
+  input: Command,
+  context: Context,
+): { state: State; result: string } {
+  const requested = commandSchema.parse(input);
+  const command =
+    requested.type === "review_task"
+      ? {
+          type: "update_task" as const,
+          id: requested.id,
+          patch: {
+            status:
+              requested.decision === "approve"
+                ? ("done" as const)
+                : ("in_progress" as const),
+          },
+        }
+      : requested;
+  const s = structuredClone(state),
+    c = context;
+  const me = actor(s, c.actorId);
+  if (requested.type === "review_task") {
+    const task = taskFor(s, requested.id, c.actorId),
+      project = projectFor(s, task.projectId, c.actorId);
+    if (
+      (task.ownerId ?? project.ownerId) !== c.actorId &&
+      !manager(s, c.actorId)
+    )
+      fail(
+        "FORBIDDEN",
+        "Only the task owner or an administrator can validate this work.",
+      );
+    if (task.status !== "to_validate")
+      fail("STATE", "This task is not awaiting validation.");
+    if (requested.decision === "return" && !requested.reason?.trim())
+      fail("REASON", "Give the worker a reason for returning this task.");
+  }
+  let result = "Saved";
+  switch (command.type) {
+    case "use_kazi_agenda": {
+      let cal = s.calendars.find((x) => x.ownerId === c.actorId);
+      const value = {
+        ownerId: c.actorId,
+        status: "native" as const,
+        selectedIds: [],
+        destinationId: "kazi",
+        lastSync: c.now,
+        shareAvailability: command.shareAvailability ?? false,
+      };
+      if (cal) Object.assign(cal, value, { error: undefined });
+      else s.calendars.push(value);
+      s.busy = s.busy.filter((b) => b.ownerId !== c.actorId);
+      audit(
+        s,
+        c,
+        "Enabled Kazi agenda; external availability selection cleared",
+      );
+      break;
+    }
+    case "create_project": {
+      if (me.role === "guest")
+        fail("FORBIDDEN", "Guests cannot create projects.");
+      const p: Project = {
+        id: c.id(),
+        title: command.title,
+        description: command.description,
+        ownerId: c.actorId,
+        memberIds: [c.actorId],
+        color: command.color,
+        icon: "folder",
+        deadline: command.deadline,
+        startDate: command.startDate,
+        private: command.private,
+        archived: false,
+        status: command.status ?? "active",
+        priority: command.priority ?? "medium",
+        createdAt: c.now,
+        updatedAt: c.now,
+        statusChangedAt: c.now,
+      };
+      if (p.startDate) Temporal.PlainDate.from(p.startDate);
+      if (
+        p.startDate &&
+        p.deadline &&
+        localInstant(
+          p.startDate,
+          0,
+          actor(s, p.ownerId).preferences.timezone,
+        ) >= deadlineAt(p.deadline, actor(s, p.ownerId).preferences.timezone)
+      )
+        fail("DATES", "Project start must be on or before delivery date.");
+      if (p.deadline) deadlineAt(p.deadline, me.preferences.timezone);
+      s.projects.push(p);
+      audit(s, c, "Created project", undefined, p.id);
+      result = p.id;
+      break;
+    }
+    case "update_project": {
+      const p = projectFor(s, command.id, c.actorId);
+      if (!canManage(s, p, c.actorId))
+        fail("FORBIDDEN", "A project manager must make this change.");
+      if (p.id === s.workspace.inboxId && command.patch.archived)
+        fail("INBOX", "The default planning project cannot be archived.");
+      command.patch.memberIds?.forEach((id) => actor(s, id));
+      if (command.patch.ownerId) actor(s, command.patch.ownerId);
+      if (command.patch.startDate)
+        Temporal.PlainDate.from(command.patch.startDate);
+      const priorDeadline = p.deadline,
+        priorStatus = p.status;
+      Object.assign(p, command.patch);
+      p.updatedAt = c.now;
+      if (priorStatus !== p.status) p.statusChangedAt = c.now;
+      if (
+        p.startDate &&
+        p.deadline &&
+        localInstant(
+          p.startDate,
+          0,
+          actor(s, p.ownerId).preferences.timezone,
+        ) >= deadlineAt(p.deadline, actor(s, p.ownerId).preferences.timezone)
+      )
+        fail("DATES", "Project start must be on or before delivery date.");
+      if (p.deadline)
+        deadlineAt(p.deadline, actor(s, p.ownerId).preferences.timezone);
+      if (priorDeadline !== p.deadline)
+        audit(
+          s,
+          c,
+          `Original project deadline changed from ${priorDeadline || "none"} to ${p.deadline || "none"}`,
+          undefined,
+          p.id,
+        );
+      audit(s, c, "Updated project", undefined, p.id);
+      break;
+    }
+    case "favorite_project": {
+      const project = projectFor(s, command.projectId, c.actorId);
+      const favorites = new Set(me.favoriteProjectIds ?? []);
+      if (command.favorite) favorites.add(project.id);
+      else favorites.delete(project.id);
+      me.favoriteProjectIds = [...favorites];
+      result = project.id;
+      break;
+    }
+    case "create_task": {
+      const projectId = command.projectId ?? s.workspace.inboxId,
+        p = projectFor(s, projectId, c.actorId);
+      if (me.role === "guest" && !p.memberIds.includes(me.id))
+        fail("FORBIDDEN", "You cannot add work here.");
+      const { type: _, ...fields } = command;
+      const t: Task = {
+        ...fields,
+        id: c.id(),
+        projectId,
+        assigneeId: command.assigneeId ?? c.actorId,
+        ownerId: command.ownerId ?? c.actorId,
+        status: command.status ?? "todo",
+        collaborators: command.collaborators ?? [],
+        loggedMinutes: 0,
+        statusChangedAt: c.now,
+        remainingMinutes: command.remainingMinutes ?? command.estimatedMinutes,
+        revision: 1,
+        createdAt: c.now,
+        updatedAt: c.now,
+        lastProgress: c.now,
+      };
+      if (t.assigneeId === "unassigned") delete t.assigneeId;
+      validateTask(s, t, c);
+      s.tasks.push(t);
+      audit(s, c, "Created task", t.id, p.id);
+      if (t.assigneeId && t.assigneeId !== c.actorId)
+        notify(
+          s,
+          c,
+          t.assigneeId,
+          "assignment:" + t.id,
+          "New work for you",
+          t.title,
+          "assignment",
+          t.id,
+        );
+      result = t.id;
+      break;
+    }
+    case "update_task": {
+      const t = taskFor(s, command.id, c.actorId);
+      editable(s, t, c.actorId);
+      if (command.patch.status === "idea") command.patch.status = "backlog";
+      if (
+        command.patch.status &&
+        ["blocked", "rejected", "canceled"].includes(command.patch.status)
+      )
+        command.patch.status = "archived";
+      const reviewOwner =
+        t.ownerId ?? projectFor(s, t.projectId, c.actorId).ownerId;
+      if (
+        command.patch.status === "done" &&
+        t.status !== "done" &&
+        reviewOwner !== c.actorId &&
+        !manager(s, c.actorId)
+      )
+        fail(
+          "VALIDATION_REQUIRED",
+          "Submit this task To validate. Its owner must approve completion.",
+        );
+      if (
+        command.patch.ownerId &&
+        command.patch.ownerId !== reviewOwner &&
+        reviewOwner !== c.actorId &&
+        !canManage(s, projectFor(s, t.projectId, c.actorId), c.actorId)
+      )
+        fail(
+          "FORBIDDEN",
+          "Only the task owner or project manager can change review ownership.",
+        );
+      const oldAssignee = t.assigneeId,
+        priorDeadline = t.deadline,
+        priorStatus = t.status,
+        priorProject = t.projectId;
+      if (
+        command.patch.assigneeId !== undefined &&
+        command.patch.assigneeId !== t.assigneeId &&
+        reviewOwner !== c.actorId &&
+        !canManage(s, projectFor(s, t.projectId, c.actorId), c.actorId) &&
+        command.patch.assigneeId !== c.actorId
+      )
+        fail("FORBIDDEN", "Ask a project manager to reassign this task.");
+      if (command.patch.projectId && command.patch.projectId !== t.projectId) {
+        projectFor(s, command.patch.projectId, c.actorId);
+        if (t.parentId || s.tasks.some((x) => x.parentId === t.id))
+          fail(
+            "SUBTASKS",
+            "Move the parent and subtasks together in a dedicated operation.",
+          );
+      }
+      Object.assign(t, command.patch);
+      if (t.status !== priorStatus) {
+        t.statusChangedAt = c.now;
+        if (priorStatus === "done" || isArchivedTask({ status: priorStatus }))
+          delete t.startedAt;
+        if (t.status === "in_progress" && t.startedAt === undefined)
+          t.startedAt = c.now;
+      }
+      if (priorDeadline !== t.deadline)
+        audit(
+          s,
+          c,
+          `Original task deadline changed from ${priorDeadline || "none"} to ${t.deadline || "none"}`,
+          t.id,
+          t.projectId,
+        );
+      if (command.patch.assigneeId === "unassigned") delete t.assigneeId;
+      if (
+        command.patch.status !== undefined ||
+        command.patch.remainingMinutes !== undefined
+      )
+        t.lastProgress = c.now;
+      t.updatedAt = c.now;
+      t.revision++;
+      validateTask(s, t, c);
+      if (priorStatus !== "done" && t.status === "done") {
+        const dueAt = deadlineAt(
+          priorDeadline,
+          s.members.find((m) => m.id === oldAssignee)?.preferences.timezone ??
+            me.preferences.timezone,
+        );
+        (s.reportEvents ??= []).push({
+          id: c.id(),
+          taskId: t.id,
+          projectId: priorProject,
+          actorId: c.actorId,
+          assigneeId: oldAssignee,
+          at: c.now,
+          type: "completed",
+          minutes: 0,
+          taskCreatedAt: t.createdAt,
+          ...(t.startedAt !== undefined ? { startedAt: t.startedAt } : {}),
+          ...(Number.isFinite(dueAt) ? { dueAt } : {}),
+          ...(priorDeadline ? { deadline: priorDeadline } : {}),
+          leaf: !s.tasks.some((x) => x.parentId === t.id),
+        });
+      }
+      if (
+        t.parentId &&
+        (command.patch.status !== undefined ||
+          command.patch.remainingMinutes !== undefined)
+      ) {
+        const parent = s.tasks.find((p) => p.id === t.parentId);
+        if (parent) {
+          parent.lastProgress = c.now;
+          parent.updatedAt = c.now;
+          parent.revision++;
+        }
+      }
+      if (!isSchedulableTask(t) || oldAssignee !== t.assigneeId) {
+        for (const proposal of s.proposals) {
+          let released = false;
+          for (const session of proposal.alternatives[proposal.selected]
+            ?.sessions ?? []) {
+            if (
+              session.taskId === t.id &&
+              session.start > c.now &&
+              session.status === "scheduled" &&
+              proposal.inputs?.calendarDestinations?.[session.assigneeId] ===
+                "kazi"
+            ) {
+              session.status = "released";
+              session.updatedAt = c.now;
+              released = true;
+            }
+          }
+          if (released && proposal.status === "applied")
+            proposal.status = "partial";
+        }
+      }
+      audit(
+        s,
+        c,
+        priorStatus !== "done" && t.status === "done"
+          ? "Completed task"
+          : priorStatus === "done" && t.status !== "done"
+            ? "Reopened task"
+            : "Updated task",
+        t.id,
+        t.projectId,
+      );
+      if (priorStatus !== "to_validate" && t.status === "to_validate") {
+        const owner =
+          t.ownerId ?? projectFor(s, t.projectId, c.actorId).ownerId;
+        notify(
+          s,
+          c,
+          owner,
+          `${t.id}:validation:${t.revision}`,
+          "Task ready for validation",
+          `${t.title} is ready for your review. Approve it or return it with a reason.`,
+          "review",
+          t.id,
+        );
+      }
+      if (requested.type === "review_task") {
+        audit(
+          s,
+          c,
+          requested.decision === "approve"
+            ? "Validated task"
+            : "Changes requested: " + requested.reason,
+          t.id,
+          t.projectId,
+          "comment",
+        );
+        if (t.assigneeId && t.assigneeId !== c.actorId)
+          notify(
+            s,
+            c,
+            t.assigneeId,
+            `${t.id}:review:${t.revision}`,
+            requested.decision === "approve"
+              ? "Your task was validated"
+              : "Changes requested",
+            requested.decision === "approve"
+              ? t.title + " was approved and completed."
+              : t.title + ": " + requested.reason,
+            "review",
+            t.id,
+          );
+      }
+      if (oldAssignee !== t.assigneeId && t.assigneeId)
+        notify(
+          s,
+          c,
+          t.assigneeId,
+          `assignment:${t.id}:${t.revision}`,
+          "A task was assigned to you",
+          t.title,
+          "assignment",
+          t.id,
+        );
+      break;
+    }
+    case "progress": {
+      const t = taskFor(s, command.id, c.actorId);
+      editable(s, t, c.actorId);
+      if (isArchivedTask(t))
+        fail("ARCHIVED", "Restore this task before recording progress.");
+      t.remainingMinutes = command.remainingMinutes;
+      t.loggedMinutes += command.loggedMinutes;
+      t.lastProgress = c.now;
+      t.updatedAt = c.now;
+      t.revision++;
+      if (command.loggedMinutes > 0)
+        (s.reportEvents ??= []).push({
+          id: c.id(),
+          taskId: t.id,
+          projectId: t.projectId,
+          actorId: c.actorId,
+          assigneeId: t.assigneeId,
+          at: c.now,
+          type: "time_logged",
+          minutes: command.loggedMinutes,
+          leaf: !s.tasks.some((x) => x.parentId === t.id),
+        });
+      if (t.parentId) {
+        const parent = s.tasks.find((p) => p.id === t.parentId);
+        if (parent) {
+          parent.lastProgress = c.now;
+          parent.updatedAt = c.now;
+          parent.revision++;
+        }
+      }
+      audit(
+        s,
+        c,
+        `Progress: ${command.remainingMinutes} minutes remaining. ${command.note}`,
+        t.id,
+        t.projectId,
+      );
+      break;
+    }
+    case "comment": {
+      const t = taskFor(s, command.id, c.actorId);
+      audit(s, c, command.body, t.id, t.projectId, "comment");
+      break;
+    }
+    case "preferences": {
+      const p = command.preferences;
+      if (
+        p.endHour <= p.startHour ||
+        p.maxSession < p.minSession ||
+        p.horizonDays > 28 ||
+        !p.workingDays.length
+      )
+        fail(
+          "PREFERENCES",
+          "Choose valid working hours, session lengths, days, and a horizon up to 28 days.",
+        );
+      dateInZone(c.now, p.timezone);
+      me.preferences = p;
+      audit(
+        s,
+        c,
+        `Review new plans before scheduling: ${p.reviewRequired ? "ON" : "OFF"}. Personal scope; ${p.dailyMinutes} min/day; ${p.timezone}.`,
+        undefined,
+        undefined,
+        "policy",
+      );
+      break;
+    }
+    case "propose": {
+      const p = command.projectId
+        ? projectFor(s, command.projectId, c.actorId)
+        : undefined;
+      const tasks = s.tasks.filter(
+        (t) =>
+          (p ? t.projectId === p.id : t.assigneeId === c.actorId) &&
+          canSeeProject(
+            s,
+            s.projects.find((p) => p.id === t.projectId)!,
+            c.actorId,
+          ),
+      );
+      if (
+        p &&
+        !canManage(s, p, c.actorId) &&
+        tasks.some((t) => t.assigneeId !== c.actorId)
+      )
+        fail(
+          "FORBIDDEN",
+          "A project manager must propose work for other people.",
+        );
+      if (!tasks.some(isSchedulableTask))
+        fail("EMPTY", "Move tasks into To do before planning work sessions.");
+      const existing = s.proposals.find(
+        (x) =>
+          x.projectId === command.projectId &&
+          x.createdBy === c.actorId &&
+          x.status === "awaiting_review" &&
+          x.trigger === command.trigger,
+      );
+      if (existing) {
+        const unchanged =
+          existing.expiresAt > c.now &&
+          Object.entries(existing.taskRevisions).every(
+            ([id, revision]) =>
+              s.tasks.find((task) => task.id === id)?.revision === revision,
+          ) &&
+          !existing.alternatives[existing.selected].sessions.some((session) =>
+            s.busy.some(
+              (busy) =>
+                busy.ownerId === session.assigneeId &&
+                busy.start < session.end &&
+                busy.end > session.start,
+            ),
+          );
+        if (unchanged) {
+          result = existing.id;
+          break;
+        }
+        existing.status = "stale";
+      }
+      const prefs: Record<string, Member["preferences"]> = {};
+      for (const member of s.members) {
+        const calendar = s.calendars.find((x) => x.ownerId === member.id);
+        if (
+          calendar &&
+          (calendar.status === "demo" ||
+            (calendar.status === "native" &&
+              (!calendar.selectedIds.length ||
+                (calendar.lastSync &&
+                  c.now - calendar.lastSync < 5 * MINUTE))) ||
+            (calendar.status === "connected" &&
+              calendar.lastSync &&
+              c.now - calendar.lastSync < 5 * MINUTE)) &&
+          (member.id === c.actorId ||
+            calendar.status === "demo" ||
+            calendar.shareAvailability === true)
+        )
+          prefs[member.id] = member.preferences;
+      }
+      if (!Object.keys(prefs).length)
+        fail(
+          "CALENDAR",
+          "Connect and refresh your calendar before planning. Unknown availability is not free time.",
+        );
+      const busy = [
+        ...s.busy,
+        ...s.proposals
+          .filter((p) => ["applying", "partial", "applied"].includes(p.status))
+          .flatMap((p) =>
+            p.alternatives[p.selected].sessions
+              .filter((x) => x.status !== "released")
+              .map((x) => ({
+                start: x.start,
+                end: x.end,
+                ownerId: x.assigneeId,
+              })),
+          ),
+      ];
+      const common = {
+        tasks,
+        allTasks: s.tasks,
+        busy: busy.filter((b) => prefs[b.ownerId] !== undefined),
+        preferences: prefs,
+        startDate: command.startDate,
+        days: Math.min(command.days, me.preferences.horizonDays),
+        now: c.now,
+        recoveryTarget: command.recoveryTarget,
+      };
+      const alternatives = [allocate({ ...common, strategy: "early" })];
+      for (const strategy of ["focus", "compact"] as const) {
+        const alternative = allocate({ ...common, strategy });
+        if (
+          alternative.sessions.length &&
+          !alternatives.some(
+            (a) =>
+              JSON.stringify(a.sessions) ===
+              JSON.stringify(alternative.sessions),
+          )
+        )
+          alternatives.push(alternative);
+      }
+      const parent = s.versions
+        .filter(
+          (v) =>
+            v.projectId === command.projectId &&
+            (v.projectId || v.createdBy === c.actorId),
+        )
+        .sort((a, b) => b.number - a.number)[0];
+      const proposal: Proposal = {
+        id: c.id(),
+        projectId: command.projectId,
+        title: p?.title ?? "Personal plan",
+        revision: 1,
+        status: "awaiting_review",
+        trigger: command.trigger,
+        parentVersionId: parent?.id,
+        taskRevisions: Object.fromEntries(
+          tasks.filter(isSchedulableTask).map((t) => [t.id, t.revision]),
+        ),
+        alternatives,
+        selected: 0,
+        createdAt: c.now,
+        expiresAt: c.now + 24 * 60 * MINUTE,
+        recoveryTarget: command.recoveryTarget,
+        availabilityAt: c.now,
+        createdBy: c.actorId,
+        automatic: !!c.automatic,
+        approvedBy: [],
+        inputs: {
+          calendarDestinations: Object.fromEntries(
+            s.calendars
+              .filter((cal) => prefs[cal.ownerId] && cal.destinationId)
+              .map((cal) => [cal.ownerId, cal.destinationId!]),
+          ),
+          tasks: structuredClone(tasks),
+          preferences: structuredClone(prefs),
+          busy: structuredClone(common.busy),
+          startDate: common.startDate,
+          days: common.days,
+          now: c.now,
+          recoveryTarget: command.recoveryTarget,
+        },
+      };
+      s.proposals.push(proposal);
+      notify(
+        s,
+        c,
+        c.actorId,
+        "review:" + proposal.id,
+        command.trigger === "recovery"
+          ? "Recovery plan ready for review"
+          : "Weekly plan ready for review",
+        "Your proposal is ready. Review the sessions before scheduling.",
+        "review",
+        undefined,
+        proposal.id,
+      );
+      audit(s, c, "Created plan proposal", undefined, p?.id);
+      result = proposal.id;
+      break;
+    }
+    case "select_alternative": {
+      const p = proposalFor(s, command.id, c, command.revision);
+      if (p.status !== "awaiting_review")
+        fail("STATE", "Only a pending proposal can be edited.");
+      if (!p.alternatives[command.selected])
+        fail("ALTERNATIVE", "This alternative is unavailable.");
+      p.selected = command.selected;
+      p.revision++;
+      p.approvedBy = [];
+      break;
+    }
+    case "reject": {
+      const p = proposalFor(s, command.id, c, command.revision);
+      if (p.status !== "awaiting_review")
+        fail("STATE", "This proposal is no longer awaiting review.");
+      p.status = "rejected";
+      p.approvedBy = [];
+      audit(s, c, "Rejected proposal", undefined, p.projectId);
+      break;
+    }
+    case "approve": {
+      const p = proposalFor(s, command.id, c, command.revision);
+      const accepted = s.versions.find((v) => v.proposalId === p.id);
+      if (accepted) {
+        result = accepted.id;
+        break;
+      }
+      if (p.status !== "awaiting_review" || p.expiresAt < c.now)
+        fail(
+          "STALE",
+          "This proposal expired or is no longer awaiting review. Generate a fresh proposal.",
+        );
+      if (!c.verifiedCalendar)
+        fail(
+          "CALENDAR",
+          "Fresh calendar availability must be checked before scheduling.",
+        );
+      const changed = Object.entries(p.taskRevisions).some(([id, revision]) => {
+        const task = s.tasks.find((t) => t.id === id);
+        return !task || task.revision !== revision || !isSchedulableTask(task);
+      });
+      if (changed)
+        fail(
+          "STALE",
+          "Tasks changed since this proposal. Generate a fresh proposal.",
+        );
+      const allocation = p.alternatives[p.selected];
+      if (!allocation.sessions.length)
+        fail(
+          "EMPTY",
+          "There are no sessions to schedule. Resolve the missing estimates, owners, or capacity.",
+        );
+      const owners = [...new Set(allocation.sessions.map((x) => x.assigneeId))];
+      for (const owner of owners) {
+        actor(s, owner);
+        if (
+          c.automatic &&
+          (actor(s, owner).preferences.reviewRequired ||
+            s.projects.find((project) => project.id === p.projectId)
+              ?.reviewRequired === true)
+        )
+          fail(
+            "REVIEW_REQUIRED",
+            "Review was enabled. This proposal is awaiting approval.",
+          );
+        const constraints = (prefs: Member["preferences"]) => {
+          const { reviewRequired, quietStart, quietEnd, ...rest } = prefs;
+          return rest;
+        };
+        const prior = p.inputs?.preferences[owner];
+        if (
+          prior &&
+          JSON.stringify(constraints(prior)) !==
+            JSON.stringify(constraints(actor(s, owner).preferences))
+        )
+          fail(
+            "STALE",
+            "Planning preferences changed. Generate a fresh proposal before scheduling.",
+          );
+      }
+      if (c.automatic) p.automatic = true;
+      if (!c.automatic) {
+        if (!owners.includes(c.actorId))
+          fail(
+            "FORBIDDEN",
+            "Only an affected calendar owner can approve sessions.",
+          );
+        if (!p.approvedBy.includes(c.actorId)) p.approvedBy.push(c.actorId);
+      }
+      if (!c.automatic && owners.some((id) => !p.approvedBy.includes(id))) {
+        result = "Awaiting approval from other calendar owners";
+        break;
+      }
+      for (const session of allocation.sessions) {
+        const cal = s.calendars.find((x) => x.ownerId === session.assigneeId);
+        if (
+          p.inputs?.calendarDestinations?.[session.assigneeId] &&
+          p.inputs.calendarDestinations[session.assigneeId] !==
+            cal?.destinationId
+        )
+          fail(
+            "STALE",
+            "Calendar selection changed. Generate a fresh proposal before scheduling.",
+          );
+        if (
+          !cal ||
+          !["connected", "demo", "native"].includes(cal.status) ||
+          !cal.destinationId
+        )
+          fail(
+            "CALENDAR",
+            "A calendar owner must reconnect and choose a writable destination.",
+          );
+        if (
+          s.proposals.some(
+            (other) =>
+              other.id !== p.id &&
+              ["applied", "partial", "applying"].includes(other.status) &&
+              other.alternatives[other.selected].sessions.some(
+                (reserved) =>
+                  ["scheduled", "pending"].includes(reserved.status) &&
+                  reserved.assigneeId === session.assigneeId &&
+                  reserved.start < session.end &&
+                  reserved.end > session.start,
+              ),
+          ) ||
+          s.busy.some(
+            (b) =>
+              b.ownerId === session.assigneeId &&
+              b.start < session.end &&
+              b.end > session.start,
+          )
+        )
+          fail(
+            "CONFLICT",
+            "A new calendar event conflicts with this proposal. Generate a fresh plan.",
+          );
+      }
+      const lineageVersions = s.versions.filter(
+        (v) =>
+          v.projectId === p.projectId &&
+          (v.projectId || v.createdBy === p.createdBy),
+      );
+      const latest = lineageVersions.sort((a, b) => b.number - a.number)[0];
+      if (latest?.id !== p.parentVersionId)
+        fail(
+          "STALE",
+          "Another plan was accepted first. Review a fresh proposal.",
+        );
+      const versionId = c.id(),
+        sessions = allocation.sessions.map((x) => ({
+          ...x,
+          id: stableId("accepted-session", versionId, x.id),
+          updatedAt: c.now,
+          status: (s.calendars.find((cal) => cal.ownerId === x.assigneeId)
+            ?.destinationId === "kazi"
+            ? "scheduled"
+            : "pending") as Session["status"],
+        }));
+      const version: State["versions"][number] = {
+        id: versionId,
+        lineageId: latest?.lineageId ?? c.id(),
+        number: (latest?.number ?? 0) + 1,
+        projectId: p.projectId,
+        parentId: latest?.id,
+        proposalId: p.id,
+        trigger: p.trigger,
+        createdAt: c.now,
+        createdBy: c.actorId,
+        taskSnapshot: structuredClone(
+          s.tasks.filter((t) => p.taskRevisions[t.id] !== undefined),
+        ),
+        sessions: structuredClone(sessions),
+        recoveryTarget: p.recoveryTarget,
+        algorithm: allocation.algorithm,
+        inputs: p.inputs ? structuredClone(p.inputs) : undefined,
+      };
+      s.versions.push(version);
+      if (p.projectId) {
+        const previous = s.iterations
+          .filter((i) => i.projectId === p.projectId)
+          .at(-1);
+        s.iterations.push({
+          id: c.id(),
+          projectId: p.projectId,
+          versionId,
+          previousId: previous?.id,
+          createdAt: c.now,
+        });
+      }
+      allocation.sessions = sessions;
+      p.status = sessions.every((session) => session.status === "scheduled")
+        ? "applied"
+        : "applying";
+      for (const task of version.taskSnapshot) {
+        const previous = s.attempts.filter((a) => a.taskId === task.id).at(-1);
+        s.attempts.push({
+          id: c.id(),
+          taskId: task.id,
+          versionId,
+          previousId: previous?.id,
+          remainingMinutes: task.remainingMinutes ?? task.estimatedMinutes ?? 0,
+        });
+      }
+      audit(
+        s,
+        c,
+        `Accepted Plan ${version.number}${latest ? ` · Recovery from Plan ${latest.number}` : ""}`,
+        undefined,
+        p.projectId,
+      );
+      result = versionId;
+      break;
+    }
+    case "notification": {
+      const n = s.notifications.find(
+        (n) => n.id === command.id && n.recipientId === c.actorId,
+      );
+      if (!n) fail("FORBIDDEN", "This notification is unavailable.");
+      if (command.action === "read") n.read = true;
+      else n.snoozedUntil = c.now + 24 * 60 * MINUTE;
+      break;
+    }
+    case "invite": {
+      if (!manager(s, c.actorId) || s.workspace.kind !== "team")
+        fail("FORBIDDEN", "Team owners and admins can invite people.");
+      command.projectIds.forEach((id) => projectFor(s, id, c.actorId));
+      if (command.role === "guest" && !command.projectIds.length)
+        fail("PROJECT_REQUIRED", "Choose at least one project for a guest.");
+      if (!c.invitationHash)
+        fail("TOKEN", "A secure invitation token is required.");
+      const invitation = {
+        id: c.id(),
+        email: command.email.toLowerCase(),
+        role: command.role,
+        projectIds: command.projectIds,
+        expiresAt: c.now + 7 * 24 * 60 * MINUTE,
+        status: "pending" as const,
+        tokenHash: c.invitationHash,
+      };
+      s.invitations.push(invitation);
+      result = invitation.id;
+      audit(s, c, "Created an invitation");
+      break;
+    }
+    case "revoke_invitation": {
+      if (!manager(s, c.actorId))
+        fail("FORBIDDEN", "A workspace manager must revoke invitations.");
+      const i = s.invitations.find((i) => i.id === command.id);
+      if (!i) fail("FORBIDDEN", "Invitation unavailable.");
+      i.status = "revoked";
+      break;
+    }
+    case "remove_member": {
+      if (!manager(s, c.actorId))
+        fail("FORBIDDEN", "A workspace manager must remove members.");
+      const member = actor(s, command.id);
+      if (member.role === "owner" || member.id === c.actorId)
+        fail("OWNER", "The workspace owner cannot be removed.");
+      if (member.role === "admin" && me.role !== "owner")
+        fail("FORBIDDEN", "Only the owner can remove an admin.");
+      s.members = s.members.filter((m) => m.id !== command.id);
+      s.projects.forEach((p) => {
+        p.memberIds = p.memberIds.filter((id) => id !== command.id);
+        if (p.ownerId === command.id) p.ownerId = s.workspace.ownerId;
+      });
+      s.tasks.forEach((t) => {
+        if (t.collaborators.includes(command.id)) {
+          t.collaborators = t.collaborators.filter((id) => id !== command.id);
+          t.revision++;
+          t.updatedAt = c.now;
+        }
+        if (t.assigneeId === command.id) {
+          delete t.assigneeId;
+          t.revision++;
+          t.updatedAt = c.now;
+        }
+      });
+      audit(s, c, "Removed member and unassigned their open work");
+      break;
+    }
+    case "release_sessions": {
+      if (!c.verifiedCalendar)
+        fail(
+          "CALENDAR",
+          "The calendar release workflow must verify these events.",
+        );
+      const version = s.versions.find((v) => v.id === command.versionId);
+      if (!version) fail("FORBIDDEN", "This version is unavailable.");
+      if (version.projectId) projectFor(s, version.projectId, c.actorId);
+      else if (version.createdBy !== c.actorId)
+        fail("FORBIDDEN", "This plan is private.");
+      const proposal = s.proposals.find((p) => p.id === version.proposalId);
+      if (!proposal)
+        fail("STATE", "This plan has no active future reservations.");
+      for (const id of command.sessionIds) {
+        const session = proposal.alternatives[proposal.selected].sessions.find(
+          (s) => s.id === id,
+        );
+        if (
+          !session ||
+          session.assigneeId !== c.actorId ||
+          session.start <= c.now
+        )
+          fail(
+            "FORBIDDEN",
+            "Only your own future focus sessions may be released.",
+          );
+        session.status = "released";
+        session.updatedAt = c.now;
+      }
+      proposal.status = "partial";
+      audit(
+        s,
+        c,
+        "Released selected future reservations; original plan snapshot preserved",
+        undefined,
+        version.projectId,
+      );
+      break;
+    }
+  }
+  const priorTasks = new Map(state.tasks.map((task) => [task.id, task]));
+  const priorProjects = new Map(
+    state.projects.map((project) => [project.id, project]),
+  );
+  for (const entityType of ["task", "project"] as const)
+    for (const entity of entityType === "task" ? s.tasks : s.projects) {
+      const old =
+        entityType === "task"
+          ? priorTasks.get(entity.id)
+          : priorProjects.get(entity.id);
+      const changes = Object.keys(entity).filter(
+        (key) =>
+          JSON.stringify((old as any)?.[key]) !==
+          JSON.stringify((entity as any)[key]),
+      );
+      if (!changes.length) continue;
+      const task = entityType === "task" ? (entity as Task) : undefined;
+      (s.lifecycleEvents ??= []).push({
+        id: c.id(),
+        entityType,
+        entityId: entity.id,
+        projectId: task?.projectId ?? entity.id,
+        actorId: c.actorId,
+        assigneeId: task?.assigneeId,
+        ownerId: task?.ownerId ?? (entity as Project).ownerId,
+        at: c.now,
+        revision: task?.revision,
+        note: requested.type === "review_task" ? requested.reason : undefined,
+        action: requested.type,
+        changes,
+        ...(!old || old.status !== entity.status
+          ? { fromStatus: old?.status, toStatus: entity.status }
+          : {}),
+      });
+    }
+  if (requested.type === "comment") {
+    const task = taskFor(s, requested.id, c.actorId);
+    (s.lifecycleEvents ??= []).push({
+      id: c.id(),
+      entityType: "task",
+      entityId: task.id,
+      projectId: task.projectId,
+      actorId: c.actorId,
+      assigneeId: task.assigneeId,
+      ownerId: task.ownerId,
+      at: c.now,
+      action: "comment",
+      note: requested.body,
+      changes: ["comment"],
+    });
+  }
+  return { state: s, result };
+}
+
+function workingDaysSince(
+  start: number,
+  end: number,
+  zone: string,
+  days: number[],
+): number {
+  let day = addDays(dateInZone(start, zone), 1),
+    count = 0;
+  const last = dateInZone(end, zone);
+  for (let i = 0; i < 366 && day <= last; i++, day = addDays(day, 1)) {
+    const weekday = new Date(day + "T12:00:00Z").getUTCDay() || 7;
+    if (days.includes(weekday)) count++;
+  }
+  return count;
+}
+
+export function evaluateRisks(state: State, c: Context): State {
+  const s = structuredClone(state);
+  for (const task of s.tasks) {
+    if (task.status === "backlog") {
+      const owner = s.members.find(
+        (member) =>
+          member.id ===
+          (task.ownerId ??
+            s.projects.find((p) => p.id === task.projectId)?.ownerId),
+      );
+      if (owner) {
+        const today = dateInZone(c.now, owner.preferences.timezone),
+          age = (c.now - (task.statusChangedAt ?? task.createdAt)) / 86400000,
+          threshold =
+            owner.preferences.agingDays?.backlog ?? defaultAgingDays.backlog;
+        if (
+          task.brainstorm
+            ? !!task.reviewDate && task.reviewDate <= today
+            : age >= threshold
+        )
+          notify(
+            s,
+            c,
+            owner.id,
+            `${task.id}:backlog-review:${task.statusChangedAt ?? task.createdAt}:${task.reviewDate ?? threshold}`,
+            task.brainstorm
+              ? "Brainstorm review is due"
+              : "Backlog idea needs a review",
+            task.title +
+              " — promote it to To do, archive it, or set a To Brainstorm review date.",
+            "review",
+            task.id,
+          );
+      }
+      continue;
+    }
+    if (!isCommittedTask(task) || !task.assigneeId) continue;
+    const member = s.members.find((m) => m.id === task.assigneeId);
+    if (!member) continue;
+    const p = s.projects.find((p) => p.id === task.projectId);
+    if (!p || p.archived || !canSeeProject(s, p, member.id)) continue;
+    const cutoff = deadlineAt(task.deadline, member.preferences.timezone),
+      hours = (cutoff - c.now) / (60 * MINUTE);
+    const overdue = hours < 0,
+      stale =
+        workingDaysSince(
+          task.lastProgress,
+          c.now,
+          member.preferences.timezone,
+          member.preferences.workingDays,
+        ) >= 2;
+    if (task.status === "to_validate") {
+      const reviewer = s.members.find(
+        (person) => person.id === (task.ownerId ?? p.ownerId),
+      );
+      const threshold = reviewer?.preferences.agingDays?.to_validate ?? 2;
+      if (
+        reviewer &&
+        (overdue ||
+          c.now - (task.statusChangedAt ?? task.updatedAt) >=
+            threshold * 86400000)
+      )
+        notify(
+          s,
+          c,
+          reviewer.id,
+          `${task.id}:validation:${dateInZone(c.now, reviewer.preferences.timezone)}`,
+          "Validation is waiting",
+          "Review the finished work: approve to complete, or return to In progress with a reason for the worker.",
+          "review",
+          task.id,
+        );
+      continue;
+    }
+    let shortfall = 0,
+      confirmedMinutes: number | undefined;
+    const connection = s.calendars.find((cal) => cal.ownerId === member.id);
+    if (
+      !overdue &&
+      Number.isFinite(cutoff) &&
+      task.remainingMinutes !== undefined &&
+      connection &&
+      (connection.status === "demo" ||
+        (connection.status === "native" &&
+          (!connection.selectedIds.length ||
+            (connection.lastSync !== undefined &&
+              c.now - connection.lastSync < 5 * MINUTE))) ||
+        (connection.status === "connected" &&
+          connection.lastSync !== undefined &&
+          c.now - connection.lastSync < 5 * MINUTE))
+    ) {
+      const reservations = s.proposals
+        .filter((p) => ["applying", "partial", "applied"].includes(p.status))
+        .flatMap((p) => p.alternatives[p.selected].sessions)
+        .filter(
+          (session) =>
+            session.status === "scheduled" &&
+            session.taskId === task.id &&
+            session.assigneeId === member.id &&
+            session.start >= c.now &&
+            session.end <= cutoff,
+        );
+      const committed = Math.min(
+        task.remainingMinutes,
+        reservations.reduce((n, s) => n + (s.end - s.start) / MINUTE, 0),
+      );
+      const available = allocate({
+        tasks: [
+          { ...task, remainingMinutes: task.remainingMinutes - committed },
+        ],
+        allTasks: s.tasks,
+        busy: s.busy,
+        preferences: { [member.id]: member.preferences },
+        startDate: dateInZone(c.now, member.preferences.timezone),
+        days: member.preferences.horizonDays,
+        now: c.now,
+      });
+      confirmedMinutes = available.scheduledMinutes + committed;
+      shortfall = Math.max(0, task.remainingMinutes - confirmedMinutes);
+    }
+    const kind = overdue
+      ? "overdue"
+      : hours <= 72 || task.status === "blocked" || shortfall > 0
+        ? "capacity"
+        : stale
+          ? "stale"
+          : undefined;
+    if (!kind) continue;
+    const window = overdue
+      ? "initial"
+      : kind === "stale"
+        ? dateInZone(c.now, member.preferences.timezone)
+        : hours <= 24
+          ? "24h"
+          : "72h";
+    notify(
+      s,
+      c,
+      member.id,
+      `${task.id}:${kind}:${window}`,
+      overdue
+        ? `${task.title} needs a new plan`
+        : kind === "stale"
+          ? "Progress update needed"
+          : `${task.title} is approaching its deadline`,
+      overdue
+        ? "The original deadline has passed. Update your progress or review a recovery proposal."
+        : `${task.remainingMinutes ?? task.estimatedMinutes ?? "Unknown"} minutes remaining. ${shortfall > 0 ? `${confirmedMinutes} minutes of confirmed permitted time fit before the deadline; ${shortfall} minutes remain unscheduled. ` : ""}${stale ? "No recent progress update has been recorded." : "Review your remaining effort and available time."}`,
+      kind,
+      task.id,
+    );
+  }
+  for (const member of s.members) {
+    const day = dateInZone(c.now, member.preferences.timezone);
+    const overdue = s.tasks.filter(
+      (t) =>
+        t.assigneeId === member.id &&
+        isCommittedTask(t) &&
+        deadlineAt(t.deadline, member.preferences.timezone) < c.now &&
+        s.projects.some(
+          (p) =>
+            p.id === t.projectId &&
+            !p.archived &&
+            canSeeProject(s, p, member.id),
+        ),
+    );
+    const previousAlert = s.notifications.some(
+      (n) =>
+        n.recipientId === member.id &&
+        n.kind === "overdue" &&
+        dateInZone(n.createdAt, member.preferences.timezone) < day,
+    );
+    if (overdue.length && previousAlert)
+      notify(
+        s,
+        c,
+        member.id,
+        "overdue-digest:" + day,
+        "Overdue task summary",
+        `${overdue.length} unfinished ${overdue.length === 1 ? "task has" : "tasks have"} passed the original deadline. Update your progress or review a recovery proposal.`,
+        "system",
+        overdue[0].id,
+      );
+  }
+  // Keep review outcomes after completion, while removing obsolete action alerts.
+  s.notifications = s.notifications.filter((n) => {
+    if (!s.members.some((m) => m.id === n.recipientId)) return false;
+    if (!n.taskId) return true;
+    const task = s.tasks.find((t) => t.id === n.taskId);
+    if (!task || isArchivedTask(task)) return false;
+    if (n.kind === "review") {
+      if (n.key.includes(":backlog-review:")) return task.status === "backlog";
+      if (n.key.includes(":validation:")) return task.status === "to_validate";
+      if (n.key.includes(":review:")) return true;
+    }
+    return isCommittedTask(task);
+  });
+  return s;
+}
+/** Event-driven checkpoints; the cron is a due-index reconciler, not a task poller. */
+export function nextRiskEvaluation(s: State, now: number): number {
+  const candidates = [now + 86400000];
+  for (const member of s.members) {
+    const p = member.preferences,
+      day = dateInZone(now, p.timezone),
+      digest = localInstant(day, p.quietEnd, p.timezone);
+    candidates.push(
+      digest > now
+        ? digest
+        : localInstant(addDays(day, 1), p.quietEnd, p.timezone),
+    );
+    for (const task of s.tasks.filter(
+      (t) => t.assigneeId === member.id && isCommittedTask(t),
+    )) {
+      const cutoff = deadlineAt(task.deadline, p.timezone);
+      if (Number.isFinite(cutoff))
+        for (const threshold of [
+          cutoff - 72 * 3600000,
+          cutoff - 24 * 3600000,
+          cutoff + 1,
+        ])
+          if (threshold > now) candidates.push(threshold);
+      let date = addDays(dateInZone(task.lastProgress, p.timezone), 1),
+        working = 0;
+      for (let i = 0; i < 14; i++, date = addDays(date, 1)) {
+        if (
+          p.workingDays.includes(new Date(date + "T12:00:00Z").getUTCDay() || 7)
+        )
+          working++;
+        if (working === 2) {
+          const checkpoint = localInstant(date, p.startHour, p.timezone);
+          if (checkpoint > now) candidates.push(checkpoint);
+          break;
+        }
+      }
+    }
+  }
+  for (const project of s.projects.filter((p) => !p.archived && p.deadline)) {
+    const zone =
+        s.members.find((m) => m.id === project.ownerId)?.preferences.timezone ??
+        "UTC",
+      cutoff = deadlineAt(project.deadline, zone) + 1;
+    if (cutoff > now) candidates.push(cutoff);
+  }
+  for (const version of s.versions.filter((v) => v.recoveryTarget)) {
+    const zone =
+        s.members.find((m) => m.id === version.createdBy)?.preferences
+          .timezone ?? "UTC",
+      cutoff = deadlineAt(version.recoveryTarget, zone) + 1;
+    if (cutoff > now) candidates.push(cutoff);
+  }
+  return Math.max(now + 1000, Math.min(...candidates));
+}
+
+export function completeDemoWrites(s: State): State {
+  const state = structuredClone(s);
+  for (const p of state.proposals.filter((p) => p.status === "applying")) {
+    p.alternatives[p.selected].sessions.forEach((x) => {
+      x.status = "scheduled";
+      x.eventId = "fixture-" + x.id;
+    });
+    p.status = p.alternatives[p.selected].remainingMinutes
+      ? "partial"
+      : "applied";
+    const key = "demo-receipt:" + p.id;
+    if (!state.notifications.some((n) => n.key === key))
+      state.notifications.unshift({
+        id: stableId("demo-receipt", p.id),
+        key,
+        recipientId: p.createdBy,
+        proposalId: p.id,
+        title: p.automatic
+          ? "Your recovery plan was scheduled automatically"
+          : "Your demo scheduling receipt",
+        body: `${p.alternatives[p.selected].sessions.length} focus sessions confirmed in the synthetic calendar. Earlier plans remain preserved.`,
+        kind: "system",
+        createdAt: Date.now(),
+        deliveryAt: Date.now(),
+        read: false,
+      });
+    state.notifications
+      .filter((n) => n.proposalId === p.id && n.kind === "review")
+      .forEach((n) => (n.read = true));
+  }
+  return state;
+}
