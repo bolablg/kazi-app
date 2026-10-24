@@ -25,6 +25,7 @@ import { commandScopes, tokenScopes } from "../shared/capabilities";
 import { overviewEvents } from "../shared/overview";
 import { buildReport, reportBounds, reportCsv } from "../shared/reports";
 import { invitationToken } from "./crypto";
+import { MAX_FILE_BYTES } from "../shared/artifacts";
 import {
   workingIntervals,
   subtractIntervals,
@@ -32,6 +33,93 @@ import {
   MINUTE,
 } from "../shared/scheduler";
 const http = httpRouter();
+const fileTransfer = httpAction(async (ctx, request) => {
+  const origin = request.headers.get("Origin"),
+    allowedOrigin = process.env.APP_ORIGIN ?? "";
+  const headers = {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    Vary: "Origin",
+  };
+  if (origin && origin !== allowedOrigin)
+    return new Response("Origin is not allowed.", { status: 403 });
+  if (request.method === "OPTIONS")
+    return new Response(null, { status: 204, headers });
+  const token = request.headers
+    .get("Authorization")
+    ?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
+  if (!token)
+    return new Response("A file transfer credential is required.", {
+      status: 401,
+      headers,
+    });
+  try {
+    const ticket = await ctx.runMutation(internal.files.claim, {
+      hash: await sha256(token),
+      kind: request.method === "POST" ? "upload" : "download",
+    });
+    if (request.method === "GET") {
+      if (!ticket.storageId) throw new Error("File unavailable.");
+      const blob = await ctx.storage.get(ticket.storageId as Id<"_storage">);
+      if (!blob) throw new Error("File unavailable.");
+      return new Response(blob, {
+        headers: {
+          ...headers,
+          "Content-Type": "application/octet-stream",
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(ticket.name)}`,
+        },
+      });
+    }
+    const declaredSize = Number(
+      request.headers.get("Content-Length") ?? ticket.size,
+    );
+    if (
+      declaredSize > MAX_FILE_BYTES ||
+      declaredSize !== ticket.size ||
+      !request.body
+    )
+      throw new Error("File size does not match the upload.");
+    const reader = request.body.getReader(),
+      parts: Uint8Array<ArrayBuffer>[] = [];
+    let size = 0;
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      size += next.value.byteLength;
+      if (size > MAX_FILE_BYTES || size > ticket.size) {
+        await reader.cancel();
+        throw new Error("Choose a file up to 20 MB.");
+      }
+      parts.push(new Uint8Array(next.value));
+    }
+    if (size !== ticket.size)
+      throw new Error("File size does not match the upload.");
+    const storageId = await ctx.storage.store(
+      new Blob(parts, { type: ticket.contentType }),
+    );
+    try {
+      const artifactId = await ctx.runMutation(internal.files.finish, {
+        ticketId: ticket._id,
+        storageId,
+      });
+      return Response.json({ artifactId }, { headers });
+    } catch (error) {
+      await ctx.storage.delete(storageId);
+      throw error;
+    }
+  } catch {
+    return new Response(
+      "Transfer unavailable or expired. Check task access and try again.",
+      { status: 400, headers },
+    );
+  }
+});
+for (const method of ["OPTIONS", "POST", "GET"] as const)
+  http.route({ path: "/task-files", method, handler: fileTransfer });
 http.route({
   pathPrefix: "/agenda/",
   method: "GET",
@@ -253,6 +341,48 @@ const mcp = httpAction(async (ctx, request) => {
       if (reads.includes(operation) && !principal.scopes.includes("read"))
         throw new Error("This token needs read scope.");
       switch (operation) {
+        case "prepare_task_upload":
+        case "prepare_artifact_download":
+          requireScope(
+            operation === "prepare_task_upload" ? "tasks:write" : "read",
+          );
+          return ctx.runMutation(internal.files.prepareFor, {
+            workspaceId,
+            subject: principal.subject,
+            mcpTokenId: principal.tokenId,
+            taskId: String(input.taskId),
+            kind: operation === "prepare_task_upload" ? "upload" : "download",
+            ...(input.artifactId
+              ? { artifactId: String(input.artifactId) }
+              : {}),
+            ...(input.name ? { name: String(input.name) } : {}),
+            ...(input.size !== undefined ? { size: Number(input.size) } : {}),
+            ...(input.contentType
+              ? { contentType: String(input.contentType) }
+              : {}),
+            ...(input.placement
+              ? { placement: input.placement as "task" | "description" }
+              : {}),
+          });
+        case "list_task_activity":
+          requireScope("read");
+          return ctx.runQuery(internal.files.activityFor, {
+            workspaceId,
+            subject: principal.subject,
+            taskId: String(input.taskId),
+            paginationOpts: {
+              cursor: input.cursor as string | null,
+              numItems: Number(input.limit ?? 50),
+            },
+          });
+        case "list_task_artifacts":
+          requireScope("read");
+          taskFor(state, String(input.taskId), principal.subject);
+          return page(
+            (state.artifacts ?? []).filter(
+              (a) => a.taskId === input.taskId && !a.removedAt,
+            ),
+          );
         case "create_team":
           requireScope("people:manage");
           return ctx.runMutation(internal.commands.createTeamFor, {
@@ -573,6 +703,9 @@ const mcp = httpAction(async (ctx, request) => {
           return {
             task: taskFor(state, String(input.id), principal.subject),
             activity: state.activities.filter((a) => a.taskId === input.id),
+            artifacts: (state.artifacts ?? []).filter(
+              (a) => a.taskId === input.id && !a.removedAt,
+            ),
           };
         case "get_proposal":
           return state.proposals.find((p) => p.id === input.id) ?? null;

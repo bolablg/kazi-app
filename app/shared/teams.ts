@@ -65,6 +65,7 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
     iterations: collect("iterations"),
     notifications: collect("notifications"),
     activities: collect("activities"),
+    artifacts: entries.flatMap(({ state }) => state.artifacts ?? []),
     invitations: collect("invitations"),
     reportEvents: entries.flatMap(({ state }) => state.reportEvents ?? []),
     lifecycleEvents: entries.flatMap(

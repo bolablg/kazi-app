@@ -133,6 +133,46 @@ export function createKaziServer(
     ...workspace,
     id: z.string(),
   });
+  register(
+    "list_task_activity",
+    "Read paginated task comments and activity, with authors and timestamps. Requires read scope.",
+    {
+      ...workspace,
+      taskId: z.string(),
+      cursor: z.string().nullable().default(null),
+      limit: z.number().int().min(1).max(100).default(50),
+    },
+  );
+  register(
+    "list_task_artifacts",
+    "List files and links attached to an authorized task. Requires read scope.",
+    { ...page, taskId: z.string() },
+  );
+  register(
+    "prepare_task_upload",
+    "Prepare a one-use file upload, up to 20 MB. Requires tasks:write. POST raw file bytes to the returned URL with Authorization: Bearer <token>. The response contains artifactId; pass that ID to add_comment to include the file in a comment. Never put the token in a URL. Uses the same task permissions as the app.",
+    {
+      ...workspace,
+      taskId: z.string(),
+      name: z.string().min(1).max(180),
+      size: z
+        .number()
+        .int()
+        .min(1)
+        .max(20 * 1024 * 1024),
+      contentType: z.string().max(150).default("application/octet-stream"),
+      placement: z.enum(["description", "task"]).default("task"),
+    },
+    "prepare_task_upload",
+    false,
+  );
+  register(
+    "prepare_artifact_download",
+    "Prepare a one-use authorized download. Requires read. GET the returned URL with Authorization: Bearer <token>. Checks current task access at download time. Never put the token in a URL.",
+    { ...workspace, taskId: z.string(), artifactId: z.string() },
+    "prepare_artifact_download",
+    false,
+  );
   const names: Partial<Record<string, string>> = {
     progress: "record_progress",
     preferences: "set_preferences",

@@ -1,0 +1,321 @@
+.board-task-open > .board-task-title,
+.board-drag-preview > .board-task-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  line-height: 1.45;
+  max-height: 2.9em;
+  text-overflow: ellipsis;
+}
+.board-priority.high,
+.priority-mark.high,
+.tasks-panel .priority-mark.high,
+.priority-select.high,
+.task-property-rows .priority-select.high {
+  color: #991b1b;
+  background: #fee2e2;
+}
+.board-priority.medium,
+.priority-mark.medium,
+.tasks-panel .priority-mark.medium,
+.priority-select.medium,
+.task-property-rows .priority-select.medium {
+  color: #854d0e;
+  background: #fef3c7;
+}
+.board-priority.low,
+.priority-mark.low,
+.tasks-panel .priority-mark.low,
+.priority-select.low,
+.task-property-rows .priority-select.low {
+  color: #166534;
+  background: #dcfce7;
+}
+.priority-mark {
+  padding: 3px 7px;
+  border-radius: 4px;
+  width: fit-content;
+}
+.task-artifacts {
+  padding: 22px 0;
+  border-bottom: 1px solid #111;
+  min-width: 0;
+}
+.task-artifacts.description {
+  padding: 0 0 18px;
+  border-bottom: 1px solid #d3d3d3;
+}
+.task-artifacts h2,
+.task-conversation h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.task-artifact {
+  display: flex;
+  align-items: center;
+  border: 1px solid #c4c7cc;
+  border-radius: 5px;
+  background: #fff;
+  min-width: 0;
+  padding-right: 5px;
+}
+.task-artifact > a,
+.task-artifact > .artifact-download {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  color: #111;
+}
+.task-artifact > a:hover,
+.task-artifact > .artifact-download:hover {
+  background: #f4f5f6;
+}
+.artifact-icon {
+  width: 30px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: #f0f1f3;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.artifact-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.artifact-copy strong {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.artifact-copy small {
+  font-size: 11px;
+  color: #4a4d53;
+}
+.artifact-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.task-editor-columns select,
+.artifact-link-editor input {
+  min-width: 0;
+  max-width: 100%;
+}
+.task-editor-columns {
+  min-width: 0;
+}
+.task-artifacts input[type="file"][hidden],
+.task-comment-composer input[type="file"][hidden] {
+  display: none;
+}
+.artifact-action-buttons small {
+  font-size: 11px;
+  color: #4a4d53;
+}
+.artifact-link-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px 0 0;
+}
+.artifact-link-editor label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+.artifact-link-editor input {
+  width: 100%;
+  min-width: 0;
+}
+.artifact-link-editor p {
+  grid-column: 1/-1;
+  margin: 0;
+  font-size: 12px;
+  color: #4a4d53;
+}
+.task-conversation {
+  padding: 24px 0;
+  border-bottom: 1px solid #111;
+}
+.task-conversation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.task-conversation [role="tablist"] {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid #c7c9cd;
+}
+.task-conversation [role="tab"] {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  padding: 8px 2px;
+  color: #35373c;
+  font-size: 12px;
+}
+.task-conversation [role="tab"][aria-selected="true"] {
+  border-bottom-color: #111;
+  color: #111;
+  font-weight: 600;
+}
+.task-comment-composer {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.task-comment-composer > .avatar {
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.comment-compose-body {
+  border: 1px solid #90949b;
+  border-radius: 5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.task-comment-composer textarea {
+  width: 100%;
+  border: 0 !important;
+  background: white !important;
+  resize: vertical;
+  min-height: 82px;
+  padding: 12px;
+  font-size: 13px;
+  border-radius: 0;
+}
+.comment-compose-body:focus-within {
+  outline: 1px solid #111;
+}
+.comment-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-top: 1px solid #e2e3e5;
+}
+.comment-compose-actions .button {
+  font-size: 12px;
+  min-height: 32px;
+}
+.comment-pending-files {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+}
+.comment-pending-files > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #d5d7da;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.task-conversation-list {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+}
+.task-conversation-event {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e3e4e6;
+  align-items: flex-start;
+}
+.task-conversation-event > .avatar {
+  flex-shrink: 0;
+}
+.task-conversation-event > div {
+  flex: 1;
+  min-width: 0;
+}
+.comment-byline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.comment-byline strong {
+  font-size: 12px;
+}
+.comment-byline time {
+  font-size: 11px;
+  color: #4a4d53;
+}
+.task-conversation-event p {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 7px 0 0;
+  color: #111;
+}
+.task-conversation-event.change p {
+  color: #4a4d53;
+}
+.removed-artifact {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+.task-status-history {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.task-status-history summary {
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .artifact-link-editor {
+    grid-template-columns: 1fr;
+  }
+  .task-conversation-heading {
+    align-items: flex-start;
+  }
+  .comment-compose-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .artifact-action-buttons {
+    gap: 12px;
+  }
+  .task-conversation [role="tablist"] {
+    gap: 12px;
+  }
+}
