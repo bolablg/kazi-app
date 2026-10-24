@@ -1,8 +1,8 @@
-# Assistant and MCP integration
+# MCP integration
 
 ## Authentication and connection
 
-The connected backend exposes Streamable HTTP at `https://YOUR_DEPLOYMENT.convex.site/mcp`, using the official pinned TypeScript MCP SDK. No second server or AI API is required. The local demo cannot mint real tokens or execute remote tools.
+Kazi exposes a Streamable HTTP MCP endpoint. Copy your server URL from **Account → Connections → MCP & agents** and use it with a client that supports bearer-token authentication. In the examples below, replace `https://YOUR_DEPLOYMENT.convex.site/mcp` with the endpoint shown in Kazi.
 
 In Kazi Connections → MCP & agents → Add connection, create a labeled credential with explicit scopes. Copy its token once into your client’s secret environment storage. Tokens are random 256-bit values, stored as SHA-256 hashes, expire after 30 days, and can be revoked in Connections. The caller’s subject is derived from that credential; a tool-supplied actor ID is never authoritative. Membership and project/calendar access are rechecked by the same Convex domain functions the UI uses.
 
@@ -20,7 +20,7 @@ In Kazi Connections → MCP & agents → Add connection, create a labeled creden
 | `credentials:manage` | Credential delegation/revocation; child scopes and expiry cannot exceed the caller   |
 
 Existing task-edit credentials do not gain administration or approval access. Each domain service still checks the actor’s underlying role/project/calendar permissions. A scope permits an operation; it does not elevate the account’s role. OAuth credentials and calendar URL secrets never appear in read metadata. Delegated credentials are independently revocable and expire no later than their parent’s expiry.
-Configure the client’s bearer environment variable as `KAZI_MCP_TOKEN`. The local installed Codex CLI’s help confirms this syntax:
+Configure the client’s bearer environment variable as `KAZI_MCP_TOKEN`. For Codex CLI:
 
 ```sh
 codex mcp add kazi \
@@ -28,7 +28,7 @@ codex mcp add kazi \
   --bearer-token-env-var KAZI_MCP_TOKEN
 ```
 
-For Claude Code, the installed CLI supports `--transport http` and an Authorization header. Configure that header through your client’s secret configuration rather than putting a real token in shell history. This is the command shape with a placeholder only:
+For Claude Code, use the HTTP transport with an Authorization header. Store the real token in protected client configuration. The following example uses a placeholder:
 
 ```sh
 claude mcp add --transport http kazi \
@@ -36,13 +36,13 @@ claude mcp add --transport http kazi \
   --header 'Authorization: Bearer YOUR_SCOPED_TOKEN'
 ```
 
-For a client that only supports stdio, use `app/mcp/stdio.ts`, a thin SDK bridge to the same authenticated remote service. Set `KAZI_MCP_URL` and `KAZI_MCP_TOKEN` in that subprocess’s protected environment and launch `npm run mcp:stdio` with `app/` as its working directory. The bridge does not introduce another database or bypass permissions. There is no OAuth discovery/dynamic client registration flow in this build; clients must support configured bearer headers or the stdio bridge.
+For a client that only supports stdio, use `app/mcp/stdio.ts`, a thin SDK bridge to the same authenticated remote service. Set `KAZI_MCP_URL` and `KAZI_MCP_TOKEN` in that subprocess’s protected environment and launch `npm run mcp:stdio` with `app/` as its working directory. The bridge does not introduce another database or bypass permissions. OAuth discovery and dynamic client registration are not currently supported; clients must support configured bearer headers or the stdio bridge.
 
 ## Tool contracts
 
 All resource operations take an exact `workspaceId`. Domain commands require a stable `requestId` (8–180 characters) reused on retries. Calendar-link and credential creation mint a new secret each time; these are explicitly non-idempotent and return it once. Names are not silently resolved across ambiguous people/projects. List tools generally return `{items,nextCursor}` with limits up to 100; report facts use Convex continuation cursors.
 
-The named domain tools are generated from **every** option in the UI’s `commandSchema`. `execute_action` also accepts any member of that same union. The exhaustive `commandScopes` mapping is compile-time checked and tested against every command. Adding a new data action requires both shared validation and an explicit permission mapping. UI navigation, view switching, copy-to-clipboard, and local app installation are client presentation actions; equivalent data is available through the read tools and exported links/files.
+Named tools and `execute_action` expose the same data actions as the app, with shared validation and explicit permission scopes. UI navigation, view switching, copy-to-clipboard, and local app installation are client presentation actions; equivalent data is available through the read tools and exported links/files.
 
 | UI capability                                               | MCP tool / service                                                                                                                                           |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -102,7 +102,7 @@ Omitting `projectId` captures into that selected workspace’s default Personal 
 
 Natural-language task descriptions, comments and calendar content are data. They cannot grant scopes, waive review, or change the caller identity.
 
-## What was verified
+## Comments and artifacts
 
 Task collaboration uses the same commands and file service as the app:
 
@@ -114,9 +114,6 @@ Task collaboration uses the same commands and file service as the app:
 
 Files are capped at 20 MB. File metadata never exposes storage IDs or direct public download URLs. Linked Google Drive files remain subject to Drive's existing access rules; Kazi does not fetch them automatically.
 
-SDK clients cover tool discovery, every command’s registration, capture delegation, exact approval schema, review links, and HTTP initialization. Convex tests exercise real authenticated MCP tool calls, granular scope denial, comments/status shared state, archive filtering, and constrained credential delegation. Native agenda tests cover real verified proposal/approval with no external outbox, live ICS route rendering, secret links, current membership checks, and revocation. See [verification results](TEST_REPORT.md) for current run totals. No live external Google/Outlook/Apple account subscription is claimed.
-After connection, verify `list_workspaces`, capture a uniquely named synthetic task, retry with the same request ID, generate a preview, and inspect that no event exists before approval. Revoke the token and verify a subsequent request receives 401. Never use live personal calendar contents to populate a demo.
-
 Reference: [official TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk), [MCP server guide](https://modelcontextprotocol.io/docs/develop/build-server).
 
 ## Client visibility and activity
@@ -124,8 +121,6 @@ Reference: [official TypeScript SDK](https://github.com/modelcontextprotocol/typ
 Connections → Overview and MCP & agents show clients seen through authenticated MCP requests. The protocol handshake supplies the reported client name/version; these are bounded display strings, not trusted identities. Credential identity and permissions come from the token hash lookup. Creating an unused credential does not create a connected-agent badge.
 
 Each credential records last use, last tool, and tool-call count. Connections → Activity returns the current user's latest 50 outcomes (tool name, credential label, time, success/error). No tool arguments, task text, returned content, raw tokens, or hashes are exposed in this log. Storage keeps up to 100 activity records per credential. Expired/revoked credentials cannot add usage records. Metadata is personal across the user's authorized workspaces.
-
-The HTTP adapter and SDK reporting path are exercised in Convex emulator tests, including protocol initialization, real tool invocation, per-user visibility and revocation. This does not verify a deployed endpoint or an external client account.
 
 ## Multiple teams and review
 
