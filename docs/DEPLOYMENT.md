@@ -2,7 +2,7 @@
 
 **The selected hosting target is now Vercel**, with GitHub promotion through `dev-bola` → `staging` → `main` and production hostname `kazi.iyanju.com`. Follow [RELEASES.md](RELEASES.md) for the current Git-linked setup. The Cloudflare Workers instructions below describe the original alternative; Cloudflare remains the DNS provider for the selected Vercel deployment.
 
-**No public deployment or DNS change was performed.** These steps are prepared for an explicitly authorized launch. The stack remains React/Vite + Cloudflare Workers Static Assets + Clerk + Convex. No separate server, paid email provider, LLM service, organization feature or database is required.
+The sections below document the original **Cloudflare Workers alternative**. The selected Vercel frontend is now deployed, with approved Cloudflare DNS and production Clerk/Convex configuration; see [RELEASES.md](RELEASES.md). No separate application server, paid email provider, LLM service, or organization feature is required.
 
 ## Service eligibility and allowances
 

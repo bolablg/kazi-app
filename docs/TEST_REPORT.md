@@ -40,3 +40,11 @@ Hosted development needs matching Clerk public key/issuer and the intended cloud
 Aggregate subscriptions are bounded to ten teams and 1,000 records per entity table. Lifecycle/report facts are separately paginated; the short activity projection is not the analytics source. A broader rollout needs indexed per-screen reads, load/latency measurements, and quota checks. This is an executable local implementation, with the external release checks above still open.
 
 See [workflow](WORKFLOW.md), [reports](REPORTS.md), [accounts and email](ACCOUNT.md), [calendar](CALENDAR.md), [MCP](MCP.md), and [local development](LOCAL_DEVELOPMENT.md).
+# Hosted release setup — October 24, 2026
+
+The initial [GitHub CI run](https://github.com/bolablg/kazi-app/actions/runs/40134062587), automatic [push CI](https://github.com/bolablg/kazi-app/actions/runs/40134955469), and [staging pull-request CI](https://github.com/bolablg/kazi-app/actions/runs/40134959353) passed. CI runs all 124 backend/domain tests, deployment-environment guard tests, TypeScript/format checks, a production asset build, and 41 browser/PWA journeys using synthetic fixtures. The same full set runs for promotions into staging and main.
+
+Verified the cloud development backend deployment, isolated Git branch preview build/backend, production backend and Vercel build, correct production Cloudflare CNAME, verified Clerk authentication/email DNS, and rendered Clerk sign-in pages at the preview and `https://kazi.iyanju.com`. Production uses its live Clerk instance; the preview visibly uses development authentication. The build guard blocked a development branch when Vercel initially treated it as production. Automatic Actions were enabled and subsequently verified on both push and pull-request events.
+
+Private account signup/sign-in and collaborative workflows against real accounts still require the account holder's live verification. Google OAuth and Resend delivery remain optional and unconfigured; no real email invitation, calendar provider connection, booking integration, or remote assistant session was exercised as part of hosting setup. The earlier local implementation evidence and external acceptance gates below remain relevant.
+

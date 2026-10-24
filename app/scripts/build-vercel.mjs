@@ -14,7 +14,7 @@ const result = spawnSync(
     "--cmd-url-env-var-name",
     "VITE_CONVEX_URL",
     "--cmd",
-    "npm run build",
+    "node scripts/build-hosted-client.mjs",
   ],
   { env, stdio: "inherit", shell: false },
 );

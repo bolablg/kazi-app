@@ -6,7 +6,7 @@ Tasks, projects, and work schedules in one application. Built from [MASTER_PROMP
 
 ## Open it locally
 
-Use Node 22.12+ (Node 24 LTS recommended).
+Use Node 24 LTS (`app/.nvmrc` pins the supported major version).
 
 ```sh
 cd app
@@ -26,7 +26,7 @@ Projects have a separate lifecycle: Planned, In progress, On hold, and **Deliver
 
 The app includes task capture, Personal planning, project list and drag-and-drop board, accountable owners, subtasks, dependencies, progress and comments, search and filters, weekly allocation alternatives, capacity explanations, plan review and comparison, preserved versions/iterations/attempts, explicit reservation release, team invitations, personal planning policy, notifications, data export, and install/update/offline UI.
 
-`app/convex/` contains the real persistence and authorization services, scheduled reminder/recovery jobs, a native Kazi agenda with revocable ICS subscriptions, optional Google free/busy reads, a legacy external-write reconciliation outbox, and authenticated remote MCP. UI data actions and MCP share validation, authorization, and commands. Connecting these services is separate from the local demonstration. **No application was publicly deployed and no DNS was changed. The existing Convex CLI login can access the `bolaji/kazi-app` cloud project and its development deployment; the browser remains connected to local Convex.** Local Convex has now been configured and verified; hosted accounts and external services remain separate. See [verification status](docs/TEST_REPORT.md) before treating this as a complete live release.
+`app/convex/` contains the real persistence and authorization services, scheduled reminder/recovery jobs, a native Kazi agenda with revocable ICS subscriptions, optional Google free/busy reads, a legacy external-write reconciliation outbox, and authenticated remote MCP. UI data actions and MCP share validation, authorization, and commands. **Kazi is hosted at [kazi.iyanju.com](https://kazi.iyanju.com)** with production Clerk and Convex. Cloudflare hosts its DNS, and development previews use isolated backends. Local Convex remains available separately. GitHub CI and the hosted sign-in page have been verified; see [verification status](docs/TEST_REPORT.md) for the remaining real-account and optional integration checks.
 
 ## Connect Clerk and Convex
 
@@ -44,10 +44,9 @@ VITE_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
 ```sh
 npx convex env set CLERK_JWT_ISSUER_DOMAIN 'https://YOUR_INSTANCE.clerk.accounts.dev'
 npx convex env set APP_ORIGIN 'http://127.0.0.1:5173'
-npx convex env set CONVEX_SITE_URL 'https://YOUR_DEPLOYMENT.convex.site'
 ```
 
-Set `INVITATION_SIGNING_KEY` to at least 32 cryptographically random characters through the Convex dashboard. Never place backend secrets in a `VITE_` variable. Both browser variables are required for live mode; partial configuration displays a repair screen.
+`CONVEX_SITE_URL` is supplied by Convex automatically. Set `INVITATION_SIGNING_KEY` to at least 32 cryptographically random characters through the Convex dashboard. Never place backend secrets in a `VITE_` variable. Both browser variables are required for live mode; partial configuration displays a repair screen.
 
 5. Restart `npm run dev`, sign in, and create your first task. Onboarding transactionally creates a personal environment and Personal planning project. Kazi agenda is ready without Google consent.
 
