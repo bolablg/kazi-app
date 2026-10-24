@@ -12,5 +12,8 @@ playwright-report/
 *.tsbuildinfo
 .DS_Store
 
+# Local-only files
+/local/
+
 # Local Convex state and development-only signing keys
 .convex/
