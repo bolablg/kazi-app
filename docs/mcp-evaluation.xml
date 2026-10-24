@@ -1,0 +1,12 @@
+<evaluation fixture="seedState(2026-10-26T13:00:00Z)">
+  <qa_pair><question>In the fixed October fixture, compare all active projects by outstanding leaf-task estimates. Which project has the largest remaining work? Return its title.</question><answer>Website launch</answer></qa_pair>
+  <qa_pair><question>Find the overdue high-priority unfinished milestone in the fixed fixture, identify its project, and resolve the project's owner. Return that person's full name.</question><answer>Alex Morgan</answer></qa_pair>
+  <qa_pair><question>Inspect the recovery preview for the project with accepted history, confirm the preview's predecessor exists in that history, and return its recovery target in YYYY-MM-DD.</question><answer>2026-11-01</answer></qa_pair>
+  <qa_pair><question>Using the immutable completion facts for October 20 through 26 in the fixed fixture, what percentage of dated task finishes were on time? Return an integer.</question><answer>67</answer></qa_pair>
+  <qa_pair><question>Find the late completion in the fixed October report, resolve its task, then identify the project that owns it. Return the project title.</question><answer>Brand handbook</answer></qa_pair>
+  <qa_pair><question>For the project that has an accepted weekly plan, total the remaining estimated minutes of unfinished leaf tasks assigned to its owner, excluding teammates' work. Return an integer.</question><answer>330</answer></qa_pair>
+  <qa_pair><question>Compare the original accepted plan's sessions with its immutable task snapshot. How many minutes were reserved for the completed inspiration task? Return an integer.</question><answer>60</answer></qa_pair>
+  <qa_pair><question>Across all projects in the fixed fixture, how many remaining estimated minutes belong to high-priority unfinished leaf tasks assigned to Alex Morgan? Return an integer.</question><answer>270</answer></qa_pair>
+  <qa_pair><question>Compare the dated completion facts' start and finish instants for October 20 through 26. What is the median execution cycle in minutes? Return an integer.</question><answer>120</answer></qa_pair>
+  <qa_pair><question>Inspect the project containing the fundamentals practice task, its membership and task list. Is that project private and limited to the task's assignee? Return True or False.</question><answer>True</answer></qa_pair>
+</evaluation>

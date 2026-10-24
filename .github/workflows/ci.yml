@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: ["dev-*", staging, main]
+  pull_request:
+    branches: [staging, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  promotion:
+    name: Promotion policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check branch promotion order
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+          SOURCE_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          if [[ "$EVENT" != "pull_request" ]]; then exit 0; fi
+          if [[ "$SOURCE_REPO" != "$TARGET_REPO" ]]; then
+            echo "Promote reviewed code from a branch in this repository."
+            exit 1
+          fi
+          if [[ "$BASE" == "staging" && "$HEAD" == dev-?* ]]; then exit 0; fi
+          if [[ "$BASE" == "main" && "$HEAD" == "staging" ]]; then exit 0; fi
+          echo "Required promotion path: dev-* -> staging -> main."
+          exit 1
+
+  quality:
+    name: Quality and backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test -- --maxWorkers=1
+      - run: npm run test:deployment
+
+  browser:
+    name: Browser and PWA tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e -- --workers=1 --reporter=github,html
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: browser-test-failures
+          path: |
+            app/playwright-report/
+            app/test-results/
+          retention-days: 7
+
+  required:
+    name: Required checks
+    if: always()
+    needs: [promotion, quality, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every check to pass
+        env:
+          PROMOTION: ${{ needs.promotion.result }}
+          QUALITY: ${{ needs.quality.result }}
+          BROWSER: ${{ needs.browser.result }}
+        run: |
+          [[ "$PROMOTION" == "success" && "$QUALITY" == "success" && "$BROWSER" == "success" ]]
