@@ -85,11 +85,15 @@ function Authenticated() {
             <span className="kazi-mark">k</span>
             <strong>Kazi</strong>
           </span>
-          <h1>Sign in to Kazi</h1>
+          <h1>Welcome to Kazi</h1>
           <p>Manage your tasks, projects, and connected tools.</p>
+          <p>Sign in or create your account below.</p>
         </div>
         <SignIn
           routing="hash"
+          withSignUp
+          fallbackRedirectUrl={location.origin}
+          signUpFallbackRedirectUrl={location.origin}
           forceRedirectUrl={
             location.pathname === "/join"
               ? location.origin + location.pathname + location.search
@@ -162,7 +166,13 @@ createRoot(document.getElementById("root")!).render(
             </p>
           </div>
         ) : configured ? (
-          <ClerkProvider publishableKey={key}>
+          <ClerkProvider
+            publishableKey={key}
+            signInUrl={location.origin}
+            signUpUrl={location.origin}
+            signInFallbackRedirectUrl={location.origin}
+            signUpFallbackRedirectUrl={location.origin}
+          >
             <ConnectedRoot />
           </ClerkProvider>
         ) : (
