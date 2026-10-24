@@ -4,7 +4,11 @@ Repository: https://github.com/bolablg/kazi-app
 
 Vercel: https://vercel.com/bolablg-projects/kazi-app
 
-Production hostname: `kazi.iyanju.com` (DNS stays at Cloudflare).
+Production: https://kazi.iyanju.com (DNS stays at Cloudflare).
+
+Development preview: https://kazi-app-git-dev-bola-bolablg-projects.vercel.app
+
+The production hostname and Clerk authentication/email DNS records are configured and verified. Both Clerk instances have the Convex integration enabled. Production uses `honorable-bird-122`; personal cloud development uses `honorable-guineapig-291`. The development branch preview uses its own backend (`glad-pelican-627` at initial setup), distinct from both. Credentials are write-only Vercel Secrets; only Clerk publishable keys are public configuration. No Clerk secret key or personal CLI access token is uploaded.
 
 ## Branches
 
@@ -26,7 +30,7 @@ The Git-linked project belongs to **Bola Builds** (`bolablg-projects`). Its root
 | Preview (`dev-*`, `staging`) | Development `pk_test_` key | Project preview deploy key; separate backend per branch |
 | Production (`main`) | Production `pk_live_` key | Deployment-specific production deploy key |
 
-Set `VITE_CLERK_PUBLISHABLE_KEY` and encrypted `CONVEX_DEPLOY_KEY` separately for Preview and Production. Never copy a production backend key into Preview. The build rejects missing keys, local authentication, development Clerk keys in production, and production Convex keys in previews. Convex deploys the backend first and injects that backend's URL as `VITE_CONVEX_URL` into the frontend build. Preview deployments reuse a branch's data; do not use `--preview-create`, which recreates a preview.
+Set `VITE_CLERK_PUBLISHABLE_KEY` and secret `CONVEX_DEPLOY_KEY` separately for Preview and Production. Never copy a production backend key into Preview. The build rejects missing keys, local authentication, development Clerk keys in production, and production Convex keys in previews. Convex injects the matching backend's URL as `VITE_CONVEX_URL` into the frontend build and deploys the backend as part of the same successful build process before Vercel publishes the output. Preview deployments reuse a branch's data; do not use `--preview-create`, which recreates a preview.
 
 Configure `CLERK_JWT_ISSUER_DOMAIN`, `APP_ORIGIN`, and backend-only signing/encryption keys for each corresponding deployment. Preview defaults use the development Clerk issuer; production uses the production issuer. After Convex creates or reuses the branch's backend, the build sets that preview's `APP_ORIGIN` to `VERCEL_BRANCH_URL`, so invitation links return to the matching frontend and data. A preview key does not automatically provide environment variables to a fresh backend: configure the project's default preview environment variables before the first build. Keep optional Google and Resend credentials out until those integrations are intentionally enabled.
 
