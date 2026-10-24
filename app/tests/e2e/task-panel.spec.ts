@@ -114,8 +114,8 @@ test("full-page task puts description before details, saves changes, and closes 
     12,
   );
   expect(box!.width).toBeGreaterThan(viewport.width * 0.75);
-  await expect(panel.getByLabel("Task owner", { exact: true })).toBeVisible();
-  await expect(panel.getByLabel("Assignee", { exact: true })).toBeVisible();
+  await expect(panel.getByLabel("Owner", { exact: true })).toBeVisible();
+  await expect(panel.getByLabel("Worker", { exact: true })).toBeVisible();
   for (const signal of ["complete", "underway", "waiting"])
     await expect(panel.locator(`.dependency-node.${signal}`)).toHaveCount(1);
   await panel

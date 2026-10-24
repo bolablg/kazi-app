@@ -11,6 +11,7 @@ import {
   type Context,
   type Command,
   type Task,
+  type TaskArtifact,
   type Session,
   type Project,
   type Member,
@@ -131,6 +132,9 @@ export function visibleState(s: State, userId: string): State {
         (!a.taskId || taskIds.has(a.taskId)) &&
         (!a.projectId || projectIds.has(a.projectId)),
     ),
+    artifacts: (s.artifacts ?? [])
+      .filter((a) => taskIds.has(a.taskId))
+      .map(({ storageId: _, ...artifact }) => artifact),
     legacyResourceIds: s.legacyResourceIds
       ? {
           projects: Object.fromEntries(
@@ -182,8 +186,9 @@ function audit(
   taskId?: string,
   projectId?: string,
   kind: "change" | "comment" | "policy" = "change",
+  attachmentIds?: string[],
 ) {
-  s.activities.unshift({
+  const event = {
     id: c.id(),
     actorId: c.actorId,
     taskId,
@@ -191,7 +196,35 @@ function audit(
     message,
     at: c.now,
     kind,
-  });
+    ...(attachmentIds?.length ? { attachmentIds } : {}),
+  };
+  s.activities.unshift(event);
+  return event.id;
+}
+export function addTaskArtifact(s: State, artifact: TaskArtifact, c: Context) {
+  const task = taskFor(s, artifact.taskId, c.actorId);
+  if (
+    artifact.createdBy !== c.actorId ||
+    artifact.name.length > 180 ||
+    !artifact.name.trim()
+  )
+    fail("ARTIFACT", "Enter a valid artifact name.");
+  if (
+    (s.artifacts ?? []).filter((a) => a.taskId === task.id && !a.removedAt)
+      .length >= 100
+  )
+    fail("ARTIFACT_LIMIT", "A task can have up to 100 artifacts.");
+  (s.artifacts ??= []).push(artifact);
+  audit(
+    s,
+    c,
+    `${artifact.kind === "file" ? "Uploaded" : "Linked"} ${artifact.name}`,
+    task.id,
+    task.projectId,
+    "change",
+    [artifact.id],
+  );
+  return artifact.id;
 }
 function notify(
   s: State,
@@ -753,7 +786,75 @@ export function execute(
     }
     case "comment": {
       const t = taskFor(s, command.id, c.actorId);
-      audit(s, c, command.body, t.id, t.projectId, "comment");
+      const attachmentIds = [...new Set(command.attachmentIds ?? [])];
+      if (!command.body && !attachmentIds.length)
+        fail("COMMENT", "Write a comment or attach a file.");
+      for (const id of attachmentIds)
+        if (
+          !(s.artifacts ?? []).some(
+            (a) => a.id === id && a.taskId === t.id && !a.removedAt,
+          )
+        )
+          fail("ARTIFACT", "An attachment is unavailable for this task.");
+      result = audit(
+        s,
+        c,
+        command.body,
+        t.id,
+        t.projectId,
+        "comment",
+        attachmentIds,
+      );
+      for (const person of new Set([
+        t.ownerId,
+        t.assigneeId,
+        ...t.collaborators,
+      ]))
+        if (
+          person &&
+          person !== c.actorId &&
+          canSeeProject(s, projectFor(s, t.projectId, c.actorId), person)
+        )
+          notify(
+            s,
+            c,
+            person,
+            "comment:" + result,
+            `New comment on ${t.title}`,
+            command.body.slice(0, 300) || "Shared an attachment.",
+            "system",
+            t.id,
+          );
+      break;
+    }
+    case "attach_link": {
+      result = addTaskArtifact(
+        s,
+        {
+          id: c.id(),
+          taskId: command.id,
+          name: command.name,
+          kind: "link",
+          url: new URL(command.url).href,
+          placement: command.placement,
+          createdBy: c.actorId,
+          createdAt: c.now,
+        },
+        c,
+      );
+      break;
+    }
+    case "remove_artifact": {
+      const t = taskFor(s, command.id, c.actorId);
+      const artifact = (s.artifacts ?? []).find(
+        (a) => a.taskId === t.id && a.id === command.artifactId,
+      );
+      if (!artifact) fail("ARTIFACT", "This artifact is unavailable.");
+      if (artifact.createdBy !== c.actorId) editable(s, t, c.actorId);
+      if (!artifact.removedAt) {
+        artifact.removedAt = c.now;
+        audit(s, c, `Removed artifact ${artifact.name}`, t.id, t.projectId);
+      }
       break;
     }
     case "preferences": {

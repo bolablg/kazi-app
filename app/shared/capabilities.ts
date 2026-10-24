@@ -14,7 +14,8 @@ export const tokenScopes = [
 ] as const;
 export const scopeLabels: Record<(typeof tokenScopes)[number], string> = {
   read: "Read tasks, projects, reports, and preferences",
-  "tasks:write": "Create, edit, move, archive, and comment on tasks",
+  "tasks:write":
+    "Create, edit, move, archive, comment, and attach task files or links",
   "projects:write": "Create, edit, deliver, archive, and favorite projects",
   "plans:propose": "Propose plans, select alternatives, and reject previews",
   "plans:approve": "Approve exact plan revisions and release your sessions",
@@ -35,6 +36,8 @@ export const commandScopes: Record<
   progress: "tasks:write",
   review_task: "tasks:write",
   comment: "tasks:write",
+  attach_link: "tasks:write",
+  remove_artifact: "tasks:write",
   create_project: "projects:write",
   update_project: "projects:write",
   favorite_project: "projects:write",
