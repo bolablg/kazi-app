@@ -16,6 +16,7 @@ The production hostname and Clerk authentication/email DNS records are configure
 - Open a pull request from `dev-*` into `staging`.
 - After reviewing staging, open a pull request from `staging` into `main`.
 - `main` is the production branch. Do not push directly to staging or main after bootstrap.
+- After a production promotion, fast-forward your development branch from `origin/main` before starting the next change. This keeps the strict up-to-date checks satisfied throughout the next promotion.
 
 CI enforces this promotion order. Each promotion runs formatting, TypeScript, backend/domain/permission tests, deployment-environment checks, and browser/PWA journeys. The `Required checks` job fails if any prerequisite fails or is cancelled. Workflow actions are pinned to release commit hashes. Browser failure reports are retained for seven days. No deployment credentials are given to pull-request jobs.
 
@@ -39,6 +40,8 @@ The initial Vercel deployment keys expire on October 24, 2027. Rotate them in Co
 Clerk production needs the approved custom hostname and verified authentication/email DNS records. Attach the Vercel hostname using the exact recommended record shown by Vercel; do not transfer the apex domain or replace unrelated records. Keep Clerk CNAME records DNS-only.
 
 The project being connected is not evidence of a successful live release. Check GitHub CI, Vercel deployment state/logs, domain verification, and a real sign-in against the intended Convex instance before calling it production-ready. Local demo and local Convex remain separate from hosted accounts.
+
+Authentication stays inside Kazi using Clerk's combined sign-in/sign-up form, with both fallback return URLs set to the current app origin. Team invitation sign-in keeps its `/join` URL and query string. Production email verification and the authenticated personal dashboard were observed on October 24, 2026; the account portal briefly stayed blank before returning successfully, so the app now avoids that separate portal for sign-up.
 
 ## Recovery
 
