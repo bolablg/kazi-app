@@ -19,6 +19,10 @@ import { useData } from "./data";
 import { cx, dueLabel, duration, useUI, Avatar } from "./components";
 import { TaskLabels } from "./TaskLabels";
 const statuses = taskWorkflow;
+const cardTitle = (title: string) =>
+  Array.from(title).length > 96
+    ? Array.from(title).slice(0, 95).join("").trimEnd() + "…"
+    : title;
 const coordinates: KeyboardCoordinateGetter = (
   event,
   { currentCoordinates, context },
@@ -196,7 +200,9 @@ export function TaskBoard({
       <DragOverlay>
         {dragging ? (
           <div className="board-drag-preview">
-            <strong>{dragging.title}</strong>
+            <strong className="board-task-title">
+              {cardTitle(dragging.title)}
+            </strong>
             <span>Move to another status</span>
           </div>
         ) : null}
@@ -264,7 +270,9 @@ function BoardTask({
         onClick={() => openTask(task.id)}
         aria-label={task.title}
       >
-        <strong>{task.title}</strong>
+        <strong className="board-task-title" title={task.title}>
+          {cardTitle(task.title)}
+        </strong>
         <TaskLabels labels={task.labels} />
         <span className={"board-priority " + task.priority}>
           {task.priority} priority

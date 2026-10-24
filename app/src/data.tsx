@@ -7,13 +7,26 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import { useAction, useMutation, useQuery, useConvex } from "convex/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 import { type Command, type State, defaults } from "../shared/model";
-import { execute, completeDemoWrites, evaluateRisks } from "../shared/domain";
+import {
+  execute,
+  completeDemoWrites,
+  evaluateRisks,
+  addTaskArtifact,
+} from "../shared/domain";
+import { checkFile } from "../shared/artifacts";
+import {
+  storeDemoFile,
+  readDemoFile,
+  clearDemoFiles,
+  downloadBlob,
+} from "./artifactFiles";
 import { seedState, DEMO_USER } from "../shared/fixtures";
 export interface Data {
   local?: boolean;
@@ -37,6 +50,12 @@ export interface Data {
     command: Command,
     options?: { teamId?: string },
   ) => Promise<string>;
+  uploadArtifact: (
+    taskId: string,
+    file: File,
+    placement: "description" | "task",
+  ) => Promise<string>;
+  downloadArtifact: (taskId: string, artifactId: string) => Promise<void>;
   enableCollaboration: () => Promise<void>;
   acceptInvite: (token: string) => Promise<void>;
   inviteUrl: string;
@@ -134,6 +153,11 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     [inviteUrl, setInviteUrl] = useState(""),
     [demoTeamId, setDemoTeamId] = useState("all");
   const online = useOnline();
+  const demoState = useRef(state);
+  const updateDemo = (next: State) => {
+    demoState.current = next;
+    set(next);
+  };
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(state));
   }, [state]);
@@ -150,7 +174,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       invitationHash:
         command.type === "invite" ? crypto.randomUUID() : undefined,
     };
-    let { state: next, result } = execute(state, command, ctx);
+    let { state: next, result } = execute(demoState.current, command, ctx);
     // A foreground fixture of the server's recovery job, explicitly limited to
     // the synthetic owner. Real background execution belongs to Convex.
     if (command.type === "preferences" && !command.preferences.reviewRequired) {
@@ -189,7 +213,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       setInviteUrl(
         "Demo invitation created. Shared links require the connected Clerk and Convex backend.",
       );
-    set(next);
+    updateDemo(next);
     return result;
   };
   return (
@@ -215,9 +239,43 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         demo: true,
         online,
         dispatch,
+        uploadArtifact: async (taskId, file, placement) => {
+          checkFile(file.name, file.size, file.type);
+          if (!online) throw new Error("Reconnect before attaching a file.");
+          const id = browserId();
+          await storeDemoFile(id, file);
+          const next = structuredClone(demoState.current);
+          addTaskArtifact(
+            next,
+            {
+              id,
+              taskId,
+              name: file.name,
+              kind: "file",
+              placement,
+              size: file.size,
+              contentType: file.type,
+              createdBy: DEMO_USER,
+              createdAt: Date.now(),
+            },
+            { actorId: DEMO_USER, now: Date.now(), id: browserId },
+          );
+          updateDemo(next);
+          return id;
+        },
+        downloadArtifact: async (taskId, id) => {
+          const artifact = state.artifacts?.find(
+            (a) => a.id === id && a.taskId === taskId && !a.removedAt,
+          );
+          if (!artifact) throw new Error("This artifact is unavailable.");
+          downloadBlob(await readDemoFile(id), artifact.name);
+        },
         inviteUrl,
         enableCollaboration: async () => {
-          set({ ...state, workspace: { ...state.workspace, kind: "team" } });
+          updateDemo({
+            ...demoState.current,
+            workspace: { ...demoState.current.workspace, kind: "team" },
+          });
         },
         acceptInvite: async () => {
           throw new Error(
@@ -306,8 +364,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         mcpActivity: [],
         revokeToken: async () => {},
         reset: () => {
+          void clearDemoFiles().catch(() => {});
           localStorage.removeItem(storageKey);
-          set(seedState());
+          updateDemo(seedState());
         },
       }}
     >
@@ -340,6 +399,7 @@ export function LiveProvider({
     mint = useAction(api.tokens.mint),
     revoke = useMutation(api.tokens.revoke);
   const release = useAction(api.commands.release);
+  const prepareFile = useMutation(api.files.prepare);
   const convex = useConvex(),
     createFeed = useAction(api.calendar.createFeed),
     revokeFeed = useMutation(api.calendar.revokeFeed);
@@ -457,6 +517,58 @@ export function LiveProvider({
         demo: false,
         online,
         dispatch,
+        uploadArtifact: async (taskId, file, placement) => {
+          if (!online) throw new Error("Reconnect before attaching a file.");
+          checkFile(file.name, file.size, file.type);
+          const transfer = await prepareFile({
+            workspaceId: (state.resourceTeams?.[taskId] ??
+              workspaceId) as Id<"workspaces">,
+            taskId,
+            kind: "upload",
+            name: file.name,
+            size: file.size,
+            contentType: file.type || "application/octet-stream",
+            placement,
+          });
+          const response = await fetch(transfer.url, {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + transfer.token,
+              "Content-Type": file.type || "application/octet-stream",
+            },
+            body: file,
+            cache: "no-store",
+            referrerPolicy: "no-referrer",
+          });
+          if (!response.ok)
+            throw new Error(
+              "File upload failed. Check your connection and task access, then try again.",
+            );
+          return (await response.json()).artifactId as string;
+        },
+        downloadArtifact: async (taskId, id) => {
+          const artifact = state.artifacts?.find(
+            (a) => a.id === id && a.taskId === taskId && !a.removedAt,
+          );
+          if (!artifact) throw new Error("This artifact is unavailable.");
+          const transfer = await prepareFile({
+            workspaceId: (state.resourceTeams?.[taskId] ??
+              workspaceId) as Id<"workspaces">,
+            taskId,
+            kind: "download",
+            artifactId: id,
+          });
+          const response = await fetch(transfer.url, {
+            headers: { Authorization: "Bearer " + transfer.token },
+            cache: "no-store",
+            referrerPolicy: "no-referrer",
+          });
+          if (!response.ok)
+            throw new Error(
+              "Download unavailable. Check task access and try again.",
+            );
+          downloadBlob(await response.blob(), artifact.name);
+        },
         inviteUrl,
         enableCollaboration: async () => {
           await enable({ workspaceId });

@@ -48,3 +48,13 @@ Verified the cloud development backend deployment, isolated Git branch preview b
 
 Private account signup/sign-in and collaborative workflows against real accounts still require the account holder's live verification. Google OAuth and Resend delivery remain optional and unconfigured; no real email invitation, calendar provider connection, booking integration, or remote assistant session was exercised as part of hosting setup. The earlier local implementation evidence and external acceptance gates below remain relevant.
 
+## Task collaboration and compact cards — October 24, 2026
+
+Board titles are capped at 96 characters and two lines, retaining full accessible/hover text and the original task title. Priority colors are red/amber/green in board, list, and editable task fields. Responsibility labels are Owner and Worker. Dependencies expose accessible tasks across projects within one team, identify their project, and retain shared cycle/access validation.
+
+The task page has Comments and Activity tabs with paginated server history, multiline comments, attachment-only posts, notifications to authorized participants, description/task file uploads, HTTPS link artifacts, and authorized downloads. Live files use private Convex storage and one-use transfer credentials; file metadata does not expose storage IDs or public file URLs. Demo uploads remain browser-local in IndexedDB.
+
+Seven added Convex service checks passed for exact file bytes and private downloads, attachment-only comments, cross-task/team restrictions, private-project access and dependency cycles, removed/expired/replayed transfers, MIME/name/size constraints, MCP scope/revocation, owner notifications, and complete activity pagination beyond the short workspace projection. The existing domain/backend suite also passed. Five focused Chrome checks passed for compact titles, priority editing, file/comment persistence and downloads after reload, description links, full task/review behavior, independent column scrolling, and mobile width. The promotion suite now contains 131 backend/domain tests and 43 browser/PWA journeys.
+
+A separate synthetic identity on the actual local Convex backend successfully uploaded a small text fixture, posted a comment referencing it, downloaded identical bytes, detached the artifact, and archived the verification task. The user's own task records were not changed. Local Activity/Comments queries also rendered without console errors. No Google Drive file contents were accessed; link storage does not import provider documents.
+

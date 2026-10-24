@@ -233,6 +233,21 @@ export interface Activity {
   message: string;
   at: number;
   kind: "change" | "comment" | "policy";
+  attachmentIds?: string[];
+}
+export interface TaskArtifact {
+  id: string;
+  taskId: string;
+  name: string;
+  kind: "file" | "link";
+  placement: "description" | "task";
+  url?: string;
+  storageId?: string;
+  size?: number;
+  contentType?: string;
+  createdBy: string;
+  createdAt: number;
+  removedAt?: number;
 }
 export interface Invitation {
   id: string;
@@ -322,6 +337,7 @@ export interface State {
   }[];
   notifications: Notification[];
   activities: Activity[];
+  artifacts?: TaskArtifact[];
   reportEvents?: ReportEvent[];
   lifecycleEvents?: LifecycleEvent[];
   /** Authorized projection of due instants, without exposing others' preferences. */
@@ -382,7 +398,26 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("comment"),
     id,
-    body: z.string().trim().min(1).max(5000),
+    body: z.string().trim().max(5000),
+    attachmentIds: z.array(id).max(10).optional(),
+  }),
+  z.object({
+    type: z.literal("attach_link"),
+    id,
+    name: text,
+    url: z
+      .url()
+      .max(2048)
+      .refine(
+        (value) => new URL(value).protocol === "https:",
+        "Use an HTTPS link.",
+      ),
+    placement: z.enum(["description", "task"]).default("task"),
+  }),
+  z.object({
+    type: z.literal("remove_artifact"),
+    id,
+    artifactId: id,
   }),
   z.object({
     type: z.literal("create_project"),
