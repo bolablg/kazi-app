@@ -6,7 +6,7 @@ Tasks, projects, and work schedules in one application. Built from [MASTER_PROMP
 
 ## Open it locally
 
-Use Node 22.12+ (Node 24 LTS recommended).
+Use Node 24 LTS (`app/.nvmrc` pins the supported major version).
 
 ```sh
 cd app
