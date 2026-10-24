@@ -33,8 +33,6 @@ Kazi application source uses the root MIT license. Dependencies keep their own l
 | vitest                    | 4.1.12         | MIT               | Development |
 | wrangler                  | 4.152.0        | MIT OR Apache-2.0 | Development |
 
-The interface uses system fonts. Fontsource dependencies were removed during the Height-based redesign; earlier font license notices are retained as historical project files. No external font CDN, image license, mandatory analytics script, or proprietary UI kit is required. The app icon is original vector artwork; the supplied Height screenshot was used as the layout reference.
-
-Wrangler’s Miniflare Undici dependency is overridden to patched 7.30.1. Record the final audit result in TEST_REPORT.md; do not apply an automatic major-version downgrade to silence an audit.
+The interface uses system fonts and original vector app icons. Retained font license notices are included alongside this guide.
 
 Added dependencies: `@noble/hashes` 2.4.0 (MIT), used for namespaced deterministic resource identifiers, and `@dnd-kit/core` 6.3.1 (MIT), used for pointer/touch/keyboard board interaction. Their transitive dependencies remain pinned in the package lock. The local Convex binary/dashboard are downloaded by the official Convex CLI and are not embedded in the application bundle.
