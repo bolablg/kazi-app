@@ -104,6 +104,16 @@ Natural-language task descriptions, comments and calendar content are data. They
 
 ## What was verified
 
+Task collaboration uses the same commands and file service as the app:
+
+- `add_comment` accepts `body` and up to ten `attachmentIds`; an empty body requires attachments from that same task.
+- `attach_link` adds an HTTPS artifact to `description` or `task`; `remove_artifact` detaches an authorized artifact. These require `tasks:write`.
+- `list_task_activity` uses a continuation cursor and returns complete timestamped comments/activity; `list_task_artifacts` lists current task files and links. Both require `read`.
+- `prepare_task_upload` requires `tasks:write` and returns `{url,token,expiresAt}`. POST the raw file bytes to `url` with `Authorization: Bearer <token>`; the response returns `artifactId`. This avoids putting file bodies in MCP JSON messages. Use that ID with `add_comment` to include the file in a comment.
+- `prepare_artifact_download` requires `read`. GET the returned URL with the one-use token in the Authorization header. Never put transfer tokens in query strings. File access is checked again on transfer, including credential revocation.
+
+Files are capped at 20 MB. File metadata never exposes storage IDs or direct public download URLs. Linked Google Drive files remain subject to Drive's existing access rules; Kazi does not fetch them automatically.
+
 SDK clients cover tool discovery, every command’s registration, capture delegation, exact approval schema, review links, and HTTP initialization. Convex tests exercise real authenticated MCP tool calls, granular scope denial, comments/status shared state, archive filtering, and constrained credential delegation. Native agenda tests cover real verified proposal/approval with no external outbox, live ICS route rendering, secret links, current membership checks, and revocation. See [verification results](TEST_REPORT.md) for current run totals. No live external Google/Outlook/Apple account subscription is claimed.
 After connection, verify `list_workspaces`, capture a uniquely named synthetic task, retry with the same request ID, generate a preview, and inspect that no event exists before approval. Revoke the token and verify a subsequent request receives 401. Never use live personal calendar contents to populate a demo.
 

@@ -15,6 +15,7 @@ export const tables = {
   attempts: "attempts",
   notifications: "notifications",
   activities: "activities",
+  artifacts: "taskArtifacts",
   invitations: "invitations",
   calendars: "calendarStatuses",
   busy: "busy",
@@ -60,6 +61,7 @@ export async function loadState(
       const docs = await ctx.db
         .query(table)
         .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
+        .order(field === "activities" ? "desc" : "asc")
         .take(limit);
       if (docs.length === 1001)
         throw new ConvexError({
@@ -94,8 +96,8 @@ export async function persist(
   // cross-document references are resolved below in the same transaction.
   for (const field of Object.keys(tables) as EntityField[]) {
     const table = tables[field],
-      old = before[field] as unknown as Record<string, unknown>[],
-      next = after[field] as unknown as Record<string, unknown>[];
+      old = (before[field] ?? []) as unknown as Record<string, unknown>[],
+      next = (after[field] ?? []) as unknown as Record<string, unknown>[];
     const key = (row: Record<string, unknown>) =>
       String(row.id ?? row.ownerId ?? `${row.ownerId}:${row.start}:${row.end}`);
     const keyFor = (row: Record<string, unknown>) =>

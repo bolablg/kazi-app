@@ -12,6 +12,7 @@ import type * as calendar from "../calendar.js";
 import type * as commands from "../commands.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
+import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as reports from "../reports.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   commands: typeof commands;
   crons: typeof crons;
   crypto: typeof crypto;
+  files: typeof files;
   http: typeof http;
   jobs: typeof jobs;
   reports: typeof reports;
