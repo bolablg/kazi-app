@@ -1,3 +1,4 @@
+import { choosePerson } from "./task-fields";
 import { test, expect } from "@playwright/test";
 import { chooseStatus } from "./task-fields";
 
@@ -109,7 +110,7 @@ test("owner validation appears with My work even for another worker and recent a
   await form
     .getByLabel("Project", { exact: true })
     .selectOption({ label: "Website launch" });
-  await form.getByLabel("Worker", { exact: true }).selectOption("demo-amira");
+  await choosePerson(page, "Worker", "Amira Chen");
   await form.getByRole("button", { name: "Create task", exact: true }).click();
   await expect(form).toBeHidden();
   await page.goto("/tasks");

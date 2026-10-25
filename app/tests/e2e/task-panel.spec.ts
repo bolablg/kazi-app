@@ -1,3 +1,4 @@
+import { choosePerson } from "./task-fields";
 import { chooseStatus } from "./task-fields";
 import { test, expect } from "@playwright/test";
 
@@ -119,10 +120,8 @@ test("full-page task puts description before details, saves changes, and closes 
   await expect(panel.getByLabel("Worker", { exact: true })).toBeVisible();
   for (const signal of ["complete", "underway", "waiting"])
     await expect(panel.locator(`.dependency-node.${signal}`)).toHaveCount(1);
-  await panel
-    .getByLabel("Add collaborator", { exact: true })
-    .selectOption("demo-daniel");
-  await expect(panel.locator(".collaborator-chip")).toContainText("Daniel");
+  await choosePerson(page, "Collaborators", "Daniel Okafor");
+  await expect(panel.locator(".person-chip")).toContainText("Daniel");
   await panel
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
@@ -131,7 +130,7 @@ test("full-page task puts description before details, saves changes, and closes 
   await expect(panel).toBeHidden();
   await expect(page).toHaveURL(/\/tasks\?view=board$/);
   await page.getByRole("button", { name: title, exact: true }).click();
-  await expect(panel.locator(".collaborator-chip")).toContainText("Daniel");
+  await expect(panel.locator(".person-chip")).toContainText("Daniel");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

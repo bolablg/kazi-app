@@ -102,7 +102,15 @@ export function createKaziServer(
     limit: z.number().int().min(1).max(100).default(50),
   };
   register("list_workspaces", "List workspaces authorized for this token.", {});
-  register("list_members", "List authorized workspace members.", page);
+  register(
+    "list_members",
+    "Find teammates by name, username or email. Pass projectId to return only people with access to that project. Use the returned stable member IDs for owners, workers, collaborators and mentions.",
+    {
+      ...page,
+      search: z.string().max(180).optional(),
+      projectId: z.string().optional(),
+    },
+  );
   register(
     "list_projects",
     "List authorized projects. Default excludes archived projects; IDs stay stable when titles change.",
@@ -125,7 +133,7 @@ export function createKaziServer(
       status: statusSchema.optional(),
       archived: z.boolean().default(false),
       assigneeId: z.string().optional(),
-      label: z.string().optional(),
+      label: z.string().optional().describe("Filter by a task tag."),
       search: z.string().max(180).optional(),
     },
   );
@@ -190,7 +198,9 @@ export function createKaziServer(
     update_task:
       "Edit one shared task. Status stages: backlog, todo, in_progress, to_validate, done (Completed), archived. Archived work is outside the board; restore with backlog. All global and project views update together. Set startDate and deadline for the timeline. Empty date strings clear dates.",
     create_task:
-      "Capture a task, optionally in Backlog. Omitting projectId uses Personal planning. Exact assignee IDs only; unassigned clears assignment. Subtasks, labels, dates, and dependencies use the same validation as the app.",
+      "Capture a task in the exact workspace/team, optionally in Backlog. A personal workspace is private; a team workspace shares according to project access. Omitting projectId uses that workspace’s planning project. Exact assignee/owner/collaborator IDs only; unassigned clears assignment. descriptionMentions contains {memberId,start,end} references to @text using UTF-16 string offsets. Mentions add collaborators and notify on save. Same validation as the app.",
+    comment:
+      "Post a comment with optional files and people mentions. mentions contains {memberId,start,end} references to @text in body using UTF-16 string offsets. Use list_members with projectId to find eligible people. Mentioned people become collaborators and receive one notification per comment; no access is granted to outsiders.",
     update_project:
       "Edit project dates, access, or lifecycle (planned, active, on_hold, done = Delivered). Delivery is independent from task completion. archived hides the project and preserves history.",
     favorite_project:

@@ -40,6 +40,7 @@ export const memberV = v.object({
   id: v.string(),
   name: v.string(),
   email: v.string(),
+  username: v.optional(v.string()),
   role: v.union(
     v.literal("owner"),
     v.literal("admin"),
@@ -78,6 +79,11 @@ export const projectV = v.object({
     v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
   ),
 });
+export const mentionV = v.object({
+  memberId: v.string(),
+  start: v.number(),
+  end: v.number(),
+});
 export const taskV = v.object({
   ownerId: v.optional(v.string()),
   brainstorm: v.optional(v.boolean()),
@@ -87,6 +93,7 @@ export const taskV = v.object({
   projectId: v.string(),
   title: v.string(),
   description: v.string(),
+  descriptionMentions: v.optional(v.array(mentionV)),
   status: v.union(
     v.literal("idea"),
     v.literal("backlog"),
@@ -253,6 +260,7 @@ export const notificationV = v.object({
   deliveryAt: v.number(),
 });
 export const activityV = v.object({
+  mentions: v.optional(v.array(mentionV)),
   id: v.string(),
   actorId: v.string(),
   taskId: v.optional(v.string()),

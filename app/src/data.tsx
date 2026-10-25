@@ -32,6 +32,7 @@ export interface Data {
   local?: boolean;
   workspaceId?: Id<"workspaces">;
   state: State;
+  captureState?: State;
   actorId: string;
   demo: boolean;
   online: boolean;
@@ -418,8 +419,13 @@ export function LiveProvider({
   const selected =
     teamId === "all" ? ordered : ordered.filter((entry) => entry.id === teamId);
   const effective = selected.length ? selected : ordered;
+  const allState = ordered.length
+    ? mergeTeamStates(ordered, actorId)
+    : undefined;
   const state = effective.length
-    ? mergeTeamStates(effective, actorId)
+    ? teamId === "all" || !selected.length
+      ? allState
+      : mergeTeamStates(effective, actorId)
     : undefined;
   const workspaceId = (effective[0]?.id ?? primaryId) as
     Id<"workspaces"> | undefined;
@@ -499,6 +505,7 @@ export function LiveProvider({
     <Context.Provider
       value={{
         state: state as State,
+        captureState: allState,
         teamId: selected.length ? teamId : "all",
         teamIds: effective.map((entry) => entry.id),
         teams: ordered.map(({ id, state }) => ({

@@ -1,4 +1,5 @@
 import { mergeTeamStates } from "../shared/teams";
+import { searchPeople, taskPeople } from "../shared/people";
 import { buildStageReport } from "../shared/lifecycle";
 import {
   isArchivedTask,
@@ -668,8 +669,21 @@ const mcp = httpAction(async (ctx, request) => {
             subject: principal.subject,
           });
         case "list_members":
+          if (input.projectId)
+            projectFor(state, String(input.projectId), principal.subject);
           return page(
-            state.members.map(({ id, name, role }) => ({ id, name, role })),
+            searchPeople(
+              input.projectId
+                ? taskPeople(state, String(input.projectId))
+                : state.members,
+              String(input.search ?? ""),
+            ).map(({ id, name, username, email, role }) => ({
+              id,
+              name,
+              username,
+              email,
+              role,
+            })),
           );
         case "list_projects":
           return page(

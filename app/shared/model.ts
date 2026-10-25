@@ -73,6 +73,7 @@ export interface Member {
   id: string;
   name: string;
   email: string;
+  username?: string;
   role: z.infer<typeof roleSchema>;
   color: string;
   preferences: Preferences;
@@ -109,6 +110,7 @@ export interface Task {
   projectId: string;
   title: string;
   description: string;
+  descriptionMentions?: Mention[];
   status: z.infer<typeof statusSchema>;
   priority: z.infer<typeof prioritySchema>;
   assigneeId?: string;
@@ -234,6 +236,7 @@ export interface Activity {
   at: number;
   kind: "change" | "comment" | "policy";
   attachmentIds?: string[];
+  mentions?: Mention[];
   fromStatus?: Task["status"];
   toStatus?: Task["status"];
   changes?: string[];
@@ -350,6 +353,12 @@ export interface State {
   busy: Busy[];
 }
 
+export const mentionSchema = z.object({
+  memberId: id,
+  start: z.number().int().min(0),
+  end: z.number().int().min(1),
+});
+export type Mention = z.infer<typeof mentionSchema>;
 const plannedDate = z.union([z.iso.date(), z.literal("")]).optional();
 const taskFields = {
   startDate: plannedDate,
@@ -360,6 +369,7 @@ const taskFields = {
   collaborators: z.array(id).max(30).optional(),
   title: text,
   description: z.string().max(5000),
+  descriptionMentions: z.array(mentionSchema).max(30).optional(),
   projectId: id.optional(),
   assigneeId: id.optional(),
   priority: prioritySchema,
@@ -367,7 +377,7 @@ const taskFields = {
   remainingMinutes: z.number().int().min(0).max(100000).optional(),
   deadline: z.string().optional(),
   dependencies: z.array(id).max(100),
-  labels: z.array(text).max(20),
+  labels: z.array(text).max(20).describe("Colored task tags."),
   parentId: id.optional(),
 };
 export const commandSchema = z.discriminatedUnion("type", [
@@ -401,7 +411,8 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("comment"),
     id,
-    body: z.string().trim().max(5000),
+    body: z.string().max(5000),
+    mentions: z.array(mentionSchema).max(30).optional(),
     attachmentIds: z.array(id).max(10).optional(),
   }),
   z.object({
