@@ -73,7 +73,11 @@ export function AccountMenu() {
           <strong>{me.name}</strong>
           <span>{me.email}</span>
           <small className="role-badge">
-            {me.role === "owner" ? "Owner" : me.role}
+            {me.role === "owner"
+              ? "Owner"
+              : me.role === "admin"
+                ? "Manager"
+                : me.role}
           </small>
         </div>
         <Link
@@ -151,7 +155,7 @@ export function AccountSettings() {
               },
               navbar: {
                 backgroundColor: "#fff8f5",
-                borderRight: "1px solid #111",
+                borderRight: "1px solid #e5e8ee",
                 boxShadow: "none",
               },
               scrollBox: { borderRadius: "0", boxShadow: "none" },
@@ -185,40 +189,6 @@ export function AccountSettings() {
           {local ? "This local development session" : "This demo"} uses a sample
           account. Profile and security settings are available when you sign in
           to Kazi.
-        </p>
-      </section>
-    </div>
-  );
-}
-export function WorkspaceSettings() {
-  const { state, actorId } = useData();
-  const me = state.members.find((m) => m.id === actorId)!;
-  return (
-    <div className="settings-form">
-      <section className="settings-section">
-        <h2>Application details</h2>
-        <div className="diagnostic-row">
-          <span>Application</span>
-          <strong>Kazi</strong>
-        </div>
-        <div className="diagnostic-row">
-          <span>Your role</span>
-          <strong>{me.role}</strong>
-        </div>
-        <div className="diagnostic-row">
-          <span>Members</span>
-          <strong>{state.members.length}</strong>
-        </div>
-        <Link className="button secondary" to="/teams">
-          Manage people & access
-        </Link>
-      </section>
-      <section className="settings-section">
-        <h2>Administration</h2>
-        <p>
-          {["owner", "admin"].includes(me.role)
-            ? "You can invite members, grant project access, and revoke membership from People & access."
-            : "Contact your owner to change membership or project access."}
         </p>
       </section>
     </div>

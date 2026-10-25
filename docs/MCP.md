@@ -54,7 +54,7 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 | Favorites                                                 | `favorite_project`, `favorite_team`; `list_projects` with `favorite:true`, `list_workspaces` with personal `favoriteAt` metadata                             |
 | Project timeline                                          | `get_project_timeline`, task start/deadline/dependency updates                                                                                               |
 | Calendar / Schedule                                       | `get_agenda`, `get_calendar`, `get_week_availability`                                                                                                        |
-| Today overview                                            | `get_today_overview` with optional `teamIds`, `person`, `projectId`, and queue page numbers                                                                                      |
+| Today overview                                            | `get_today_overview` with optional `teamIds`, `person`, `projectId`, and queue page numbers                                                                  |
 | Proposal, alternatives, recovery, approval, release       | `propose_plan`, `select_alternative`, `propose_recovery_plan`, `approve_plan`, `release_sessions`, `reject_plan`                                             |
 | Plan history and review URL                               | `get_plan_history`, `get_proposal`, `get_plan_review_link`                                                                                                   |
 | Review, validation, return reason                         | `review_task`                                                                                                                                                |
@@ -63,7 +63,7 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 | Preferences and automatic policy                          | `get_preferences`, `set_preferences`                                                                                                                         |
 | Notifications                                             | `list_notifications`, `acknowledge_notification`                                                                                                             |
 | Team creation and selection                               | `list_teams`, `create_team`; scoped `workspaceId` on writes                                                                                                  |
-| Collaboration and people                                  | `enable_collaboration`, `list_members`, `invite_person`, `list_invitations`, `revoke_invitation`, `remove_member`                                            |
+| Collaboration and people                                  | `enable_collaboration`, `list_members`, `invite_person`, `list_invitations`, `revoke_invitation`, `set_member_role`, `remove_member`                         |
 | Kazi calendar subscription / download                     | `use_kazi_agenda`, `create_calendar_link`, `list_calendar_links`, `revoke_calendar_link`, `export_agenda`                                                    |
 | Optional external availability                            | `connect_calendar_availability`, `list_external_calendars`, `set_calendar_availability`, `refresh_calendar_availability`, `disconnect_calendar_availability` |
 | MCP credentials and activity                              | `create_credential`, `list_credentials`, `revoke_credential`, `list_mcp_activity`                                                                            |
@@ -71,6 +71,8 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 | Discovery / permission definitions                        | `list_workspaces`, `list_capabilities`                                                                                                                       |
 
 A proposal is a preview. `approve_plan` is a real data action when the token explicitly has `plans:approve`; it uses the same fresh availability, current revision, predecessor, owner, membership, and task/constraint checks as the UI. A generic `confirmed:true` is not authority. Team sessions still wait for the necessary owners. `set_preferences` similarly requires `settings:write`; task text cannot authorize a policy change.
+
+`set_member_role` takes an exact team `workspaceId`, member `id`, `role`, and a unique `requestId`. It requires `people:manage` and the caller must be that team’s owner. Roles are `admin` (Manager in the interface), `member`, or `guest`. The owner cannot be demoted, and every change records timestamped activity. Managers can invite members and guests; only owners can invite managers.
 
 `favorite_team` takes `favorite:true` or `false` and the exact shared-team `workspaceId`. It requires `settings:write` and an existing membership. It changes only the caller's personal shortcut, without changing team access or roles. `list_workspaces` returns that caller's `favoriteAt` timestamp for starred teams. Project and team timestamps order the app's combined Favorites list; older project stars remain supported.
 

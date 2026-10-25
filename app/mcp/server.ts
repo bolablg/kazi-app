@@ -193,6 +193,8 @@ export function createKaziServer(
     invite: "invite_person",
   };
   const descriptions: Partial<Record<string, string>> = {
+    set_member_role:
+      "Change an existing team member's role. Owner only; cannot change the owner's role. admin means Manager in the app, member means Member, guest keeps project-restricted access. Records timestamped activity. Requires explicit user intent to change team access.",
     review_task:
       "Approve a task waiting To validate, or return it to In progress with a required reason. Task owner or administrator only. Notifies the worker and records immutable status timestamps.",
     update_task:

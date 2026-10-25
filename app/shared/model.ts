@@ -500,6 +500,11 @@ export const commandSchema = z.discriminatedUnion("type", [
     projectIds: z.array(id).default([]),
   }),
   z.object({ type: z.literal("revoke_invitation"), id }),
+  z.object({
+    type: z.literal("set_member_role"),
+    id,
+    role: z.enum(["admin", "member", "guest"]),
+  }),
   z.object({ type: z.literal("remove_member"), id }),
   z.object({
     type: z.literal("release_sessions"),
