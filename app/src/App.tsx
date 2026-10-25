@@ -1,4 +1,4 @@
-import { TeamFilter } from "./TeamFilter";
+import { TeamSidebar } from "./TeamSidebar";
 import {
   projectPath,
   taskPath,
@@ -61,6 +61,7 @@ import {
 } from "./components";
 import { OverviewPage } from "./OverviewPage";
 import { CalendarPage } from "./CalendarPage";
+import { CalendarSubscriptionsPage } from "./AgendaSettings";
 import { TasksPage, ProjectsPage, ProjectDetail } from "./WorkPages";
 import { PlansPage, PlanReview } from "./PlanningPages";
 const InsightsPage = lazy(() =>
@@ -108,7 +109,7 @@ function Shell() {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const { state, actorId, demo, online, local } = useData(),
+  const { state, actorId, demo, online, local, teams, teamId } = useData(),
     { run } = useUI(),
     navigate = useNavigate(),
     location = useLocation();
@@ -231,13 +232,15 @@ function Shell() {
       : navigationResource.kind === "plan"
         ? "Plans"
         : (primary.find((n) => n.path === navigationLocation.pathname)?.label ??
-          (location.pathname === "/team"
+          (["/team", "/teams"].includes(location.pathname)
             ? "Team & people"
             : location.pathname === "/connections"
               ? "Connections"
-              : location.pathname === "/settings"
-                ? "Settings"
-                : "Welcome"));
+              : location.pathname === "/calendar/subscriptions"
+                ? "Calendar"
+                : location.pathname === "/settings"
+                  ? "Settings"
+                  : "Welcome"));
   const legacyParams = new URLSearchParams(location.search);
   if (location.pathname === "/" && legacyParams.get("view") === "list") {
     legacyParams.set("view", "list");
@@ -302,92 +305,110 @@ function Shell() {
           <span className="kazi-mark">k</span>
           <strong>Kazi</strong>
         </Link>
-        <button className="sidebar-search" onClick={() => setSearchOpen(true)}>
-          <Search size={16} />
-          <span>Search</span>
-          <kbd>⌘ K</kbd>
-        </button>
-        <div className="nav-group-label">Work</div>
-        <nav aria-label="Main navigation">
-          {primary.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobile(false)}
-              aria-label={item.label}
-              end={item.path === "/"}
-              className={() =>
-                cx(
-                  "nav-item",
-                  (item.path === navigationLocation.pathname ||
-                    (item.path === "/projects" &&
-                      navigationLocation.pathname.startsWith("/project/")) ||
-                    (item.path === "/plans" &&
-                      navigationResource.kind === "plan")) &&
-                    "active",
-                )
-              }
-            >
-              <item.icon size={18} strokeWidth={1.6} />
-              <span>{item.label}</span>
-              {item.path === "/notifications" && unread > 0 && (
-                <span className="nav-count">{unread}</span>
-              )}
-              {item.path === "/plans" && pending > 0 && (
-                <span className="nav-dot" />
-              )}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="sidebar-project-heading">
+        <div className="sidebar-scroll">
           <button
-            className="sidebar-favorites-toggle nav-group-label"
-            aria-expanded={favoritesOpen}
-            aria-controls="favorite-projects"
-            onClick={() => setFavoritesOpen((open) => !open)}
+            className="sidebar-search"
+            onClick={() => setSearchOpen(true)}
           >
-            <ChevronDown
-              size={15}
-              className={favoritesOpen ? "" : "collapsed"}
-            />
-            Favorites
+            <Search size={16} />
+            <span>Search</span>
+            <kbd>⌘ K</kbd>
           </button>
-          <button
-            className="icon-button"
-            aria-label="Create project"
-            onClick={() => setProjectForm(true)}
-          >
-            <Plus size={14} />
-          </button>
-        </div>
-        <div
-          className="sidebar-projects"
-          id="favorite-projects"
-          hidden={!favoritesOpen}
-        >
-          {favoriteProjects.map((p) => (
-            <NavLink
-              className="sidebar-project"
-              key={p.id}
-              to={projectPath(p.id)}
+          <div className="nav-group-label">Work</div>
+          <nav aria-label="Main navigation">
+            {primary.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobile(false)}
+                aria-label={item.label}
+                end={item.path === "/"}
+                className={() =>
+                  cx(
+                    "nav-item",
+                    (item.path === navigationLocation.pathname ||
+                      (item.path === "/calendar" &&
+                        navigationLocation.pathname.startsWith("/calendar/")) ||
+                      (item.path === "/projects" &&
+                        navigationLocation.pathname.startsWith("/project/")) ||
+                      (item.path === "/plans" &&
+                        navigationResource.kind === "plan")) &&
+                      "active",
+                  )
+                }
+              >
+                <item.icon size={18} strokeWidth={1.6} />
+                <span>{item.label}</span>
+                {item.path === "/notifications" && unread > 0 && (
+                  <span className="nav-count">{unread}</span>
+                )}
+                {item.path === "/plans" && pending > 0 && (
+                  <span className="nav-dot" />
+                )}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="sidebar-project-heading">
+            <button
+              className="sidebar-favorites-toggle nav-group-label"
+              aria-expanded={favoritesOpen}
+              aria-controls="favorite-projects"
+              onClick={() => setFavoritesOpen((open) => !open)}
             >
-              <i
-                className={p.color}
-                style={{
-                  ...projectStyle(p.color),
-                  background: "var(--project-accent)",
-                }}
+              <ChevronDown
+                size={15}
+                className={favoritesOpen ? "" : "collapsed"}
               />
-              <span>{p.title}</span>
-            </NavLink>
-          ))}
-          {!favoriteProjects.length && (
-            <p className="sidebar-favorites-empty">
-              Star projects to keep them here.
-            </p>
-          )}
+              Favorites
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Create project"
+              onClick={() => setProjectForm(true)}
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+          <div
+            className="sidebar-projects"
+            id="favorite-projects"
+            hidden={!favoritesOpen}
+          >
+            {favoriteProjects.slice(0, 5).map((p) => (
+              <NavLink
+                className="sidebar-project"
+                key={p.id}
+                to={projectPath(p.id)}
+                onClick={() => setMobile(false)}
+              >
+                <i
+                  className={p.color}
+                  style={{
+                    ...projectStyle(p.color),
+                    background: "var(--project-accent)",
+                  }}
+                />
+                <span>{p.title}</span>
+              </NavLink>
+            ))}
+            {favoriteProjects.length > 5 && (
+              <Link
+                className="sidebar-more"
+                to="/projects"
+                onClick={() => setMobile(false)}
+              >
+                More projects
+                <ArrowUpRight size={14} />
+              </Link>
+            )}
+            {!favoriteProjects.length && (
+              <p className="sidebar-favorites-empty">
+                Star projects to keep them here.
+              </p>
+            )}
+          </div>
+          <TeamSidebar onSelect={() => setMobile(false)} />
         </div>
-        <div className="sidebar-spacer" />
         <AccountMenu />
       </aside>
       <div className="main-area">
@@ -401,13 +422,19 @@ function Shell() {
               <Menu size={21} />
             </button>
             <strong>{pageName}</strong>
+            <span className="team-scope-label" title="Current team filter">
+              {teamId === "all"
+                ? "All teams"
+                : teams.find((team) => team.id === teamId)?.kind === "personal"
+                  ? "Personal"
+                  : teams.find((team) => team.id === teamId)?.name}
+            </span>
             {(demo || local) && (
               <span className="demo-label">
                 {local ? "Local development" : "Demo"}
               </span>
             )}
           </div>
-          <TeamFilter />
           <div className="topbar-actions">
             <button
               className="search-trigger"
@@ -500,6 +527,10 @@ function Shell() {
               >
                 <Route path="/" element={<OverviewPage {...props} />} />
                 <Route path="/calendar" element={<CalendarPage {...props} />} />
+                <Route
+                  path="/calendar/subscriptions"
+                  element={<CalendarSubscriptionsPage />}
+                />
                 <Route
                   path="/my-tasks"
                   element={
@@ -613,6 +644,7 @@ function Shell() {
                   }
                 />
                 <Route path="/team" element={<TeamPage />} />
+                <Route path="/teams" element={<TeamPage directory />} />
                 <Route
                   path="/settings"
                   element={<SettingsPage key="settings" />}

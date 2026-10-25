@@ -1,0 +1,141 @@
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  padding-bottom: 20px;
+}
+.sidebar-scroll > .nav-group-label {
+  margin: 0 10px 10px;
+}
+.sidebar > .wordmark,
+.sidebar > .account-menu {
+  flex-shrink: 0;
+}
+.sidebar-team,
+.sidebar-more {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #111;
+  font-size: 13px;
+  text-align: left;
+}
+.sidebar-team > span:not(.team-shortcut-icon) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-team > svg,
+.sidebar-more > svg {
+  flex-shrink: 0;
+}
+.sidebar-team:hover,
+.sidebar-more:hover {
+  background: var(--brand-wash);
+}
+.sidebar-team.active {
+  background: #fce1d9;
+  border-color: var(--brand-line);
+  font-weight: 600;
+}
+.team-shortcut-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #e5eefb;
+  color: #1764c0;
+  flex-shrink: 0;
+}
+.team-shortcut-icon[data-personal="true"] {
+  background: #f1ebfa;
+  color: #7552a3;
+}
+.sidebar-more {
+  justify-content: space-between;
+  font-size: 12px;
+}
+.team-scope-label {
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  padding-left: 12px;
+  border-left: 1px solid #111;
+}
+.calendar-heading-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.overview-page > .page-heading {
+  flex-wrap: wrap;
+}
+.embedded-account-profile {
+  width: 100%;
+  min-width: 0;
+}
+.embedded-account-profile .cl-rootBox,
+.embedded-account-profile .cl-cardBox {
+  width: 100%;
+  max-width: none;
+}
+.embedded-account-profile .cl-cardBox {
+  height: auto;
+  min-height: 32rem;
+  box-shadow: none;
+  border: 0;
+}
+.embedded-account-profile .cl-scrollBox {
+  max-height: none;
+}
+.embedded-account-profile .cl-pageScrollBox {
+  min-width: 0;
+  padding: 24px;
+}
+.calendar-sharing-scope {
+  padding: 12px 14px;
+  background: var(--brand-wash);
+  border-left: 3px solid var(--brand);
+  font-size: 13px;
+}
+@media (max-width: 1023px) {
+  .sidebar-team,
+  .sidebar-more {
+    min-height: 44px;
+  }
+}
+@media (max-width: 700px) {
+  .team-scope-label {
+    max-width: 95px;
+    padding-left: 8px;
+  }
+  .calendar-heading-actions {
+    width: 100%;
+  }
+  .calendar-heading-actions .button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .embedded-account-profile .cl-pageScrollBox {
+    padding: 16px;
+  }
+  .embedded-account-profile .cl-cardBox {
+    min-height: 0;
+  }
+}
