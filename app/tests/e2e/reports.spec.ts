@@ -3,14 +3,14 @@ import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
-  await page.goto("/reports");
+  await page.goto("/insights");
   await page.waitForLoadState("networkidle");
 });
 test("reports track delivery, flow, planned workload and project goals without manual time logging", async ({
   page,
 }) => {
-  await expect(page.getByLabel("Report summary")).toContainText("67%");
-  await expect(page.getByLabel("Report summary")).not.toContainText("Logged");
+  await expect(page.getByLabel("Insights summary")).toContainText("67%");
+  await expect(page.getByLabel("Insights summary")).not.toContainText("Logged");
   await expect(
     page.getByRole("heading", { name: "Created vs completed" }),
   ).toBeVisible();
@@ -24,12 +24,12 @@ test("reports track delivery, flow, planned workload and project goals without m
     }),
   ).toBeVisible();
   await page
-    .getByLabel("Report project")
+    .getByLabel("Insights project")
     .selectOption({ label: "Cloud certification" });
   await expect(
     page.getByRole("heading", { name: "No confirmed calendar blocks" }),
   ).toBeVisible();
-  await page.getByLabel("Report project").selectOption("all");
+  await page.getByLabel("Insights project").selectOption("all");
   await page.getByRole("tab", { name: "Performance", exact: true }).click();
   await expect(
     page.getByText("Median cycle time", { exact: true }),
@@ -40,7 +40,7 @@ test("reports track delivery, flow, planned workload and project goals without m
   await expect(page).toHaveURL(/\/project\/[a-f0-9]{32}\/task\/[a-f0-9]{32}$/);
   await page.getByRole("button", { name: "Close task" }).click();
   await expect(page).toHaveURL(/\/tasks/);
-  await page.goto("/reports?tab=Performance");
+  await page.goto("/insights?tab=Performance");
   await page.getByRole("tab", { name: "Goals", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Project goals & milestones" }),
@@ -70,15 +70,15 @@ test("completion updates analytics automatically, custom periods filter records,
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close task" }).click();
   await expect(page).toHaveURL(/\/tasks/);
-  await page.goto("/reports?tab=Performance");
+  await page.goto("/insights?tab=Performance");
   await expect(
-    page.getByLabel("Report summary").locator("strong").first(),
+    page.getByLabel("Insights summary").locator("strong").first(),
   ).toHaveText("4");
-  await page.getByLabel("Report period").selectOption("custom");
-  await page.getByLabel("Report start date").fill("2026-10-26");
-  await page.getByLabel("Report end date").fill("2026-10-26");
+  await page.getByLabel("Insights period").selectOption("custom");
+  await page.getByLabel("Insights start date").fill("2026-10-26");
+  await page.getByLabel("Insights end date").fill("2026-10-26");
   await expect(
-    page.getByLabel("Report summary").locator("strong").first(),
+    page.getByLabel("Insights summary").locator("strong").first(),
   ).toHaveText("2");
   const pending = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export daily totals" }).click();
@@ -89,7 +89,7 @@ test("completion updates analytics automatically, custom periods filter records,
   expect(download.suggestedFilename()).toBe(
     "kazi-report-2026-10-26-2026-10-26.csv",
   );
-  await page.getByLabel("Report start date").fill("2026-10-27");
+  await page.getByLabel("Insights start date").fill("2026-10-27");
   await expect(page.getByRole("alert")).toContainText("Choose a date range");
 });
 test("project colors agree between calendar labels and reports", async ({
@@ -100,7 +100,7 @@ test("project colors agree between calendar labels and reports", async ({
     .filter({ hasText: "Brand handbook" })
     .evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(color).toBe("rgb(250, 210, 207)");
-  await page.goto("/?view=calendar&range=day");
+  await page.goto("/calendar?view=calendar&range=day");
   await expect(
     page
       .locator(".day-due-items button")
@@ -121,7 +121,7 @@ test("all report tabs and panels fit phones, tablets and desktop", async ({
     ]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       const tabsFit = await page
-        .getByRole("tablist", { name: "Report views" })
+        .getByRole("tablist", { name: "Insights views" })
         .evaluate((element) =>
           Array.from(element.querySelectorAll("button")).every((button) => {
             const a = element.getBoundingClientRect(),

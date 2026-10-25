@@ -1,6 +1,6 @@
-# Automatic analytics and performance
+# Insights
 
-Open **Reports** for Summary, Workload, Performance, Workflow, and Goals. All share a global team filter, person filter, project filter, and Last 7/30/90 days or a custom period up to 366 days. Days use the viewer's saved timezone. The app does not require manual time logging, and logged minutes are not used as performance metrics.
+Open **Insights** for Summary, Workload, Performance, Workflow, and Goals. All share a global team filter, person filter, project filter, and Last 7/30/90 days or a custom period up to 366 days. Days use the viewer's saved timezone. The app does not require manual time logging, and logged minutes are not used as performance metrics.
 
 ## Delivery and flow
 
@@ -30,7 +30,7 @@ Project goals show current task-based progress: completed leaf tasks divided by 
 
 Status changes automatically record start/status-change timestamps. Completing work appends an immutable reporting fact in the same transaction. Command retries use the existing idempotency mechanism, and re-saving an already-done task does not create another finish. Dates are not parsed from activity text or inferred from `updatedAt`.
 
-Earlier completed tasks with no finish date remain in project progress but do not receive invented trend dates. Earlier records without start/creation snapshots are omitted from the corresponding elapsed-time metrics. Historical logged-time fields are retained for compatibility and data preservation, but the Reports interface does not use them. The progress form no longer requests manually worked minutes.
+Earlier completed tasks with no finish date remain in project progress but do not receive invented trend dates. Earlier records without start/creation snapshots are omitted from the corresponding elapsed-time metrics. Historical logged-time fields are retained for compatibility and data preservation, but the Insights interface does not use them. The progress form no longer requests manually worked minutes.
 
 Live history uses a workspace/time index and cursor pagination (100 records per page), independent of the bounded activity feed. The screen waits for all pages before showing totals, including a previous-period window when applicable. Every page checks current workspace membership, present task access, and the reporting fact's historical project access. Private calendar titles and busy-event details are never included.
 
@@ -53,3 +53,5 @@ Workflow reports include all five stages, current counts and age, and total, mea
 Settings → Planning saves per-person aging thresholds. Defaults are Backlog 90, To do 14, In progress 7, and To validate 2 days. To Brainstorm keeps an idea in Backlog with a separate review date; it is excluded from aging alerts until review is due. The report links to flagged tasks and retained ideas.
 
 Lifecycle facts include entity, action, actor, assignee/owner where applicable, revision, changed fields, timestamp, previous/new status, and a review-return reason. They are immutable and cursor-paginated independently of the short activity feed. All-team reports merge only currently authorized memberships and retain each team's permissions and historical project checks.
+
+Insights is available at `/insights`. Existing `/reports` links redirect with their tab and filters preserved. MCP report tools and CSV formats retain their existing names.

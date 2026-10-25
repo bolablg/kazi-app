@@ -6,21 +6,25 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("Today is the default and keyboard tabs preserve explicit calendar and schedule views", async ({
+test("Overview is the daily dashboard and Calendar tabs preserve range, keyboard navigation, and history", async ({
   page,
 }) => {
-  const today = page.getByRole("tab", { name: "Today", exact: true });
-  const calendar = page.getByRole("tab", { name: "Calendar", exact: true });
-  const schedule = page.getByRole("tab", { name: "Schedule", exact: true });
-  await expect(today).toHaveAttribute("aria-selected", "true");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
   await expect(
-    page.getByRole("tabpanel", { name: "Today", exact: true }),
+    page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Calendar range" })).toHaveCount(
     0,
   );
-  await today.press("ArrowRight");
-  await expect(calendar).toBeFocused();
+  await nav.getByRole("link", { name: "Calendar", exact: true }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  const calendar = page.getByRole("tab", { name: "Calendar", exact: true });
+  const schedule = page.getByRole("tab", { name: "Schedule", exact: true });
+  await expect(calendar).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("tablist", { name: "Calendar views" }).getByRole("tab"),
+  ).toHaveCount(2);
   await expect(
     page.getByRole("table", { name: "Monthly work calendar" }),
   ).toBeVisible();
@@ -31,21 +35,68 @@ test("Today is the default and keyboard tabs preserve explicit calendar and sche
   await expect(
     page.getByRole("region", { name: "Weekly work calendar" }),
   ).toBeVisible();
-  await calendar.press("End");
+  await calendar.press("ArrowRight");
   await expect(schedule).toBeFocused();
-  await expect(page).toHaveURL(/view=schedule/);
+  await expect(page).toHaveURL(/\/calendar\?view=schedule&range=week$/);
   await page.reload();
   await expect(schedule).toHaveAttribute("aria-selected", "true");
   await schedule.press("Home");
-  await expect(today).toBeFocused();
-  await page.reload();
-  await expect(today).toHaveAttribute("aria-selected", "true");
-  await calendar.click();
+  await expect(calendar).toBeFocused();
   await expect(
     page.getByRole("region", { name: "Weekly work calendar" }),
   ).toBeVisible();
-  await page.goto("/");
-  await expect(today).toHaveAttribute("aria-selected", "true");
+  await calendar.press("End");
+  await expect(schedule).toBeFocused();
+  await schedule.press("ArrowRight");
+  await expect(calendar).toBeFocused();
+  await nav.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+  await page.goBack();
+  await expect(
+    page.getByRole("region", { name: "Weekly work calendar" }),
+  ).toBeVisible();
+});
+
+test("old calendar and reports bookmarks redirect without dropping views, filters, or history", async ({
+  page,
+}) => {
+  for (const view of ["calendar", "schedule"]) {
+    await page.goto("/");
+    await page.goto(`/?view=${view}&range=week&person=all#agenda`);
+    await expect(page).toHaveURL(
+      new RegExp(`/calendar\\?view=${view}&range=week&person=all#agenda$`),
+    );
+    await expect(
+      page.getByRole("tab", {
+        name: view === "calendar" ? "Calendar" : "Schedule",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByLabel("Calendar assignee")).toHaveValue("all");
+    await page.goBack();
+    await expect(
+      page.getByRole("heading", { name: "Overview", exact: true }),
+    ).toBeVisible();
+  }
+  await page.goto("/reports?tab=Workflow&person=all#history");
+  await expect(page).toHaveURL(/\/insights\?tab=Workflow&person=all#history$/);
+  await expect(
+    page.getByRole("heading", { name: "Insights", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "Workflow", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByLabel("Insights person")).toHaveValue("all");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(
+    nav.getByRole("link", { name: "Insights", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    nav.getByRole("link", { name: "Reports", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("owner validation appears with My work even for another worker and recent activity links to the same task", async ({
@@ -102,8 +153,9 @@ test("owner validation appears with My work even for another worker and recent a
   );
   await page.goBack();
   await expect(
-    page.getByRole("tab", { name: "Today", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
 });
 
 test("Today favorites share existing stars and project filters scope the daily snapshot", async ({
@@ -167,13 +219,24 @@ test("Today favorites share existing stars and project filters scope the daily s
   await expect(page.getByRole("region", { name: /^My focus/ })).toContainText(
     "Practice networking fundamentals",
   );
-  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+  await page.reload();
   await expect(
-    page
-      .getByLabel("Overview project", { exact: true })
-      .locator("option:checked"),
+    page.getByLabel("Overview project").locator("option:checked"),
   ).toHaveText("Cloud certification");
-  await page.getByRole("tab", { name: "Today", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "Calendar", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Calendar", exact: true }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Overview project").locator("option:checked"),
+  ).toHaveText("Cloud certification");
   await website.waitFor({ state: "hidden" });
   await projects
     .getByRole("link", { name: "Cloud certification", exact: true })

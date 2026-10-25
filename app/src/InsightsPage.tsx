@@ -34,7 +34,7 @@ const dateTime = (at: number, zone: string) =>
   }).format(at);
 const tabs = ["Summary", "Workload", "Performance", "Workflow", "Goals"];
 
-export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
+export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
   const { state, actorId, demo } = useData();
   const zone = state.members.find((m) => m.id === actorId)!.preferences
     .timezone;
@@ -76,7 +76,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
     <div className="page reports-page">
       <div className="page-heading">
         <div>
-          <h1>Reports</h1>
+          <h1>Insights</h1>
           <p>Understand your time, progress, and what gets finished.</p>
         </div>
         <span className="reports-period-label">
@@ -88,7 +88,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
         <label>
           Period
           <select
-            aria-label="Report period"
+            aria-label="Insights period"
             value={period}
             onChange={(e) => {
               const next = e.target.value;
@@ -111,7 +111,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
               From
               <input
                 type="date"
-                aria-label="Report start date"
+                aria-label="Insights start date"
                 value={from}
                 max={to || today}
                 onChange={(e) => setFrom(e.target.value)}
@@ -121,7 +121,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
               To
               <input
                 type="date"
-                aria-label="Report end date"
+                aria-label="Insights end date"
                 value={to}
                 min={from}
                 max={today}
@@ -133,7 +133,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
         <label>
           Person
           <select
-            aria-label="Report person"
+            aria-label="Insights person"
             value={person}
             onChange={(e) => select("person", e.target.value)}
           >
@@ -151,7 +151,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
         <label>
           Project
           <select
-            aria-label="Report project"
+            aria-label="Insights project"
             value={project}
             onChange={(e) => select("project", e.target.value)}
           >
@@ -173,7 +173,7 @@ export function ReportsPage({ openTask }: { openTask: (id: string) => void }) {
       <div
         className="overview-tabs report-tabs"
         role="tablist"
-        aria-label="Report views"
+        aria-label="Insights views"
       >
         {tabs.map((name) => (
           <button
@@ -275,7 +275,7 @@ function ReportBody({
       role="tabpanel"
       aria-labelledby={`report-tab-${tab}`}
     >
-      <div className="report-metrics" aria-label="Report summary">
+      <div className="report-metrics" aria-label="Insights summary">
         <Metric
           value={String(report.completed.length)}
           tone="green"
@@ -319,7 +319,7 @@ function ReportBody({
               versus the previous {report.days.length} days.
             </>
           ) : (
-            "Task status changes and calendar plans update these reports automatically."
+            "Task status changes and calendar plans update these insights automatically."
           )}
         </p>
         <button className="button secondary" onClick={exportReport}>
@@ -474,7 +474,7 @@ function ReportBody({
         </section>
       )}
       <details className="report-method">
-        <summary>How these reports work</summary>
+        <summary>How these insights work</summary>
         <p>
           Performance comes from task creation, status changes, and due dates.
           Workload uses confirmed calendar reservations and estimates. No manual

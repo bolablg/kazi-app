@@ -99,23 +99,23 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close task", exact: true }).click();
   for (const range of ["month", "week", "day"]) {
-    await page.goto(`/?view=calendar&range=${range}`);
+    await page.goto(`/calendar?view=calendar&range=${range}`);
     await expect(
       page.getByLabel("Project colors", { exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByLabel("Overview project", { exact: true }),
+      page.getByLabel("Calendar project", { exact: true }),
     ).toBeVisible();
   }
   await expect(
     page.locator(".selected-day-agenda .task-label", { hasText: "Research" }),
   ).toHaveCSS("background-color", "rgb(210, 227, 252)");
   await page
-    .getByLabel("Overview project", { exact: true })
+    .getByLabel("Calendar project", { exact: true })
     .selectOption({ label: "Cloud certification" });
   await expect(page.locator(".selected-day-agenda")).not.toContainText(title);
   await page
-    .getByLabel("Overview project", { exact: true })
+    .getByLabel("Calendar project", { exact: true })
     .selectOption({ label: "Website launch" });
   await expect(page.locator(".selected-day-agenda")).toContainText(title);
   await page.setViewportSize({ width: 390, height: 844 });
