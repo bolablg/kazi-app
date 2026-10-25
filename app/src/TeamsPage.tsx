@@ -412,7 +412,7 @@ function TeamMembersPage() {
             </select>
           </label>
           {role === "guest" ? (
-            <fieldset>
+            <fieldset className="invite-project-access">
               <legend>Project access</legend>
               {state.projects.map((project) => (
                 <label className="check-label" key={project.id}>

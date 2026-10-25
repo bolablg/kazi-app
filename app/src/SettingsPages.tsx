@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bell,
   Clock3,
@@ -7,11 +7,13 @@ import {
   CalendarDays,
   RefreshCw,
   Check,
+  CheckCircle2,
   Users,
 } from "lucide-react";
 import { PageTitle } from "./InfoTip";
 import { useData } from "./data";
 import { useUI, Empty, cx } from "./components";
+import { useCurrentMinute } from "./WorkViewScope";
 export function NotificationsPage({
   openTask,
   openPlan,
@@ -22,14 +24,12 @@ export function NotificationsPage({
   const { state, dispatch } = useData(),
     { run } = useUI(),
     [filter, setFilter] = useState("unread");
-  const now = Date.now();
-  const items = state.notifications
-    .filter(
-      (n) =>
-        (filter === "all" || !n.read) &&
-        (!n.snoozedUntil || n.snoozedUntil <= now) &&
-        n.deliveryAt <= now,
-    )
+  const now = useCurrentMinute();
+  const available = state.notifications.filter(
+    (n) => (!n.snoozedUntil || n.snoozedUntil <= now) && n.deliveryAt <= now,
+  );
+  const items = available
+    .filter((n) => filter === "all" || !n.read)
     .sort((a, b) => b.createdAt - a.createdAt);
   return (
     <div className="page notifications-page">
@@ -47,18 +47,14 @@ export function NotificationsPage({
       <div className="tabs">
         <button
           className={filter === "unread" ? "active" : ""}
+          aria-pressed={filter === "unread"}
           onClick={() => setFilter("unread")}
         >
-          Unread{" "}
-          <span>
-            {
-              state.notifications.filter((n) => !n.read && n.deliveryAt <= now)
-                .length
-            }
-          </span>
+          Unread <span>{available.filter((n) => !n.read).length}</span>
         </button>
         <button
           className={filter === "all" ? "active" : ""}
+          aria-pressed={filter === "all"}
           onClick={() => setFilter("all")}
         >
           All notifications
@@ -83,7 +79,11 @@ export function NotificationsPage({
               {n.kind === "overdue" ? (
                 <RefreshCw size={21} />
               ) : n.kind === "review" ? (
-                <CalendarDays size={21} />
+                n.proposalId ? (
+                  <CalendarDays size={21} />
+                ) : (
+                  <CheckCircle2 size={21} />
+                )
               ) : (
                 <Bell size={21} />
               )}
@@ -94,9 +94,11 @@ export function NotificationsPage({
                   {n.kind === "overdue"
                     ? "OVERDUE"
                     : n.kind === "review"
-                      ? "PLAN REVIEW"
+                      ? n.proposalId
+                        ? "PLAN REVIEW"
+                        : "TASK REVIEW"
                       : n.kind === "stale"
-                        ? "PROGRESS CHECK"
+                        ? "WORKFLOW REVIEW"
                         : "REMINDER"}
                 </span>
                 <time>
@@ -184,27 +186,46 @@ export function JoinPage() {
   const [params] = useSearchParams(),
     { acceptInvite } = useData(),
     { run } = useUI();
+  const token = params.get("token");
+  const navigate = useNavigate();
+  const [accepting, setAccepting] = useState(false);
   return (
     <div className="page">
       <section className="join-card">
-        <span className="empty-mark">✳</span>
-        <h1>Join Kazi</h1>
+        <span className="join-emblem">
+          <Users size={24} aria-hidden="true" />
+        </span>
+        <h1>{token ? "Join Kazi" : "Invitation link missing"}</h1>
         <p>
-          Accept this invitation using the verified email address it was sent
-          to. You’ll only gain the access included in the invitation.
+          {token
+            ? "Accept using the verified email address this invitation was sent to. You’ll receive the access included in the invitation."
+            : "Open the complete invitation link from your teammate to join their team."}
         </p>
-        <button
-          className="button primary"
-          onClick={() =>
-            run(
-              () => acceptInvite(params.get("token") ?? ""),
-              "Invitation accepted. Welcome to the team.",
-            )
-          }
-        >
-          <Users size={16} />
-          Accept invitation
-        </button>
+        {token ? (
+          <button
+            className="button primary"
+            disabled={accepting}
+            onClick={async () => {
+              setAccepting(true);
+              try {
+                const accepted = await run(async () => {
+                  await acceptInvite(token);
+                  return true;
+                }, "Invitation accepted. Welcome to the team.");
+                if (accepted) navigate("/", { replace: true });
+              } finally {
+                setAccepting(false);
+              }
+            }}
+          >
+            <Users size={16} />
+            {accepting ? "Joining…" : "Accept invitation"}
+          </button>
+        ) : (
+          <Link className="button secondary" to="/">
+            Back to overview
+          </Link>
+        )}
       </section>
     </div>
   );

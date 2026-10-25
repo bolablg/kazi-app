@@ -1,4 +1,5 @@
 import { WorkflowReport } from "./WorkflowReport";
+import { ScrollTable } from "./ScrollTable";
 import { InfoTip, PageTitle } from "./InfoTip";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -345,7 +346,8 @@ function ReportBody({
                 {report.completed.length - previous.completed.length} tasks
                 completed
               </strong>{" "}
-              versus the previous {report.days.length} days.
+              versus the previous {report.days.length}{" "}
+              {report.days.length === 1 ? "day" : "days"}.
             </>
           ) : (
             "Task status changes and calendar plans update these insights automatically."
@@ -421,7 +423,7 @@ function ReportBody({
             </div>
             <span>Live snapshot</span>
           </div>
-          <div className="report-table-wrap">
+          <ScrollTable label="Insights data table">
             <table className="report-table">
               <thead>
                 <tr>
@@ -479,14 +481,17 @@ function ReportBody({
                   })}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         </section>
       )}
       {tab === "Goals" && (
         <section className="report-panel">
           <div className="section-line">
             <h2>Completed work</h2>
-            <span>{report.completed.length} tasks in this period</span>
+            <span>
+              {report.completed.length}{" "}
+              {report.completed.length === 1 ? "task" : "tasks"} in this period
+            </span>
           </div>
           {report.completed.length ? (
             <div className="report-completed-list">
@@ -696,6 +701,16 @@ function Trend({
             : "Planned calendar time by day. Exact values in daily totals."
         }
       >
+        <svg
+          className="trend-grid-lines"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {[0, 25, 50, 75].map((y) => (
+            <line key={y} x1="0" y1={y} x2="100" y2={y} />
+          ))}
+        </svg>
         <span className="trend-max">
           {metric === "scheduled" ? duration(max) : `${max} tasks`}
         </span>
@@ -739,7 +754,7 @@ function Trend({
       )}
       <details className="daily-totals">
         <summary>View daily totals</summary>
-        <div className="report-table-wrap">
+        <ScrollTable label="Insights data table">
           <table className="report-table">
             <thead>
               <tr>
@@ -760,7 +775,7 @@ function Trend({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollTable>
       </details>
     </section>
   );
@@ -809,10 +824,13 @@ function Performance({
       <section className="report-panel">
         <div className="section-line">
           <h2>Finished late</h2>
-          <span>{report.late.length} tasks in this period</span>
+          <span>
+            {report.late.length} {report.late.length === 1 ? "task" : "tasks"}{" "}
+            in this period
+          </span>
         </div>
         {report.late.length ? (
-          <div className="report-table-wrap">
+          <ScrollTable label="Insights data table">
             <table className="report-table">
               <thead>
                 <tr>
@@ -853,7 +871,7 @@ function Performance({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         ) : (
           <p className="overview-empty">
             No recorded late completions in this period.
@@ -941,7 +959,8 @@ function ProjectGoals({
                 <i style={{ width: `${g.percent}%` }} />
               </div>
               <p>
-                {g.done} of {g.total} tasks completed
+                {g.done} of {g.total} {g.total === 1 ? "task" : "tasks"}{" "}
+                completed
                 {g.overdue ? ` · ${g.overdue} overdue` : ""}
                 {g.project.deadline
                   ? ` · Target ${g.project.deadline.slice(0, 10)}`

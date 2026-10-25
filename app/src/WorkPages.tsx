@@ -2,12 +2,14 @@ import { resourceRole } from "../shared/teams";
 import { PageTitle } from "./InfoTip";
 import { ResponsiveFilters } from "./ResponsiveFilters";
 import { ProjectTimeline } from "./ProjectTimeline";
+import { PrioritySelect } from "./PrioritySelect";
+import { projectStyle } from "./projectColors";
 import { TaskArchive } from "./TaskArchive";
 import { isArchivedTask, isOpenTask } from "../shared/workflow";
 import { TaskBoard } from "./TaskBoard";
 import { normalizeTaskLabels, taskLabelKey } from "../shared/taskLabels";
 import { projectPath } from "../shared/ids";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -71,7 +73,10 @@ const icons = {
 export function ProjectIcon({ project }: { project: Project }) {
   const Icon = icons[project.icon as keyof typeof icons] ?? Folder;
   return (
-    <span className={cx("project-icon", project.color)}>
+    <span
+      className={cx("project-icon", project.color)}
+      style={projectStyle(project.color)}
+    >
       <Icon size={21} strokeWidth={1.6} />
     </span>
   );
@@ -445,7 +450,9 @@ export function TasksPage(props: WorkProps) {
         ) : (
           <GroupedTasks tasks={tasks} onOpen={props.openTask} onAdd={add} />
         )}
-        <div className="table-footer">{tasks.length} tasks</div>
+        <div className="table-footer">
+          {view === "archive" ? archived.length : tasks.length} tasks
+        </div>
       </section>
       {view === "list" && (
         <TaskArchive tasks={archived} openTask={props.openTask} />
@@ -455,10 +462,18 @@ export function TasksPage(props: WorkProps) {
 }
 export function ProjectsPage(props: WorkProps) {
   const { state } = useData();
-  const [archived, setArchived] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const archived = params.get("view") === "archive";
+  const setArchived = (value: boolean) =>
+    setParams((before) => {
+      const next = new URLSearchParams(before);
+      if (value) next.set("view", "archive");
+      else next.delete("view");
+      return next;
+    });
   const projects = state.projects.filter((p) => p.archived === archived);
   return (
-    <div className="page">
+    <div className="page projects-page">
       <div className="page-heading">
         <div>
           <h1>Projects</h1>
@@ -472,6 +487,7 @@ export function ProjectsPage(props: WorkProps) {
       <div className="tabs">
         <button
           className={!archived ? "active" : ""}
+          aria-pressed={!archived}
           onClick={() => setArchived(false)}
         >
           Active projects{" "}
@@ -479,6 +495,7 @@ export function ProjectsPage(props: WorkProps) {
         </button>
         <button
           className={archived ? "active" : ""}
+          aria-pressed={archived}
           onClick={() => setArchived(true)}
         >
           Archived
@@ -520,7 +537,13 @@ export function ProjectDetail(props: WorkProps) {
     { run } = useUI(),
     [viewParams, setViewParams] = useSearchParams(),
     [membersOpen, setMembersOpen] = useState(false);
+  const viewTabs = useRef<HTMLDivElement>(null);
   const view = viewParams.get("view") ?? "list";
+  useEffect(() => {
+    viewTabs.current
+      ?.querySelector('[aria-pressed="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [view]);
   const setView = (value: string) =>
     setViewParams((before) => {
       const next = new URLSearchParams(before);
@@ -545,11 +568,11 @@ export function ProjectDetail(props: WorkProps) {
         resourceRole(state, project.id, actorId) ?? "",
       );
   return (
-    <div className="page">
+    <div className="page project-detail-page">
       <Link className="breadcrumb-back" to="/projects">
         Projects
         <ChevronRight size={13} />
-        {project.title}
+        <span>{project.title}</span>
       </Link>
       <div className="page-heading project-detail-heading">
         <div className="project-heading-group">
@@ -560,22 +583,48 @@ export function ProjectDetail(props: WorkProps) {
           </div>
           <ProjectFavoriteButton project={project} />
         </div>
-        <button className="button primary" onClick={() => props.addTask(id)}>
-          <Plus size={16} />
-          Add task
-        </button>
+        <div className="project-heading-actions">
+          <button className="button primary" onClick={() => props.addTask(id)}>
+            <Plus size={16} />
+            Add task
+          </button>
+          {canManage && (
+            <button
+              className="icon-button"
+              aria-label={
+                project.archived ? "Restore project" : "Archive project"
+              }
+              title={project.archived ? "Restore project" : "Archive project"}
+              onClick={() =>
+                run(
+                  () =>
+                    dispatch({
+                      type: "update_project",
+                      id: project.id,
+                      patch: { archived: !project.archived },
+                    }),
+                  project.archived
+                    ? "Project restored"
+                    : "Project archived; history preserved",
+                )
+              }
+            >
+              <Archive size={18} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="project-meta-bar">
-        <span>
+        <span aria-label={"Owner: " + (owner?.name ?? "Unassigned")}>
           <Avatar
             name={owner?.name ?? "Unassigned"}
             color={owner?.color}
             small
           />
-          Owned by {owner?.name ?? "Unassigned"}
+          {owner?.name ?? "Unassigned"}
         </span>
         <label className="project-lifecycle">
-          Project status
+          <span className="project-status-label">Project status</span>
           <select
             aria-label="Project status"
             value={project.status ?? "active"}
@@ -598,40 +647,23 @@ export function ProjectDetail(props: WorkProps) {
             <option value="done">Delivered</option>
           </select>
         </label>
-        <span>
+        <span
+          aria-label={"Delivery date: " + dueLabel(project.deadline)}
+          title={"Delivery date: " + dueLabel(project.deadline)}
+        >
           <CalendarDays size={14} />
-          Delivery date · {dueLabel(project.deadline)}
+          {dueLabel(project.deadline)}
         </span>
         <button className="text-button" onClick={() => setMembersOpen(true)}>
           <Users size={14} />
           {project.memberIds.length} project members
         </button>
-        {canManage && (
-          <button
-            className="text-button"
-            onClick={() =>
-              run(
-                () =>
-                  dispatch({
-                    type: "update_project",
-                    id: project.id,
-                    patch: { archived: !project.archived },
-                  }),
-                project.archived
-                  ? "Project restored"
-                  : "Project archived; history preserved",
-              )
-            }
-          >
-            <Archive size={14} />
-            {project.archived ? "Restore" : "Archive"}
-          </button>
-        )}
       </div>
-      <div className="view-toolbar">
-        <div className="tabs">
+      <div className="view-toolbar project-view-toolbar">
+        <div className="tabs" ref={viewTabs} aria-label="Project views">
           <button
             className={view === "list" ? "active" : ""}
+            aria-pressed={view === "list"}
             onClick={() => setView("list")}
           >
             <List size={15} />
@@ -639,6 +671,7 @@ export function ProjectDetail(props: WorkProps) {
           </button>
           <button
             className={view === "board" ? "active" : ""}
+            aria-pressed={view === "board"}
             onClick={() => setView("board")}
           >
             <LayoutGrid size={15} />
@@ -646,6 +679,7 @@ export function ProjectDetail(props: WorkProps) {
           </button>
           <button
             className={view === "timeline" ? "active" : ""}
+            aria-pressed={view === "timeline"}
             onClick={() => setView("timeline")}
           >
             <CalendarDays size={15} />
@@ -653,6 +687,7 @@ export function ProjectDetail(props: WorkProps) {
           </button>
           <button
             className={view === "archive" ? "active" : ""}
+            aria-pressed={view === "archive"}
             onClick={() => setView("archive")}
           >
             <Archive size={15} />
@@ -713,10 +748,10 @@ export function ProjectDetail(props: WorkProps) {
         open={membersOpen}
         onClose={() => setMembersOpen(false)}
         title="Project & people"
-        description="Workspace membership and project access are checked separately."
+        description="Edit the project and choose who can collaborate."
       >
         <form
-          className="form"
+          className="form project-access-form"
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -781,14 +816,7 @@ export function ProjectDetail(props: WorkProps) {
                 </label>
                 <label>
                   Priority
-                  <select
-                    name="priority"
-                    defaultValue={project.priority ?? "medium"}
-                  >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
+                  <PrioritySelect defaultValue={project.priority ?? "medium"} />
                 </label>
                 <label>
                   Planned start
@@ -814,7 +842,11 @@ export function ProjectDetail(props: WorkProps) {
               <Avatar name={m.name} color={m.color} />
               <span>
                 {m.name}
-                <small>{m.role}</small>
+                <small>
+                  {m.role === "admin"
+                    ? "Manager"
+                    : m.role.charAt(0).toUpperCase() + m.role.slice(1)}
+                </small>
               </span>
               <input
                 name="member"

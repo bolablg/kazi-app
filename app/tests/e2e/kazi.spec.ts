@@ -679,7 +679,7 @@ test("calendar switches month, week, and day with matching navigation and task d
   expect(after.versions).toEqual(before.versions);
 });
 
-test("weekly and daily calendar fit phones and retain the selected cross-month date", async ({
+test("phone calendars contain readable week scrolling and retain the selected cross-month date", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -691,11 +691,17 @@ test("weekly and daily calendar fit phones and retain the selected cross-month d
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  const week = page.getByLabel("Scrollable work calendar", { exact: true });
+  expect(await week.evaluate((e) => e.scrollWidth)).toBeGreaterThan(
+    (await week.boundingBox())!.width,
+  );
   expect(
-    await page
-      .locator(".overview-time-calendar")
-      .evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
-  ).toBe(true);
+    (await page.locator(".time-calendar-day").first().boundingBox())!.width,
+  ).toBeGreaterThanOrEqual(100);
+  await expect(
+    page.getByText("Swipe or scroll to see the full week", { exact: true }),
+  ).toBeVisible();
+  await week.evaluate((e) => (e.scrollLeft = e.scrollWidth));
   await page
     .getByRole("button", { name: "View Sunday, Nov 1", exact: true })
     .click();
@@ -704,6 +710,11 @@ test("weekly and daily calendar fit phones and retain the selected cross-month d
     page.getByRole("heading", { name: "Sunday, Nov 1, 2026", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".time-calendar-day")).toHaveCount(1);
+  expect(
+    await page
+      .locator(".overview-time-calendar")
+      .evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
+  ).toBe(true);
   await expect(page.locator(".day-due-items")).toContainText(
     "Book a dentist appointment",
   );

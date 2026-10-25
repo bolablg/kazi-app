@@ -8,6 +8,7 @@ import type { ReportFilter } from "../shared/reports";
 import { useData } from "./data";
 import { Link } from "react-router-dom";
 import { InfoTip } from "./InfoTip";
+import { ScrollTable } from "./ScrollTable";
 
 export function WorkflowReport(props: {
   filter: ReportFilter;
@@ -72,6 +73,7 @@ function StageBody({
       id="report-content"
       role="tabpanel"
       aria-labelledby="report-tab-Workflow"
+      className="workflow-report"
     >
       <div className="section-line">
         <div className="section-title-group">
@@ -115,7 +117,7 @@ function StageBody({
             : `Only time within your working calendar: ${schedule}`}
         </p>
       </div>
-      <div className="report-table-wrap">
+      <ScrollTable label="Workflow stage durations">
         <table className="report-table">
           <thead>
             <tr>
@@ -156,7 +158,7 @@ function StageBody({
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollTable>
       <p className="report-footnote">{report.coverage}</p>
       <section className="report-panel">
         <div className="section-line">
@@ -164,7 +166,7 @@ function StageBody({
           <span>{report.aged.length} tasks</span>
         </div>
         {report.aged.length ? (
-          <div className="report-table-wrap">
+          <ScrollTable label="Workflow stage durations">
             <table className="report-table">
               <thead>
                 <tr>
@@ -196,7 +198,7 @@ function StageBody({
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         ) : (
           <p>No tasks exceed their stage review threshold.</p>
         )}

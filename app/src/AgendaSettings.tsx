@@ -74,7 +74,7 @@ function ScopedAgendaSettings({
   return (
     <div className="settings-form">
       {view === "subscriptions" && (
-        <section className="settings-section">
+        <section className="settings-section agenda-subscription-card">
           <div className="integration-heading">
             <CalendarDays size={28} />
             <div>
@@ -117,7 +117,7 @@ function ScopedAgendaSettings({
             </strong>
             . Only your assigned work is included.
           </p>
-          <div className="form-grid">
+          <div className="form agenda-subscription-options">
             <label>
               Project
               <select
@@ -265,19 +265,22 @@ function ScopedAgendaSettings({
               </div>
             ))}
           </div>
-          <p className="settings-footnote">
-            In Google Calendar choose “Other calendars → From URL”. In Outlook
-            choose “Add calendar → Subscribe from web”. In Apple Calendar choose
-            “File → New Calendar Subscription”. Subscribe to the link for
-            updates; importing a downloaded file creates a snapshot.
-          </p>
-          <p className="settings-footnote">
-            Your calendar provider controls refresh timing; updates can take
-            over 24 hours. For Google appointment schedules, select the
-            subscribed Kazi calendar under calendars checked for availability.
-            Eligible plans are required. Verify it before relying on it for
-            bookings.
-          </p>
+          <details className="agenda-help">
+            <summary>How to subscribe &amp; refresh timing</summary>
+            <p className="settings-footnote">
+              In Google Calendar choose “Other calendars → From URL”. In Outlook
+              choose “Add calendar → Subscribe from web”. In Apple Calendar
+              choose “File → New Calendar Subscription”. Subscribe to the link
+              for updates; importing a downloaded file creates a snapshot.
+            </p>
+            <p className="settings-footnote">
+              Your calendar provider controls refresh timing; updates can take
+              over 24 hours. For Google appointment schedules, select the
+              subscribed Kazi calendar under calendars checked for availability.
+              Eligible plans are required. Verify it before relying on it for
+              bookings.
+            </p>
+          </details>
           {demo && (
             <p className="inline-info">
               The demo supports ICS download. Live, revocable subscription links

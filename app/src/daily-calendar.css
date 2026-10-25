@@ -1,0 +1,384 @@
+/* Daily planning surfaces: flat color, readable density, and bounded calendars. */
+.plans-page .page-heading > div:first-child {
+  flex-shrink: 0;
+}
+.plans-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.plans-policy {
+  gap: 12px;
+  padding: 14px 16px;
+}
+.plans-policy > svg {
+  color: var(--brand-ink);
+  flex-shrink: 0;
+}
+.plans-policy .section-title-group {
+  flex: 1;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.proposal-card h2,
+.history-line h3,
+.review-session strong,
+.comparison-task strong {
+  overflow-wrap: anywhere;
+}
+.proposal-card .proposal-numbers {
+  gap: 12px;
+}
+.proposal-numbers > span {
+  min-width: 0;
+}
+.proposal-card > .section-line > svg {
+  color: var(--brand-ink);
+}
+.plan-lineage-banner {
+  background: #f5f6ff;
+  border-color: #e0e5ff;
+}
+.lineage-node.active {
+  background: #e8edff;
+  border-color: #c4ceff;
+}
+.review-totals {
+  gap: 10px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.review-totals > div:nth-child(n) {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e0e5ff;
+  border-radius: 8px;
+  background: #f5f6ff;
+}
+.review-totals > div:nth-child(2) {
+  background: #eef8f6;
+  border-color: #d1eae4;
+}
+.review-totals > div:nth-child(3) {
+  background: #fff7e6;
+  border-color: #f1dfbb;
+}
+.review-totals strong {
+  font-weight: 600;
+  font-size: 24px;
+}
+.alternative-picker button.selected {
+  background: var(--brand-wash);
+  border-color: var(--brand-line);
+}
+.alternative-picker button.selected > span {
+  color: var(--brand-ink);
+}
+.review-session {
+  border-color: #e5e8ee;
+}
+.review-session-date {
+  width: 150px;
+  line-height: 1.5;
+}
+.review-session > div {
+  min-width: 0;
+}
+.plan-review .section-line {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.plan-review .section-line .muted {
+  font-size: 12px;
+}
+.overview-review-strip {
+  background: #fff9eb;
+  border: 1px solid #eddfbf;
+  border-radius: 9px;
+}
+.overview-review-strip .button {
+  flex-shrink: 0;
+}
+.overview-time-calendar {
+  border-radius: 9px;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.time-calendar-day {
+  border-color: #e1e5ec;
+}
+.time-calendar-hour {
+  border-color: #e8ebf0;
+}
+.time-calendar-day.selected > .time-calendar-date-header {
+  background: #edf1ff;
+  border-top: 0;
+}
+.time-calendar-day.selected > .time-calendar-date-header strong {
+  color: #2746ba;
+  font-weight: 650;
+}
+.time-calendar-event.proposed,
+.time-calendar-event.pending,
+.month-event.proposed,
+.month-event.pending {
+  border-color: #7c828d;
+}
+.calendar-scroll-hint {
+  display: none;
+}
+.overview-calendar td.selected-day {
+  outline-color: #4263eb;
+  background: #f5f7ff;
+}
+.overview-calendar :is(th, td),
+.overview-event-row {
+  border-color: #e1e5ec;
+}
+.overview-calendar .today .calendar-date-button > span:first-child {
+  background: #4263eb;
+}
+.calendar-subscriptions-page .settings-section {
+  padding: 24px;
+}
+.agenda-subscription-card .integration-heading {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.agenda-subscription-card .integration-heading > svg {
+  box-sizing: content-box;
+  padding: 12px;
+  border-radius: 12px;
+  background: #edf1ff;
+  color: #4263eb;
+  flex-shrink: 0;
+}
+.agenda-subscription-card .integration-heading > div {
+  flex: 1;
+}
+.agenda-subscription-card .integration-heading h2 {
+  margin-bottom: 4px;
+}
+.agenda-subscription-card .calendar-sharing-scope {
+  max-width: none;
+  background: #f7f8fa;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 18px 0;
+}
+.agenda-subscription-card .agenda-subscription-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 0;
+  margin-bottom: 18px;
+}
+.agenda-subscription-options .check-label {
+  align-self: end;
+  min-height: 44px;
+  margin: 0;
+}
+.agenda-subscription-options select {
+  width: 100%;
+  border-color: #d6dce5;
+}
+.agenda-help {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e8ee;
+}
+.agenda-help > summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+}
+.agenda-help .settings-footnote {
+  max-width: 90ch;
+  margin: 6px 0 14px;
+}
+.agenda-subscription-card .inline-info {
+  max-width: none;
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #f5f7ff;
+  border-color: #e0e5ff;
+  font-size: 13px;
+}
+.notifications-page .notification-icon.clay {
+  color: #b42318;
+  background: #fff0ec;
+}
+.notifications-page .notification-icon.olive {
+  color: #19675a;
+  background: #e9f7f1;
+}
+.notifications-page .notification-icon.gold {
+  color: #3754c7;
+  background: #eef1ff;
+}
+.notifications-page .unread-dot {
+  background: #e9488b;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}
+.notification-content {
+  min-width: 0;
+}
+.notification-content :is(h3, p) {
+  overflow-wrap: anywhere;
+}
+.notification-content > div:first-child {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (max-width: 1100px) {
+  .plans-page .page-heading {
+    flex-wrap: wrap;
+  }
+  .plans-page .page-heading > div:first-child {
+    flex: 1 0 100%;
+  }
+  .plans-heading-actions {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 900px) {
+  .overview-page .work-view-filters select,
+  .overview-page .overview-filters select,
+  .overview-page .icon-button,
+  .overview-review-strip .button,
+  .calendar-scale-control button,
+  .today-switches button,
+  .today-panel-heading .text-button,
+  .today-project-tile .project-favorite {
+    min-height: 44px;
+  }
+  .today-project-tile .project-favorite {
+    min-width: 44px;
+  }
+  .overview-time-calendar:not(.daily) .time-calendar-columns {
+    grid-template-columns: 48px repeat(7, minmax(100px, 1fr));
+    min-width: 748px;
+  }
+  .overview-time-calendar:not(.daily) .time-calendar-labels {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: #fff;
+  }
+  .calendar-scroll-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #55565c;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .overview-time-calendar .day-due-summary {
+    min-height: 44px;
+  }
+  .overview-time-calendar:not(.daily) .day-due-summary {
+    display: block;
+    width: 100%;
+    font-size: 11px;
+    text-align: center;
+  }
+  .overview-time-calendar:not(.daily) .day-due-items {
+    display: none;
+  }
+  .overview-time-calendar:not(.daily) .time-calendar-due,
+  .overview-time-calendar:not(.daily) .time-calendar-due-label {
+    height: 60px;
+    padding-block: 7px;
+  }
+  .plans-page :is(.button, .text-button, .icon-button),
+  .notifications-page .text-button,
+  .comparison-controls select {
+    min-height: 44px;
+  }
+}
+@media (max-width: 700px) {
+  .calendar-subscriptions-page .page-heading {
+    flex-wrap: wrap;
+  }
+  .calendar-subscriptions-page .page-heading > div:first-child {
+    flex: 1 0 100%;
+  }
+  .comparison-controls select {
+    font-size: 16px;
+  }
+  .plans-heading-actions {
+    width: 100%;
+  }
+  .plans-policy {
+    align-items: flex-start;
+    padding: 12px;
+  }
+  .plans-policy .section-title-group {
+    gap: 4px;
+  }
+  .plans-policy .section-title-group strong {
+    font-size: 13px;
+  }
+  .plans-policy > .text-button {
+    min-height: 44px;
+  }
+  .plan-review .alternative-picker button {
+    flex-wrap: wrap;
+  }
+  .plan-review .alternative-picker button small {
+    white-space: normal;
+  }
+  .review-totals {
+    gap: 6px;
+  }
+  .review-totals > div:nth-child(n) {
+    padding: 10px 8px;
+  }
+  .review-totals strong {
+    font-size: 20px;
+  }
+  .review-totals span {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .review-session {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+  .review-session-date {
+    width: auto;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: center;
+  }
+  .review-session-date small {
+    margin-top: 0;
+  }
+  .calendar-subscriptions-page .settings-section {
+    padding: 18px 16px;
+  }
+  .agenda-subscription-card .integration-heading {
+    align-items: flex-start;
+  }
+  .agenda-subscription-card .integration-heading > svg {
+    padding: 8px;
+    width: 24px;
+    height: 24px;
+  }
+  .agenda-subscription-card .integration-heading .badge {
+    margin: 0;
+  }
+  .agenda-subscription-card .agenda-subscription-options {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
