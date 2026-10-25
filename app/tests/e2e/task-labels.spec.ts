@@ -13,7 +13,7 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   await dialog
     .getByLabel("Task labels", { exact: true })
     .fill("Research, Design, research");
-  await expect(dialog.locator(".task-label")).toHaveCount(2);
+  await expect(dialog.locator(".label-token")).toHaveCount(2);
   await dialog.getByLabel(/^Deadline/).fill("2026-10-26");
   await dialog
     .getByRole("button", { name: "Create task", exact: true })
@@ -46,9 +46,16 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   });
   await task.click();
   dialog = page.getByRole("article", { name: "Task details" });
-  await expect(dialog.getByLabel("Task labels", { exact: true })).toHaveValue(
-    "Research, Design",
-  );
+  await expect(dialog.locator(".label-token")).toHaveText([
+    "Research",
+    "Design",
+  ]);
+  await dialog
+    .getByRole("button", { name: "Remove Research label", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Remove Design label", exact: true })
+    .click();
   await dialog
     .getByLabel("Task labels", { exact: true })
     .fill("Meeting, Admin");
@@ -73,9 +80,11 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   ).toHaveCount(0);
   await task.click();
   await page
-    .getByRole("article", { name: "Task details" })
-    .getByLabel("Task labels", { exact: true })
-    .fill("");
+    .getByRole("button", { name: "Remove Meeting label", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Remove Admin label", exact: true })
+    .click();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close task", exact: true }).click();

@@ -66,6 +66,8 @@ test("dragging a task changes its board status and completion analytics, while c
   await start.focus();
   await page.keyboard.press("Space");
   await expect(start).toHaveAttribute("aria-pressed", "true");
+  // Let the installed clock run the keyboard sensor’s deferred activation.
+  await page.clock.runFor(32);
   await page.keyboard.press("ArrowRight");
   await expect(page.locator(".board-column.drop-target")).toHaveAttribute(
     "data-status",
@@ -95,8 +97,8 @@ test("dragging a task changes its board status and completion analytics, while c
   await expect(
     page.getByRole("article", { name: "Task details" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Task status", { exact: true })).toHaveValue(
-    "done",
+  await expect(page.getByLabel("Task status", { exact: true })).toHaveText(
+    "Completed",
   );
   await page.getByRole("button", { name: "Close task" }).click();
   await page
@@ -106,6 +108,7 @@ test("dragging a task changes its board status and completion analytics, while c
   await expect(
     page.getByRole("button", { name: `Move ${title}`, exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  await page.clock.runFor(32);
   await page.keyboard.press("ArrowLeft");
   await expect(page.locator(".board-column.drop-target")).toHaveAttribute(
     "data-status",
@@ -124,6 +127,7 @@ test("dragging a task changes its board status and completion analytics, while c
   await expect(
     page.getByRole("button", { name: `Move ${title}`, exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  await page.clock.runFor(32);
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Escape");
   await expect(

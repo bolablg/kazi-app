@@ -494,7 +494,7 @@ export function createKaziServer(
   );
   register(
     "get_workflow_report",
-    "Get mean/median completed stage duration, current stage age, aging thresholds, and To Brainstorm review items. Existing periods without recorded entry timestamps are marked as incomplete coverage.",
+    "Get calendar and working-period totals, mean/median stage duration, current age, aging thresholds, and To Brainstorm reviews. Repeated visits are summed per task. Working time uses the caller’s saved days, hours, and timezone, not logged work. Unknown historical entries are excluded.",
     {
       ...workspace,
       from: z.iso.date(),

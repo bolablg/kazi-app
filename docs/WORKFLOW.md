@@ -31,15 +31,15 @@ Clicking a task opens a URL-backed full page across the main content area. The t
 
 The **owner** requests and accepts the work; the **worker** executes it. The same person can fill both roles. Submitting to To validate notifies the owner. The owner approves to complete, or returns to In progress with a required explanation and a worker notification. Administrators retain administrative authority. A worker cannot change the reviewer or approve another owner's work by changing the status field.
 
-Dependencies are separate tasks that must finish first. The task page displays connected nodes with status text: green Completed, yellow In progress/To validate, and red waiting work. Subtasks remain a separate section. Collaborators use removable avatar/name chips. Circular dependencies are rejected by shared validation.
+Dependencies are separate tasks that must finish first. The task page displays connected nodes with status text: green Completed, yellow In progress/To validate, and red waiting work. Subtasks appear directly under the description as clickable rows; each opens its own task page, with a link back to the parent. Collaborators use removable avatar/name chips. Circular dependencies are rejected by shared validation.
 
 Dependencies may span projects the actor can access **within the same team**. The picker and connected nodes identify the project; another team's tasks are excluded. Subtasks remain within their parent's project. A dependency indicates a prerequisite; it does not copy the task or automatically change its status.
 
 Board titles show at most 96 characters and two lines, with an ellipsis when shortened. The full title remains available on hover, to assistive technology, and on the task page. High, medium, and low priority use red, amber, and green respectively, with a text label in every view.
 
-## Task conversation and artifacts
+## Task activity and artifacts
 
-The full task page has Activity and Comments tabs, an update composer, and paginated history. Comments support multiline text and up to ten attachments, including attachment-only comments. New comments notify the owner, worker, and collaborators who retain project access. Comments and artifacts are timestamped; they do not count as execution progress or logged time.
+The full task page has one Activity feed with a comment composer and paginated history. Comments, file attachments, and system updates appear together. Status updates show the previous and new stage. Comments support multiline text and up to ten attachments, including attachment-only comments. New comments notify the owner, worker, and collaborators who retain project access. Comments and artifacts are timestamped; they do not count as execution progress or logged time.
 
 Attach files directly under Description or under Artifacts. Files are limited to 20 MB each and 100 active artifacts per task. HTTPS links may reference Google Drive or other services; Kazi stores the link without fetching its contents or changing source permissions. Removing an artifact detaches it while preserving the historical activity. An uploader or task editor may remove an artifact. Source documents remain at their original provider.
 

@@ -8,7 +8,7 @@ import {
 import { resourceRoute } from "../shared/resourceRoutes";
 import type { Location } from "react-router-dom";
 import { projectStyle } from "./projectColors";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   NavLink,
   Navigate,
@@ -58,16 +58,28 @@ import {
   ProjectTag,
   cx,
 } from "./components";
-import { ReportsPage } from "./ReportsPage";
 import { OverviewPage } from "./OverviewPage";
 import { TasksPage, ProjectsPage, ProjectDetail } from "./WorkPages";
 import { PlansPage, PlanReview } from "./PlanningPages";
-import {
-  TeamPage,
-  SettingsPage,
-  NotificationsPage,
-  JoinPage,
-} from "./SettingsPages";
+const ReportsPage = lazy(() =>
+  import("./ReportsPage").then((module) => ({ default: module.ReportsPage })),
+);
+const TeamPage = lazy(() =>
+  import("./SettingsPages").then((module) => ({ default: module.TeamPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./SettingsPages").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+const NotificationsPage = lazy(() =>
+  import("./SettingsPages").then((module) => ({
+    default: module.NotificationsPage,
+  })),
+);
+const JoinPage = lazy(() =>
+  import("./SettingsPages").then((module) => ({ default: module.JoinPage })),
+);
 const primary = [
   { path: "/", label: "Overview", icon: LayoutDashboard },
   { path: "/tasks", label: "Tasks", icon: ListIcon },
@@ -442,136 +454,159 @@ function Shell() {
               onOpen={openTask}
             />
           ) : (
-            <Routes
-              location={
-                dialogOpen && !resource.staleRevision && background
-                  ? background
-                  : location
+            <Suspense
+              fallback={
+                <p role="status" className="muted">
+                  Loading…
+                </p>
               }
             >
-              <Route path="/" element={<OverviewPage {...props} />} />
-              <Route
-                path="/my-tasks"
-                element={<Navigate to={`/tasks?assignee=${actorId}`} replace />}
-              />
-              <Route
-                path="/inbox"
-                element={
-                  <Navigate
-                    to={`/tasks?project=${state.workspace.inboxId}`}
-                    replace
-                  />
+              <Routes
+                location={
+                  dialogOpen && !resource.staleRevision && background
+                    ? background
+                    : location
                 }
-              />
-              <Route path="/tasks" element={<TasksPage {...props} />} />
-              <Route path="/projects" element={<ProjectsPage {...props} />} />
-              <Route
-                path="/projects/:id"
-                element={<ProjectDetail {...props} />}
-              />
-              <Route
-                path="/project/:id"
-                element={<ProjectDetail {...props} />}
-              />
-              <Route
-                path="/project/:id/task/:taskId"
-                element={
-                  resource.task ? (
-                    <ProjectDetail {...props} />
-                  ) : (
-                    <MissingResource kind="task" />
-                  )
-                }
-              />
-              <Route
-                path="/task/:taskId"
-                element={<MissingResource kind="task" />}
-              />
-              <Route
-                path="/tasks/:taskId"
-                element={<MissingResource kind="task" />}
-              />
-              <Route
-                path="/plan/:planId"
-                element={
-                  resource.staleRevision && resource.plan ? (
-                    <div className="page">
-                      <Empty
-                        title="This plan link is outdated."
-                        body="The proposal has changed since this link was created."
-                        action={
-                          <button
-                            className="button secondary"
-                            onClick={() =>
-                              navigate(
-                                planPath(
-                                  resource.plan!.id,
-                                  resource.plan!.revision,
-                                ),
-                                { replace: true },
-                              )
-                            }
-                          >
-                            Review the current proposal
-                          </button>
-                        }
-                      />
-                    </div>
-                  ) : resource.plan ? (
-                    <PlansPage openPlan={openPlan} />
-                  ) : (
-                    <MissingResource kind="plan" />
-                  )
-                }
-              />
-              <Route
-                path="/reports"
-                element={<ReportsPage openTask={openTask} />}
-              />
-              <Route
-                path="/week"
-                element={
-                  <Navigate
-                    to={{ pathname: "/plans", search: location.search }}
-                    replace
-                  />
-                }
-              />
-              <Route
-                path="/plans"
-                element={<PlansPage openPlan={openPlan} />}
-              />
-              <Route
-                path="/notifications"
-                element={
-                  <NotificationsPage openTask={openTask} openPlan={openPlan} />
-                }
-              />
-              <Route path="/team" element={<TeamPage />} />
-              <Route
-                path="/settings"
-                element={<SettingsPage key="settings" />}
-              />
-              <Route
-                path="/connections"
-                element={<SettingsPage key="connections" connections />}
-              />
-              <Route path="/join" element={<JoinPage />} />
-              <Route
-                path="*"
-                element={
-                  <Empty
-                    title="Page not found"
-                    body="That page is not available in Kazi."
-                    action={
-                      <Link className="button primary" to="/">
-                        Back to overview
-                      </Link>
-                    }
-                  />
-                }
-              />
-            </Routes>
+              >
+                <Route path="/" element={<OverviewPage {...props} />} />
+                <Route
+                  path="/my-tasks"
+                  element={
+                    <Navigate to={`/tasks?assignee=${actorId}`} replace />
+                  }
+                />
+                <Route
+                  path="/inbox"
+                  element={
+                    <Navigate
+                      to={`/tasks?project=${state.workspace.inboxId}`}
+                      replace
+                    />
+                  }
+                />
+                <Route path="/tasks" element={<TasksPage {...props} />} />
+                <Route path="/projects" element={<ProjectsPage {...props} />} />
+                <Route
+                  path="/projects/:id"
+                  element={<ProjectDetail {...props} />}
+                />
+                <Route
+                  path="/project/:id"
+                  element={<ProjectDetail {...props} />}
+                />
+                <Route
+                  path="/project/:id/task/:taskId"
+                  element={
+                    resource.task ? (
+                      <ProjectDetail {...props} />
+                    ) : (
+                      <MissingResource kind="task" />
+                    )
+                  }
+                />
+                <Route
+                  path="/task/:taskId"
+                  element={<MissingResource kind="task" />}
+                />
+                <Route
+                  path="/tasks/:taskId"
+                  element={<MissingResource kind="task" />}
+                />
+                <Route
+                  path="/plan/:planId"
+                  element={
+                    resource.staleRevision && resource.plan ? (
+                      <div className="page">
+                        <Empty
+                          title="This plan link is outdated."
+                          body="The proposal has changed since this link was created."
+                          action={
+                            <button
+                              className="button secondary"
+                              onClick={() =>
+                                navigate(
+                                  planPath(
+                                    resource.plan!.id,
+                                    resource.plan!.revision,
+                                  ),
+                                  { replace: true },
+                                )
+                              }
+                            >
+                              Review the current proposal
+                            </button>
+                          }
+                        />
+                      </div>
+                    ) : resource.plan ? (
+                      <PlansPage openPlan={openPlan} />
+                    ) : (
+                      <MissingResource kind="plan" />
+                    )
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <Suspense
+                      fallback={
+                        <p role="status" className="muted">
+                          Loading reports…
+                        </p>
+                      }
+                    >
+                      <ReportsPage openTask={openTask} />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/week"
+                  element={
+                    <Navigate
+                      to={{ pathname: "/plans", search: location.search }}
+                      replace
+                    />
+                  }
+                />
+                <Route
+                  path="/plans"
+                  element={<PlansPage openPlan={openPlan} />}
+                />
+                <Route
+                  path="/notifications"
+                  element={
+                    <NotificationsPage
+                      openTask={openTask}
+                      openPlan={openPlan}
+                    />
+                  }
+                />
+                <Route path="/team" element={<TeamPage />} />
+                <Route
+                  path="/settings"
+                  element={<SettingsPage key="settings" />}
+                />
+                <Route
+                  path="/connections"
+                  element={<SettingsPage key="connections" connections />}
+                />
+                <Route path="/join" element={<JoinPage />} />
+                <Route
+                  path="*"
+                  element={
+                    <Empty
+                      title="Page not found"
+                      body="That page is not available in Kazi."
+                      action={
+                        <Link className="button primary" to="/">
+                          Back to overview
+                        </Link>
+                      }
+                    />
+                  }
+                />
+              </Routes>
+            </Suspense>
           )}
         </main>
       </div>

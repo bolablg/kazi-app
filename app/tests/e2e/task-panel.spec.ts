@@ -1,3 +1,4 @@
+import { chooseStatus } from "./task-fields";
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
@@ -174,18 +175,16 @@ test("review actions update the full-page status without submitting stale task f
   await page
     .getByRole("button", { name: "Return for changes", exact: true })
     .click();
-  await expect(page.getByLabel("Task status", { exact: true })).toHaveValue(
-    "in_progress",
+  await expect(page.getByLabel("Task status", { exact: true })).toHaveText(
+    "In progress",
   );
-  await page
-    .getByLabel("Task status", { exact: true })
-    .selectOption("to_validate");
+  await chooseStatus(page, "to_validate");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page
     .getByRole("button", { name: "Approve & complete", exact: true })
     .click();
-  await expect(page.getByLabel("Task status", { exact: true })).toHaveValue(
-    "done",
+  await expect(page.getByLabel("Task status", { exact: true })).toHaveText(
+    "Completed",
   );
   await page.getByRole("button", { name: "Close task", exact: true }).click();
   await expect(

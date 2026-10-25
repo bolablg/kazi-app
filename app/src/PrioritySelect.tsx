@@ -1,22 +1,59 @@
-import { useState } from "react";
-import type { Task } from "../shared/model";
+import { statusLabels, taskStatusOptions, type Task } from "../shared/model";
+import { TaskChoice } from "./TaskChoice";
+
+export const stageColors: Record<string, string> = {
+  backlog: "#7e8188",
+  todo: "#526780",
+  in_progress: "#0c66e4",
+  to_validate: "#946600",
+  done: "#1f845a",
+  archived: "#76797f",
+  idea: "#7e8188",
+  blocked: "#76797f",
+  rejected: "#76797f",
+  canceled: "#76797f",
+};
 export function PrioritySelect({
   defaultValue = "medium",
 }: {
   defaultValue?: Task["priority"];
 }) {
-  const [value, setValue] = useState(defaultValue);
   return (
-    <select
+    <TaskChoice
       name="priority"
-      aria-label="Priority"
-      className={"priority-select " + value}
-      value={value}
-      onChange={(e) => setValue(e.target.value as Task["priority"])}
-    >
-      <option value="low">Low</option>
-      <option value="medium">Medium</option>
-      <option value="high">High</option>
-    </select>
+      label="Priority"
+      defaultValue={defaultValue}
+      className="priority-choice"
+      options={[
+        { value: "high", label: "High", color: "#c9372c" },
+        { value: "medium", label: "Medium", color: "#9c6f00" },
+        { value: "low", label: "Low", color: "#1f845a" },
+      ]}
+    />
+  );
+}
+export function StatusSelect({
+  defaultValue,
+}: {
+  defaultValue: Task["status"];
+}) {
+  return (
+    <TaskChoice
+      name="status"
+      label="Task status"
+      defaultValue={
+        defaultValue === "idea"
+          ? "backlog"
+          : ["blocked", "rejected", "canceled"].includes(defaultValue)
+            ? "archived"
+            : defaultValue
+      }
+      className="status-choice"
+      options={taskStatusOptions.map((value) => ({
+        value,
+        label: statusLabels[value],
+        color: stageColors[value],
+      }))}
+    />
   );
 }
