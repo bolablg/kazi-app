@@ -19,7 +19,8 @@ export const scopeLabels: Record<(typeof tokenScopes)[number], string> = {
   "projects:write": "Create, edit, deliver, archive, and favorite projects",
   "plans:propose": "Propose plans, select alternatives, and reject previews",
   "plans:approve": "Approve exact plan revisions and release your sessions",
-  "settings:write": "Change your planning and automatic scheduling preferences",
+  "settings:write":
+    "Change your planning preferences and personal team favorites",
   "people:manage": "Enable collaboration, invite people, and manage access",
   "connections:manage": "Connect or disconnect external calendar availability",
   "agenda:write":
@@ -41,6 +42,7 @@ export const commandScopes: Record<
   create_project: "projects:write",
   update_project: "projects:write",
   favorite_project: "projects:write",
+  favorite_team: "settings:write",
   preferences: "settings:write",
   propose: "plans:propose",
   select_alternative: "plans:propose",

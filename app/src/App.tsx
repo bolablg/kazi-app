@@ -1,4 +1,4 @@
-import { TeamSidebar } from "./TeamSidebar";
+import { SidebarFavorites, FavoritesPage, TeamScope } from "./Favorites";
 import {
   projectPath,
   taskPath,
@@ -7,7 +7,6 @@ import {
 } from "../shared/ids";
 import { resourceRoute } from "../shared/resourceRoutes";
 import type { Location } from "react-router-dom";
-import { projectStyle } from "./projectColors";
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   NavLink,
@@ -33,7 +32,6 @@ import {
   Settings,
   Search,
   Plus,
-  ChevronDown,
   HelpCircle,
   ArrowUpRight,
   Command,
@@ -109,7 +107,7 @@ function Shell() {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
-  const { state, actorId, demo, online, local, teams, teamId } = useData(),
+  const { state, actorId, demo, online, local } = useData(),
     { run } = useUI(),
     navigate = useNavigate(),
     location = useLocation();
@@ -120,13 +118,8 @@ function Shell() {
     [search, setSearch] = useState(""),
     [help, setHelp] = useState(false),
     [mobile, setMobile] = useState(false),
-    [favoritesOpen, setFavoritesOpen] = useState(true),
     [install, setInstall] = useState<InstallEvent>();
-  const me = state.members.find((m) => m.id === actorId)!,
-    favoriteProjects = state.projects.filter(
-      (p) => !p.archived && me.favoriteProjectIds?.includes(p.id),
-    ),
-    unread = state.notifications.filter(
+  const unread = state.notifications.filter(
       (n) =>
         !n.read &&
         n.deliveryAt <= now &&
@@ -240,7 +233,9 @@ function Shell() {
                 ? "Calendar"
                 : location.pathname === "/settings"
                   ? "Settings"
-                  : "Welcome"));
+                  : location.pathname === "/favorites"
+                    ? "Favorites"
+                    : "Welcome"));
   const legacyParams = new URLSearchParams(location.search);
   if (location.pathname === "/" && legacyParams.get("view") === "list") {
     legacyParams.set("view", "list");
@@ -348,66 +343,7 @@ function Shell() {
               </NavLink>
             ))}
           </nav>
-          <div className="sidebar-project-heading">
-            <button
-              className="sidebar-favorites-toggle nav-group-label"
-              aria-expanded={favoritesOpen}
-              aria-controls="favorite-projects"
-              onClick={() => setFavoritesOpen((open) => !open)}
-            >
-              <ChevronDown
-                size={15}
-                className={favoritesOpen ? "" : "collapsed"}
-              />
-              Favorites
-            </button>
-            <button
-              className="icon-button"
-              aria-label="Create project"
-              onClick={() => setProjectForm(true)}
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-          <div
-            className="sidebar-projects"
-            id="favorite-projects"
-            hidden={!favoritesOpen}
-          >
-            {favoriteProjects.slice(0, 5).map((p) => (
-              <NavLink
-                className="sidebar-project"
-                key={p.id}
-                to={projectPath(p.id)}
-                onClick={() => setMobile(false)}
-              >
-                <i
-                  className={p.color}
-                  style={{
-                    ...projectStyle(p.color),
-                    background: "var(--project-accent)",
-                  }}
-                />
-                <span>{p.title}</span>
-              </NavLink>
-            ))}
-            {favoriteProjects.length > 5 && (
-              <Link
-                className="sidebar-more"
-                to="/projects"
-                onClick={() => setMobile(false)}
-              >
-                More projects
-                <ArrowUpRight size={14} />
-              </Link>
-            )}
-            {!favoriteProjects.length && (
-              <p className="sidebar-favorites-empty">
-                Star projects to keep them here.
-              </p>
-            )}
-          </div>
-          <TeamSidebar onSelect={() => setMobile(false)} />
+          <SidebarFavorites onSelect={() => setMobile(false)} />
         </div>
         <AccountMenu />
       </aside>
@@ -422,13 +358,7 @@ function Shell() {
               <Menu size={21} />
             </button>
             <strong>{pageName}</strong>
-            <span className="team-scope-label" title="Current team filter">
-              {teamId === "all"
-                ? "All teams"
-                : teams.find((team) => team.id === teamId)?.kind === "personal"
-                  ? "Personal"
-                  : teams.find((team) => team.id === teamId)?.name}
-            </span>
+            <TeamScope />
             {(demo || local) && (
               <span className="demo-label">
                 {local ? "Local development" : "Demo"}
@@ -548,6 +478,7 @@ function Shell() {
                 />
                 <Route path="/tasks" element={<TasksPage {...props} />} />
                 <Route path="/projects" element={<ProjectsPage {...props} />} />
+                <Route path="/favorites" element={<FavoritesPage />} />
                 <Route
                   path="/projects/:id"
                   element={<ProjectDetail {...props} />}

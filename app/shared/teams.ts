@@ -12,13 +12,18 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
     for (const member of state.members) {
       const prior = members.get(member.id);
       if (!prior) members.set(member.id, structuredClone(member));
-      else if (member.id === actorId)
+      else if (member.id === actorId) {
         prior.favoriteProjectIds = [
           ...new Set([
             ...(prior.favoriteProjectIds ?? []),
             ...(member.favoriteProjectIds ?? []),
           ]),
         ];
+        prior.favoriteProjectAt = {
+          ...prior.favoriteProjectAt,
+          ...member.favoriteProjectAt,
+        };
+      }
     }
   const resourceTeams: Record<string, string> = {},
     teamMemberships: Record<string, Member[]> = {};
@@ -78,6 +83,7 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
       id: id,
       key: state.workspace.id,
       role: state.members.find((m) => m.id === actorId)?.role ?? "guest",
+      favoriteAt: state.members.find((m) => m.id === actorId)?.favoriteTeamAt,
     })),
     taskDueAt: Object.assign(
       {},

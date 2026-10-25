@@ -220,6 +220,9 @@ export const workspaces = query({
               name: w.name,
               kind: w.kind,
               role: m.data.role,
+              ...(m.data.favoriteTeamAt !== undefined
+                ? { favoriteAt: m.data.favoriteTeamAt }
+                : {}),
             }
           : null;
       }),

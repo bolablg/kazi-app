@@ -44,6 +44,7 @@ export interface Data {
     kind: "personal" | "team";
     ownerId: string;
     role: string;
+    favoriteAt?: number;
   }[];
   setTeam: (id: string) => void;
   createTeam: (name: string) => Promise<void>;
@@ -228,6 +229,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
             ...state.workspace,
             role:
               state.members.find((m) => m.id === DEMO_USER)?.role ?? "owner",
+            favoriteAt: state.members.find((m) => m.id === DEMO_USER)
+              ?.favoriteTeamAt,
           },
         ],
         setTeam: setDemoTeamId,
@@ -512,6 +515,8 @@ export function LiveProvider({
           ...state.workspace,
           id,
           role: state.members.find((m) => m.id === actorId)?.role ?? "guest",
+          favoriteAt: state.members.find((m) => m.id === actorId)
+            ?.favoriteTeamAt,
         })),
         setTeam,
         createTeam: async (name) => {

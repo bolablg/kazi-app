@@ -211,7 +211,15 @@ export const workspacesFor = internalQuery({
     return Promise.all(
       memberships.map(async (m) => {
         const w = await ctx.db.get(m.workspaceId);
-        return { id: m.workspaceId, name: w?.name, role: m.data.role };
+        return {
+          id: m.workspaceId,
+          name: w?.name,
+          kind: w?.kind,
+          role: m.data.role,
+          ...(m.data.favoriteTeamAt !== undefined
+            ? { favoriteAt: m.data.favoriteTeamAt }
+            : {}),
+        };
       }),
     );
   },

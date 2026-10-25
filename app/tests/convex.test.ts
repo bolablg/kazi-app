@@ -33,6 +33,81 @@ const command = {
 };
 afterEach(() => vi.useRealTimers());
 describe("Convex transactional services", () => {
+  it("persists private team favorites across retries, memberships and the shared MCP service", async () => {
+    const t = make(),
+      a = t.withIdentity(alice),
+      b = t.withIdentity(bob);
+    await a.mutation(api.commands.bootstrap, {});
+    const team = await a.mutation(api.commands.createTeam, {
+      name: "Favorite team",
+    });
+    const bPersonal = (await b.mutation(api.commands.bootstrap, {}))!;
+    const args = {
+      workspaceId: team,
+      command: JSON.stringify({ type: "favorite_team", favorite: true }),
+      requestId: "favorite-team-retry",
+    };
+    await expect(b.mutation(api.commands.execute, args)).rejects.toThrow(
+      "unavailable",
+    );
+    await a.mutation(api.commands.execute, args);
+    await a.mutation(api.commands.execute, args);
+    const favorite = (await a.query(api.commands.workspaces, {})).find(
+      (w) => w?.id === team,
+    )!;
+    expect(favorite.favoriteAt).toBeTypeOf("number");
+    await t.run(async (ctx) => {
+      const personal = await loadState(ctx, bPersonal);
+      await ctx.db.insert("memberships", {
+        workspaceId: team,
+        key: bob.subject,
+        subject: bob.subject,
+        data: { ...personal.members[0], role: "member" },
+      });
+    });
+    expect(
+      (
+        await b.query(api.commands.snapshot, { workspaceId: team })
+      ).members.find((m) => m.id === alice.subject)?.favoriteTeamAt,
+    ).toBeUndefined();
+    expect(
+      (await b.query(api.commands.workspaces, {})).find((w) => w?.id === team)
+        ?.favoriteAt,
+    ).toBeUndefined();
+    const token = "kazi_team_favorite_test";
+    await t.mutation(internal.tokens.save, {
+      subject: alice.subject,
+      hash: await sha256(token),
+      label: "Team favorites",
+      scopes: ["read", "settings:write"],
+    });
+    const response = await t.fetch("/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        Authorization: "Bearer " + token,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "favorite_team",
+          arguments: {
+            workspaceId: team,
+            favorite: false,
+            requestId: "mcp-unfavorite-team",
+          },
+        },
+      }),
+    });
+    expect((await response.json()).result.isError).not.toBe(true);
+    expect(
+      (await a.query(api.commands.workspaces, {})).find((w) => w?.id === team)
+        ?.favoriteAt,
+    ).toBeUndefined();
+  });
   it("refreshes searchable identity only from issuer claims across team memberships", async () => {
     const t = make(),
       a = t.withIdentity(alice);

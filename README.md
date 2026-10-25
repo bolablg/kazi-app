@@ -12,7 +12,7 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 Use lists and drag-and-drop boards to move tasks through **Backlog → To do → In progress → To validate → Completed**. Keep rejected or discontinued work in Archive, and save ideas for a later review with **To Brainstorm**.
 
-Group work into projects, or use Personal planning for everyday tasks. Add priorities, colored tags, deadlines, dependencies, subtasks, and milestones. Project timelines show how the pieces fit together. Favorites keep the projects you use most within reach.
+Group work into projects, or use Personal planning for everyday tasks. Add priorities, colored tags, deadlines, dependencies, subtasks, and milestones. Project timelines show how the pieces fit together. Favorites keep the projects and teams you use most within reach.
 
 ## Collaborate with clear responsibilities
 
