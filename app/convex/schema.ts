@@ -56,6 +56,7 @@ export default defineSchema({
     subject: v.string(),
     name: v.string(),
     email: v.string(),
+    username: v.optional(v.string()),
     activeWorkspaceId: v.optional(v.id("workspaces")),
   }).index("by_subject", ["subject"]),
   workspaces: defineTable({

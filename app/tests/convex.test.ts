@@ -7,6 +7,7 @@ import { fixtureState as seedState, DEMO_USER } from "../shared/fixtures";
 import { loadState, persist } from "../convex/store";
 import type { ReportEvent } from "../shared/model";
 import type { Id } from "../convex/_generated/dataModel";
+import { sha256 } from "../convex/crypto";
 const modules = import.meta.glob("../convex/**/*.ts");
 const make = () => convexTest(schema, modules);
 const alice = {
@@ -32,6 +33,137 @@ const command = {
 };
 afterEach(() => vi.useRealTimers());
 describe("Convex transactional services", () => {
+  it("refreshes searchable identity only from issuer claims across team memberships", async () => {
+    const t = make(),
+      a = t.withIdentity(alice);
+    const personal = (await a.mutation(api.commands.bootstrap, {}))!;
+    const team = await a.mutation(api.commands.createTeam, { name: "Design" });
+    const renamed = t.withIdentity({
+      ...alice,
+      name: "Alice Updated",
+      preferredUsername: "alice.design",
+      email: "new@example.test",
+    });
+    await renamed.mutation(api.commands.bootstrap, {});
+    for (const workspaceId of [personal, team]) {
+      const member = (
+        await renamed.query(api.commands.snapshot, { workspaceId })
+      ).members.find((m) => m.id === alice.subject)!;
+      expect([member.name, member.username, member.email]).toEqual([
+        "Alice Updated",
+        "alice.design",
+        "new@example.test",
+      ]);
+    }
+    // Missing optional claims must not erase the known identity.
+    await t
+      .withIdentity({ subject: alice.subject })
+      .mutation(api.commands.bootstrap, {});
+    expect(
+      (await a.query(api.commands.snapshot, { workspaceId: personal }))
+        .members[0].username,
+    ).toBe("alice.design");
+  });
+  it("persists mentions and notifications once across retried commands", async () => {
+    const t = make(),
+      a = t.withIdentity({ ...alice, subject: DEMO_USER });
+    const workspaceId = (await a.mutation(api.commands.bootstrap, {}))!;
+    await t.run(async (ctx) => {
+      const before = await loadState(ctx, workspaceId),
+        after = seedState(Date.now());
+      after.workspace = before.workspace;
+      after.projects[0].id = before.workspace.inboxId;
+      after.tasks.forEach((task) => {
+        if (task.projectId === "inbox")
+          task.projectId = before.workspace.inboxId;
+      });
+      await persist(ctx, workspaceId, before, after);
+    });
+    const args = {
+      workspaceId,
+      requestId: "comment-mention-retry",
+      command: JSON.stringify({
+        type: "comment",
+        id: "t1",
+        body: "Ask @amira.chen",
+        mentions: [{ memberId: "demo-amira", start: 4, end: 15 }],
+      }),
+    };
+    const activity = await a.mutation(api.commands.execute, args);
+    expect(await a.mutation(api.commands.execute, args)).toBe(activity);
+    const snapshot = await a.query(api.commands.snapshot, { workspaceId });
+    expect(
+      snapshot.activities.find((event) => event.id === activity)?.mentions?.[0]
+        .memberId,
+    ).toBe("demo-amira");
+    const recipient = t.withIdentity({ subject: "demo-amira" });
+    const notices = (
+      await recipient.query(api.commands.snapshot, { workspaceId })
+    ).notifications.filter((n) => n.key === "comment:" + activity);
+    expect(notices).toHaveLength(1);
+    expect(notices[0].title).toContain("mentioned you");
+    const token = "kazi_people_test_token";
+    await t.mutation(internal.tokens.save, {
+      subject: DEMO_USER,
+      hash: await sha256(token),
+      label: "People tests",
+      scopes: ["read", "tasks:write"],
+    });
+    const call = async (name: string, args: Record<string, unknown>) => {
+      const response = await t.fetch("/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name, arguments: { workspaceId, ...args } },
+        }),
+      });
+      const result = (await response.json()).result;
+      expect(result.isError).not.toBe(true);
+      return result.structuredContent.result;
+    };
+    const people = await call("list_members", {
+      search: "amira@example",
+      projectId: "website",
+    });
+    expect(people.items.map((m: { id: string }) => m.id)).toEqual([
+      "demo-amira",
+    ]);
+    expect(people.items[0].username).toBe("amira.chen");
+    expect(
+      (await call("list_members", { search: "amira", projectId: "learning" }))
+        .items,
+    ).toEqual([]);
+    const mcpArgs = {
+      id: "t1",
+      body: "Ask @daniel",
+      mentions: [{ memberId: "demo-daniel", start: 4, end: 11 }],
+      requestId: "mcp-mention-retry",
+    };
+    const mcpActivity = await call("add_comment", mcpArgs);
+    expect(await call("add_comment", mcpArgs)).toBe(mcpActivity);
+    const mcpSnapshot = await a.query(api.commands.snapshot, { workspaceId });
+    expect(
+      mcpSnapshot.activities.find((event) => event.id === mcpActivity)
+        ?.mentions?.[0].memberId,
+    ).toBe("demo-daniel");
+    const personal = (await t
+      .withIdentity(bob)
+      .mutation(api.commands.bootstrap, {}))!;
+    await expect(
+      t.withIdentity(bob).mutation(api.commands.execute, {
+        ...args,
+        workspaceId: personal,
+        requestId: "foreign-mention",
+      }),
+    ).rejects.toThrow("unavailable");
+  });
   it("persists personal favorites across subscriptions and retries and rejects foreign projects", async () => {
     const t = make(),
       a = t.withIdentity(alice),

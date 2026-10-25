@@ -15,12 +15,14 @@ import {
   type Session,
   type Project,
   type Member,
+  type Mention,
   type Proposal,
   commandSchema,
   defaults,
   defaultAgingDays,
   fail,
 } from "./model";
+import { trimMentionText } from "./people";
 import {
   allocate,
   addDays,
@@ -187,6 +189,7 @@ function audit(
   projectId?: string,
   kind: "change" | "comment" | "policy" = "change",
   attachmentIds?: string[],
+  mentions?: Mention[],
 ) {
   const event = {
     id: c.id(),
@@ -197,6 +200,7 @@ function audit(
     at: c.now,
     kind,
     ...(attachmentIds?.length ? { attachmentIds } : {}),
+    ...(mentions?.length ? { mentions } : {}),
   };
   s.activities.unshift(event);
   return event.id;
@@ -347,6 +351,83 @@ function validateTask(s: State, t: Task, c: Context) {
     }
   };
   visit(t.id, new Set());
+}
+
+function validateMentions(
+  s: State,
+  t: Task,
+  text: string,
+  mentions: Mention[],
+  c: Context,
+) {
+  const project = projectFor(s, t.projectId, c.actorId);
+  let end = 0;
+  for (const mention of mentions) {
+    if (
+      mention.start < end ||
+      mention.end <= mention.start ||
+      mention.end > text.length ||
+      !text.slice(mention.start, mention.end).startsWith("@") ||
+      /[\r\n]/.test(text.slice(mention.start, mention.end)) ||
+      !canSeeProject(s, project, mention.memberId)
+    )
+      fail(
+        "MENTION",
+        "Select a teammate with access to this project for each mention.",
+      );
+    end = mention.end;
+  }
+}
+function addMentionCollaborators(t: Task, mentions: Mention[]) {
+  t.collaborators = [
+    ...new Set([...t.collaborators, ...mentions.map((m) => m.memberId)]),
+  ];
+  if (t.collaborators.length > 30)
+    fail("COLLABORATOR_LIMIT", "A task can have up to 30 collaborators.");
+}
+function notifyMentions(
+  s: State,
+  t: Task,
+  mentions: Mention[],
+  previous: Mention[],
+  key: string,
+  c: Context,
+) {
+  const prior = new Set(previous.map((m) => m.memberId));
+  for (const id of new Set(mentions.map((m) => m.memberId)))
+    if (id !== c.actorId && !prior.has(id))
+      notify(
+        s,
+        c,
+        id,
+        key,
+        `${actor(s, c.actorId).name} mentioned you`,
+        t.title,
+        "system",
+        t.id,
+      );
+}
+
+function notifyCollaborators(
+  s: State,
+  t: Task,
+  prior: string[],
+  mentions: Mention[],
+  c: Context,
+) {
+  const mentioned = new Set(mentions.map((m) => m.memberId));
+  for (const id of t.collaborators)
+    if (id !== c.actorId && !prior.includes(id) && !mentioned.has(id))
+      notify(
+        s,
+        c,
+        id,
+        `collaborator:${t.id}:${t.revision}`,
+        "Added as a collaborator",
+        t.title,
+        "assignment",
+        t.id,
+      );
 }
 function proposalFor(
   s: State,
@@ -532,9 +613,20 @@ export function execute(
         lastProgress: c.now,
       };
       if (t.assigneeId === "unassigned") delete t.assigneeId;
+      validateMentions(s, t, t.description, t.descriptionMentions ?? [], c);
+      addMentionCollaborators(t, t.descriptionMentions ?? []);
       validateTask(s, t, c);
       s.tasks.push(t);
       audit(s, c, "Created task", t.id, p.id);
+      notifyMentions(
+        s,
+        t,
+        t.descriptionMentions ?? [],
+        [],
+        `mention:description:${t.id}:${t.revision}`,
+        c,
+      );
+      notifyCollaborators(s, t, [], t.descriptionMentions ?? [], c);
       if (t.assigneeId && t.assigneeId !== c.actorId)
         notify(
           s,
@@ -581,6 +673,8 @@ export function execute(
           "Only the task owner or project manager can change review ownership.",
         );
       const oldAssignee = t.assigneeId,
+        oldCollaborators = [...t.collaborators],
+        oldMentions = t.descriptionMentions ?? [],
         priorDeadline = t.deadline,
         priorStatus = t.status,
         priorProject = t.projectId;
@@ -600,6 +694,11 @@ export function execute(
             "Move the parent and subtasks together in a dedicated operation.",
           );
       }
+      if (
+        command.patch.description !== undefined &&
+        command.patch.descriptionMentions === undefined
+      )
+        command.patch.descriptionMentions = [];
       Object.assign(t, command.patch);
       for (const field of ["deadline", "startDate", "reviewDate"] as const)
         if (t[field] === "") delete t[field];
@@ -626,7 +725,25 @@ export function execute(
         t.lastProgress = c.now;
       t.updatedAt = c.now;
       t.revision++;
+      validateMentions(s, t, t.description, t.descriptionMentions ?? [], c);
+      if (command.patch.descriptionMentions !== undefined)
+        addMentionCollaborators(t, t.descriptionMentions ?? []);
       validateTask(s, t, c);
+      notifyMentions(
+        s,
+        t,
+        t.descriptionMentions ?? [],
+        oldMentions,
+        `mention:description:${t.id}:${t.revision}`,
+        c,
+      );
+      notifyCollaborators(
+        s,
+        t,
+        oldCollaborators,
+        t.descriptionMentions ?? [],
+        c,
+      );
       if (priorStatus !== "done" && t.status === "done") {
         const dueAt = deadlineAt(
           priorDeadline,
@@ -788,6 +905,10 @@ export function execute(
     }
     case "comment": {
       const t = taskFor(s, command.id, c.actorId);
+      const content = trimMentionText(command.body, command.mentions);
+      command.body = content.text;
+      const mentions = content.mentions;
+      validateMentions(s, t, command.body, mentions, c);
       const attachmentIds = [...new Set(command.attachmentIds ?? [])];
       if (!command.body && !attachmentIds.length)
         fail("COMMENT", "Write a comment or attach a file.");
@@ -806,7 +927,22 @@ export function execute(
         t.projectId,
         "comment",
         attachmentIds,
+        mentions,
       );
+      const beforeCollaborators = [...t.collaborators];
+      addMentionCollaborators(t, mentions);
+      if (beforeCollaborators.length !== t.collaborators.length) {
+        t.revision++;
+        t.updatedAt = c.now;
+        audit(
+          s,
+          c,
+          "Added mentioned people as collaborators",
+          t.id,
+          t.projectId,
+        );
+      }
+      notifyMentions(s, t, mentions, [], "comment:" + result, c);
       for (const person of new Set([
         t.ownerId,
         t.assigneeId,
@@ -1323,6 +1459,11 @@ export function execute(
         if (p.ownerId === command.id) p.ownerId = s.workspace.ownerId;
       });
       s.tasks.forEach((t) => {
+        if (t.ownerId === command.id) t.ownerId = s.workspace.ownerId;
+        if (t.descriptionMentions?.some((m) => m.memberId === command.id))
+          t.descriptionMentions = t.descriptionMentions.filter(
+            (m) => m.memberId !== command.id,
+          );
         if (t.collaborators.includes(command.id)) {
           t.collaborators = t.collaborators.filter((id) => id !== command.id);
           t.revision++;

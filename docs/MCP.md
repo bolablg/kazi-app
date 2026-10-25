@@ -46,7 +46,7 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 
 | UI capability                                               | MCP tool / service                                                                                                                                           |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Task capture, fields, stages, labels, subtasks/dependencies | `create_task`, `update_task`, `assign_task`, `complete_task`                                                                                                 |
+| Task capture, fields, stages, tags, subtasks/dependencies | `create_task`, `update_task`, `assign_task`, `complete_task`                                                                                                 |
 | Reject/archive or restore a task                            | `update_task` status `archived` / `backlog`; `list_tasks` with `archived:true`                                                                               |
 | List/global/project board                                   | `list_tasks` with project/status/person/label/search filters; same records                                                                                   |
 | Comments and task updates                                   | `add_comment`, `update_task`                                                                                                                                 |
@@ -103,11 +103,14 @@ Omitting `projectId` captures into that selected workspace’s default Personal 
 
 Natural-language task descriptions, comments and calendar content are data. They cannot grant scopes, waive review, or change the caller identity.
 
+The app calls colored task categories **Tags**. The existing `labels` task field and `list_tasks.label` filter retain their API names for compatibility.
+
 ## Comments and artifacts
 
 Task collaboration uses the same commands and file service as the app:
 
-- `add_comment` accepts `body` and up to ten `attachmentIds`; an empty body requires attachments from that same task.
+- `list_members` searches authorized teammates by `search` (name, username, or email). Pass `projectId` to restrict candidates to that project's team and access. Results include stable IDs and searchable identity fields.
+- `add_comment` accepts `body`, optional `mentions`, and up to ten `attachmentIds`; an empty body requires attachments from that same task. Each mention is `{memberId,start,end}`, referencing selected @text in `body` using UTF-16 string offsets. `create_task` and `update_task.patch` accept the equivalent `descriptionMentions` for `description`. References must be ordered, non-overlapping, and refer to a current member with project access. Mentions add collaborators and notify through the same service as the app. Use the same request ID for retries to avoid duplicate comments or notifications. Replacing description text without `descriptionMentions` clears its references.
 - `attach_link` adds an HTTPS artifact to `description` or `task`; `remove_artifact` detaches an authorized artifact. These require `tasks:write`.
 - `list_task_activity` uses a continuation cursor and returns complete timestamped comments/activity; `list_task_artifacts` lists current task files and links. Both require `read`.
 - `prepare_task_upload` requires `tasks:write` and returns `{url,token,expiresAt}`. POST the raw file bytes to `url` with `Authorization: Bearer <token>`; the response returns `artifactId`. This avoids putting file bodies in MCP JSON messages. Use that ID with `add_comment` to include the file in a comment.

@@ -1,3 +1,4 @@
+import { choosePerson } from "./task-fields";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
@@ -61,7 +62,7 @@ test("creates a project and assigns work on its board", async ({ page }) => {
   await dialog
     .getByLabel("What needs to get done?")
     .fill("Draft the welcome issue");
-  await dialog.getByLabel("Worker").selectOption("demo-amira");
+  await choosePerson(page, "Worker", "Amira Chen");
   await dialog.getByLabel("Estimated minutes").fill("90");
   await dialog.getByRole("button", { name: "Create task" }).click();
   await page.getByRole("button", { name: "Board", exact: true }).click();

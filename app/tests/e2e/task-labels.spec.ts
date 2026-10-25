@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("colored task labels persist across lists, boards, details, and calendar agendas without a project legend", async ({
+test("colored task tags persist across lists, boards, details, and calendar agendas without a project legend", async ({
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
@@ -11,7 +11,7 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   const title = "Map customer research";
   await dialog.getByLabel("What needs to get done?").fill(title);
   await dialog
-    .getByLabel("Task labels", { exact: true })
+    .getByLabel("Task tags", { exact: true })
     .fill("Research, Design, research");
   await expect(dialog.locator(".label-token")).toHaveCount(2);
   await dialog.getByLabel(/^Deadline/).fill("2026-10-26");
@@ -51,14 +51,12 @@ test("colored task labels persist across lists, boards, details, and calendar ag
     "Design",
   ]);
   await dialog
-    .getByRole("button", { name: "Remove Research label", exact: true })
+    .getByRole("button", { name: "Remove Research tag", exact: true })
     .click();
   await dialog
-    .getByRole("button", { name: "Remove Design label", exact: true })
+    .getByRole("button", { name: "Remove Design tag", exact: true })
     .click();
-  await dialog
-    .getByLabel("Task labels", { exact: true })
-    .fill("Meeting, Admin");
+  await dialog.getByLabel("Task tags", { exact: true }).fill("Meeting, Admin");
   await dialog
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
@@ -70,7 +68,13 @@ test("colored task labels persist across lists, boards, details, and calendar ag
     .getByRole("navigation", { name: "Main navigation" })
     .getByRole("link", { name: "Tasks", exact: true })
     .click();
-  await page.getByLabel("Filter by label").selectOption({ label: "Admin" });
+  await page.getByLabel("Filter by tag").selectOption({ label: "Admin" });
+  await expect(page).toHaveURL(/tag=admin/);
+  const legacy = new URL(page.url());
+  legacy.searchParams.delete("tag");
+  legacy.searchParams.set("label", "admin");
+  await page.goto(legacy.toString());
+  await expect(page.getByLabel("Filter by tag")).toHaveValue("admin");
   await expect(task).toBeVisible();
   await expect(
     page.getByRole("button", {
@@ -80,20 +84,20 @@ test("colored task labels persist across lists, boards, details, and calendar ag
   ).toHaveCount(0);
   await task.click();
   await page
-    .getByRole("button", { name: "Remove Meeting label", exact: true })
+    .getByRole("button", { name: "Remove Meeting tag", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Remove Admin label", exact: true })
+    .getByRole("button", { name: "Remove Admin tag", exact: true })
     .click();
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close task", exact: true }).click();
-  await expect(page.getByLabel("Filter by label")).toHaveValue("all");
+  await expect(page.getByLabel("Filter by tag")).toHaveValue("all");
   await expect(task.locator(".task-label")).toHaveCount(0);
   await task.click();
   await page
     .getByRole("article", { name: "Task details" })
-    .getByLabel("Task labels", { exact: true })
+    .getByLabel("Task tags", { exact: true })
     .fill("Research");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
