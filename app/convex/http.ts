@@ -23,6 +23,7 @@ import {
 } from "../shared/model";
 import { commandScopes, tokenScopes } from "../shared/capabilities";
 import { overviewEvents } from "../shared/overview";
+import { buildTodayOverview } from "../shared/today";
 import { buildReport, reportBounds, reportCsv } from "../shared/reports";
 import { invitationToken } from "./crypto";
 import { MAX_FILE_BYTES } from "../shared/artifacts";
@@ -286,6 +287,7 @@ const mcp = httpAction(async (ctx, request) => {
           "list_projects",
           "list_tasks",
           "get_agenda",
+          "get_today_overview",
           "get_plan_history",
           "get_report",
           "get_workflow_report",
@@ -325,6 +327,7 @@ const mcp = httpAction(async (ctx, request) => {
         "availability",
         "get_calendar",
         "get_agenda",
+        "get_today_overview",
         "get_project_timeline",
         "list_invitations",
         "export_data",
@@ -430,6 +433,22 @@ const mcp = httpAction(async (ctx, request) => {
           });
         }
 
+        case "get_today_overview": {
+          if (input.projectId && input.projectId !== "all")
+            projectFor(state, String(input.projectId), principal.subject);
+          const person = String(input.person ?? principal.subject);
+          if (
+            person !== "all" &&
+            !state.members.some((member) => member.id === person)
+          )
+            throw new Error("Select an available person.");
+          return buildTodayOverview(state, {
+            actorId: principal.subject,
+            now: Date.now(),
+            person,
+            project: String(input.projectId ?? "all"),
+          });
+        }
         case "get_calendar":
           return (
             state.calendars.find((cal) => cal.ownerId === principal.subject) ??

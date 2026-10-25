@@ -124,7 +124,7 @@ export function ProjectCard({ project }: { project: Project }) {
     </div>
   );
 }
-function ProjectFavoriteButton({ project }: { project: Project }) {
+export function ProjectFavoriteButton({ project }: { project: Project }) {
   const { state, actorId, dispatch, online } = useData(),
     { run } = useUI(),
     [saving, setSaving] = useState(false);
