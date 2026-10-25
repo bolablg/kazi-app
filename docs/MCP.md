@@ -15,6 +15,7 @@ In Kazi Connections → MCP & agents → Add connection, create a labeled creden
 | `read`               | Authorized resources, reports, agenda, preferences, credential metadata and activity |
 | `tasks:write`        | Tasks, statuses, comments, progress, notification acknowledgement                    |
 | `projects:write`     | Project creation, lifecycle/dates/access, personal project favorites                 |
+| `sprints:write`      | Sprint creation, selection, start, cancellation, and closeout                        |
 | `plans:propose`      | Proposal previews, alternatives and rejection                                        |
 | `plans:approve`      | Exact-revision approval and release of your future sessions                          |
 | `settings:write`     | Your planning preferences, automatic scheduling policy, and personal team favorites  |
@@ -73,6 +74,10 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 | MCP credentials and activity                              | `create_credential`, `list_credentials`, `revoke_credential`, `list_mcp_activity`                                                                            |
 | Data export                                               | `export_data`                                                                                                                                                |
 | Discovery / permission definitions                        | `list_workspaces`, `list_capabilities`                                                                                                                       |
+
+Sprint planning uses `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `cancel_sprint`, and `close_sprint`. Writes require `sprints:write` plus the same underlying team/project permissions as the app. Omit `create_sprint.title` to generate `TeamName - Sprint - W44` or `Perso - Sprint - W44` from the start date's ISO week; explicit legacy titles remain supported. Draft automatic names follow start-date changes, and active dates/names stay fixed.
+
+Supply `objectives: [{id,title,successCriteria,leadId?}]` and `objectiveAssignments: {TASK_ID: OBJECTIVE_ID}` alongside the canonical `taskIds`. Missing assignments mean Other work. Leads must have access to every linked project. Incomplete drafts can be saved; starting requires an outcome and selected work for every objective. Updates require the current `revision`. `close_sprint.objectiveOutcomes` must assess each objective exactly once with `{objectiveId,outcome,note?}`; the legacy `outcome` field still supports a single objective. Every unfinished task also needs a deliberate decision. Backlog decisions additionally require `tasks:write`, and transfers enter Other work in a multi-objective destination. `propose_plan` accepts `sprintId` and includes all selected ready tasks once, retaining objective/assignment snapshots on acceptance. See [Sprints](SPRINTS.md) for lifecycle and history rules.
 
 A proposal is a preview. `approve_plan` is a real data action when the token explicitly has `plans:approve`; it uses the same fresh availability, current revision, predecessor, owner, membership, and task/constraint checks as the UI. A generic `confirmed:true` is not authority. Team sessions still wait for the necessary owners. `set_preferences` similarly requires `settings:write`; task text cannot authorize a policy change.
 

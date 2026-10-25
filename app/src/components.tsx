@@ -774,10 +774,12 @@ export function TaskDetail({
   id,
   onClose,
   onOpen,
+  backLabel = "All tasks",
 }: {
   id: string | undefined;
   onClose: () => void;
   onOpen: (id: string) => void;
+  backLabel?: string;
 }) {
   const { state, dispatch, actorId, online } = useData(),
     { run } = useUI();
@@ -825,7 +827,7 @@ export function TaskDetail({
         <header className="task-page-toolbar">
           <button className="text-button task-back" onClick={onClose}>
             <ArrowLeft size={16} />
-            All tasks
+            {backLabel}
           </button>
           <span className="task-page-project">
             <span className="task-home-scope">

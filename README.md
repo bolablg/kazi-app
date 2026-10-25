@@ -25,6 +25,8 @@ Create teams, invite people, and control access to projects. If you belong to se
 
 ## Plan your day, week, and month
 
+Use optional **Sprints** to plan a shared period with several objectives. The full-page planner generates the sprint name from the team and start week, saves resumable drafts, groups existing tasks, and previews calendar sessions. Close each objective with an assessment and decide what happens to unfinished work. Original scope and closeout results stay in history. See the [sprint guide](docs/SPRINTS.md).
+
 **Overview** opens directly on your daily priorities, work ready to start, favorite and recent projects, and recent task activity. **Calendar** has Calendar and Schedule views for seeing when work happens. **Plans** keeps proposals and accepted plan history together.
 
 The agenda combines deadlines and scheduled focus sessions in daily, weekly, and monthly views. Review proposed plans before accepting them, adjust your working hours and capacity, and keep previous plan versions when priorities change.

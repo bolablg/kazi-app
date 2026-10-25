@@ -17,6 +17,7 @@ import {
   type Member,
   type Mention,
   type Proposal,
+  type Sprint,
   commandSchema,
   defaults,
   defaultAgingDays,
@@ -31,6 +32,14 @@ import {
   localInstant,
   MINUTE,
 } from "./scheduler";
+import {
+  automaticSprintName,
+  isOpenSprint,
+  sprintAssignments,
+  sprintDays,
+  sprintObjectives,
+  sprintSnapshot,
+} from "./sprints";
 
 export function actor(s: State, id: string): Member {
   return (
@@ -86,6 +95,182 @@ function editable(s: State, t: Task, id: string) {
       "Only the assignee or a project manager can change this task.",
     );
 }
+export function canSeeSprint(
+  s: State,
+  sprint: Sprint,
+  userId: string,
+): boolean {
+  const member = s.members.find((m) => m.id === userId);
+  if (!member) return false;
+  const ids = new Set([
+    ...sprint.taskIds,
+    ...(sprint.initialTasks ?? []).map((t) => t.id),
+    ...sprint.changes.flatMap((change) => [...change.added, ...change.removed]),
+  ]);
+  const projects = new Set([
+    ...sprint.projectIds,
+    ...s.tasks.filter((task) => ids.has(task.id)).map((task) => task.projectId),
+  ]);
+  if (!projects.size)
+    return (
+      sprint.ownerId === userId ||
+      !!sprint.objectives?.some((objective) => objective.leadId === userId) ||
+      ["owner", "admin"].includes(member.role)
+    );
+  return [...projects].every((id) => {
+    const project = s.projects.find((p) => p.id === id);
+    return !!project && canSeeProject(s, project, userId);
+  });
+}
+export function sprintFor(s: State, id: string, userId: string): Sprint {
+  const sprint = s.sprints?.find((item) => item.id === id);
+  if (!sprint || !canSeeSprint(s, sprint, userId))
+    fail("FORBIDDEN", "This sprint is unavailable or you do not have access.");
+  return sprint;
+}
+function manageSprint(
+  s: State,
+  id: string,
+  revision: number,
+  c: Context,
+): Sprint {
+  const sprint = sprintFor(s, id, c.actorId);
+  if (sprint.ownerId !== c.actorId && !manager(s, c.actorId))
+    fail(
+      "FORBIDDEN",
+      "Only the sprint owner or a team manager can change this sprint.",
+    );
+  if (sprint.revision !== revision)
+    fail("REVISION", "This sprint changed. Reload it before saving.");
+  if (!isOpenSprint(sprint)) fail("STATE", "This sprint is already closed.");
+  return sprint;
+}
+function validateSprint(s: State, sprint: Sprint) {
+  const days = sprintDays(sprint.startDate, sprint.endDate);
+  if (days < 1 || days > 28)
+    fail("DATES", "Choose a sprint period between one and 28 days.");
+  dateInZone(sprint.createdAt, sprint.timezone);
+  const objectives = sprintObjectives(sprint),
+    assignments = sprintAssignments(sprint);
+  if (
+    new Set(objectives.map((objective) => objective.id)).size !==
+    objectives.length
+  )
+    fail("OBJECTIVE", "Each sprint objective needs a different ID.");
+  if (
+    Object.keys(assignments).length > 100 ||
+    Object.entries(assignments).some(
+      ([taskId, objectiveId]) =>
+        !sprint.taskIds.includes(taskId) ||
+        !objectives.some((objective) => objective.id === objectiveId),
+    )
+  )
+    fail("OBJECTIVE", "Assign selected tasks to an objective in this sprint.");
+  for (const objective of objectives) {
+    if (
+      objective.leadId &&
+      !s.members.some((member) => member.id === objective.leadId)
+    )
+      fail("MEMBER", "Choose an objective lead from this team.");
+    if (objective.leadId && !canSeeSprint(s, sprint, objective.leadId))
+      fail(
+        "FORBIDDEN",
+        "An objective lead needs access to every linked project in the sprint.",
+      );
+  }
+  if (sprint.status === "active") {
+    if (
+      !objectives.length ||
+      objectives.some((objective) => !objective.title.trim())
+    )
+      fail(
+        "OBJECTIVE",
+        "Give each sprint objective a clear outcome before starting.",
+      );
+    if (
+      objectives.some(
+        (objective) =>
+          !sprint.taskIds.some(
+            (taskId) => assignments[taskId] === objective.id,
+          ),
+      )
+    )
+      fail(
+        "OBJECTIVE",
+        "Select at least one task for each sprint objective before starting.",
+      );
+  }
+}
+function syncSprintObjectives(sprint: Sprint) {
+  if (!sprint.objectives) return;
+  sprint.objectives = sprint.objectives.map((objective) => ({
+    ...objective,
+    leadId: objective.leadId ?? sprint.ownerId,
+  }));
+  sprint.objective = sprint.objectives[0]?.title ?? "";
+  sprint.successCriteria = sprint.objectives[0]?.successCriteria ?? "";
+}
+function selectSprintTasks(
+  s: State,
+  sprint: Sprint,
+  ids: string[],
+  c: Context,
+) {
+  if (new Set(ids).size !== ids.length)
+    fail("TASKS", "Each task can only be selected once.");
+  for (const id of ids) {
+    const task = taskFor(s, id, c.actorId);
+    editable(s, task, c.actorId);
+    if (
+      !sprint.taskIds.includes(id) &&
+      (task.status === "done" || isArchivedTask(task))
+    )
+      fail("TASKS", "Select unfinished, unarchived work for the sprint.");
+    if (s.tasks.some((child) => child.parentId === id))
+      fail(
+        "TASKS",
+        "Select the individual subtasks instead of their parent to count work once.",
+      );
+    if (
+      s.sprints?.some(
+        (other) =>
+          other.id !== sprint.id &&
+          isOpenSprint(other) &&
+          other.taskIds.includes(id),
+      )
+    )
+      fail("TASKS", "A selected task already belongs to another open sprint.");
+  }
+  for (const id of sprint.taskIds.filter((id) => !ids.includes(id)))
+    editable(s, taskFor(s, id, c.actorId), c.actorId);
+  const added = ids.filter((id) => !sprint.taskIds.includes(id));
+  const removed = sprint.taskIds.filter((id) => !ids.includes(id));
+  if (added.length || removed.length)
+    sprint.changes.push({ at: c.now, actorId: c.actorId, added, removed });
+  sprint.taskIds = [...ids];
+  if (sprint.objectiveAssignments)
+    sprint.objectiveAssignments = Object.fromEntries(
+      Object.entries(sprint.objectiveAssignments).filter(([id]) =>
+        ids.includes(id),
+      ),
+    );
+  sprint.projectIds = [
+    ...new Set([
+      ...sprint.projectIds,
+      ...ids.map((id) => s.tasks.find((t) => t.id === id)!.projectId),
+    ]),
+  ];
+}
+function staleSprintPlans(s: State, sprintId: string) {
+  for (const proposal of s.proposals)
+    if (
+      proposal.sprintId === sprintId &&
+      proposal.status === "awaiting_review"
+    ) {
+      proposal.status = "stale";
+      proposal.approvedBy = [];
+    }
+}
 export function visibleState(s: State, userId: string): State {
   actor(s, userId);
   const projects = s.projects.filter((p) => canSeeProject(s, p, userId)),
@@ -94,18 +279,35 @@ export function visibleState(s: State, userId: string): State {
     taskIds = new Set(tasks.map((t) => t.id));
   const proposals = s.proposals.filter(
     (p) =>
-      (p.projectId ? projectIds.has(p.projectId) : p.createdBy === userId) &&
+      (!p.sprintId ||
+        !!s.sprints?.some(
+          (sprint) =>
+            sprint.id === p.sprintId && canSeeSprint(s, sprint, userId),
+        )) &&
+      (p.projectId
+        ? projectIds.has(p.projectId)
+        : !!p.sprintId || p.createdBy === userId) &&
       Object.keys(p.taskRevisions).every((id) => taskIds.has(id)),
   );
   const versions = s.versions.filter(
     (v) =>
-      (v.projectId ? projectIds.has(v.projectId) : v.createdBy === userId) &&
+      (!v.sprintId ||
+        !!s.sprints?.some(
+          (sprint) =>
+            sprint.id === v.sprintId && canSeeSprint(s, sprint, userId),
+        )) &&
+      (v.projectId
+        ? projectIds.has(v.projectId)
+        : !!v.sprintId || v.createdBy === userId) &&
       v.taskSnapshot.every((t) => taskIds.has(t.id)),
   );
   return {
     ...s,
     projects,
     tasks,
+    sprints: (s.sprints ?? []).filter((sprint) =>
+      canSeeSprint(s, sprint, userId),
+    ),
     taskDueAt: Object.fromEntries(
       tasks
         .filter((t) => t.deadline)
@@ -451,6 +653,7 @@ function proposalFor(
   const p = s.proposals.find((p) => p.id === id);
   if (!p) fail("FORBIDDEN", "This proposal is unavailable.");
   if (p.projectId) projectFor(s, p.projectId, c.actorId);
+  else if (p.sprintId) sprintFor(s, p.sprintId, c.actorId);
   else if (p.createdBy !== c.actorId)
     fail("FORBIDDEN", "This proposal is private.");
   if (p.revision !== revision)
@@ -498,6 +701,248 @@ export function execute(
   }
   let result = "Saved";
   switch (command.type) {
+    case "create_sprint": {
+      if (me.role === "guest")
+        fail("FORBIDDEN", "Guests cannot create sprints.");
+      const sprint: Sprint = {
+        id: c.id(),
+        title:
+          command.title ?? automaticSprintName(s.workspace, command.startDate),
+        objective: command.objective,
+        successCriteria: command.successCriteria,
+        focus: command.focus,
+        automaticName: command.title === undefined,
+        objectives: command.objectives,
+        startDate: command.startDate,
+        endDate: command.endDate,
+        timezone: command.timezone,
+        ownerId: c.actorId,
+        status: "planned",
+        taskIds: [],
+        projectIds: [],
+        revision: 1,
+        createdAt: c.now,
+        updatedAt: c.now,
+        changes: [],
+      };
+      selectSprintTasks(s, sprint, command.taskIds, c);
+      sprint.objectiveAssignments = command.objectiveAssignments;
+      syncSprintObjectives(sprint);
+      validateSprint(s, sprint);
+      (s.sprints ??= []).push(sprint);
+      result = sprint.id;
+      break;
+    }
+    case "update_sprint": {
+      const sprint = manageSprint(s, command.id, command.revision, c);
+      if (
+        sprint.status === "active" &&
+        (command.patch.startDate ||
+          command.patch.endDate ||
+          command.patch.title ||
+          command.patch.automaticName !== undefined)
+      )
+        fail(
+          "DATES",
+          "An active sprint keeps its dates and name. Adjust its scope or close it instead.",
+        );
+      const beforeObjectives = JSON.stringify(sprintObjectives(sprint));
+      const beforeAssignments = JSON.stringify(sprintAssignments(sprint));
+      const changeCount = sprint.changes.length;
+      const { taskIds, objectiveAssignments, ...fields } = command.patch;
+      if (
+        sprint.objectives &&
+        !fields.objectives &&
+        (fields.objective !== undefined || fields.successCriteria !== undefined)
+      )
+        fields.objectives = sprint.objectives.map((objective, index) =>
+          index === 0
+            ? {
+                ...objective,
+                title: fields.objective ?? objective.title,
+                successCriteria:
+                  fields.successCriteria ?? objective.successCriteria,
+              }
+            : objective,
+        );
+      Object.assign(sprint, fields);
+      if (taskIds) selectSprintTasks(s, sprint, taskIds, c);
+      if (objectiveAssignments !== undefined)
+        sprint.objectiveAssignments = objectiveAssignments;
+      syncSprintObjectives(sprint);
+      if (sprint.status === "planned" && sprint.automaticName)
+        sprint.title = automaticSprintName(s.workspace, sprint.startDate);
+      validateSprint(s, sprint);
+      if (
+        beforeObjectives !== JSON.stringify(sprintObjectives(sprint)) ||
+        beforeAssignments !== JSON.stringify(sprintAssignments(sprint))
+      ) {
+        const entry = {
+          objectives: structuredClone(sprintObjectives(sprint)),
+          objectiveAssignments: { ...sprintAssignments(sprint) },
+        };
+        if (sprint.changes.length > changeCount)
+          Object.assign(sprint.changes.at(-1)!, entry);
+        else
+          sprint.changes.push({
+            at: c.now,
+            actorId: c.actorId,
+            added: [],
+            removed: [],
+            ...entry,
+          });
+      }
+      sprint.revision++;
+      sprint.updatedAt = c.now;
+      staleSprintPlans(s, sprint.id);
+      break;
+    }
+    case "start_sprint": {
+      const sprint = manageSprint(s, command.id, command.revision, c);
+      if (sprint.status !== "planned")
+        fail("STATE", "This sprint has already started.");
+      if (s.sprints?.some((other) => other.status === "active"))
+        fail(
+          "STATE",
+          "Close the current active sprint before starting another.",
+        );
+      if (localInstant(sprint.endDate, 24, sprint.timezone) <= c.now)
+        fail("DATES", "Choose a sprint period that has not ended.");
+      if (!sprint.taskIds.length)
+        fail("TASKS", "Select work before starting the sprint.");
+      selectSprintTasks(s, sprint, sprint.taskIds, c);
+      if (sprint.automaticName)
+        sprint.title = automaticSprintName(s.workspace, sprint.startDate);
+      sprint.status = "active";
+      validateSprint(s, sprint);
+      sprint.startedAt = c.now;
+      sprint.initialTasks = sprintSnapshot(
+        s.tasks.filter((task) => sprint.taskIds.includes(task.id)),
+      );
+      sprint.initialObjectives = structuredClone(sprintObjectives(sprint));
+      sprint.initialObjectiveAssignments = { ...sprintAssignments(sprint) };
+      sprint.revision++;
+      sprint.updatedAt = c.now;
+      staleSprintPlans(s, sprint.id);
+      break;
+    }
+    case "cancel_sprint": {
+      const sprint = manageSprint(s, command.id, command.revision, c);
+      if (sprint.status !== "planned")
+        fail("STATE", "Use closeout for an active sprint.");
+      sprint.status = "canceled";
+      sprint.updatedAt = c.now;
+      sprint.revision++;
+      staleSprintPlans(s, sprint.id);
+      break;
+    }
+    case "close_sprint": {
+      const sprint = manageSprint(s, command.id, command.revision, c);
+      if (sprint.status !== "active")
+        fail("STATE", "Start the sprint before closing it.");
+      const tasks = s.tasks.filter((task) => sprint.taskIds.includes(task.id));
+      const unfinished = tasks.filter(
+        (task) => task.status !== "done" && !isArchivedTask(task),
+      );
+      if (
+        command.decisions.length !== unfinished.length ||
+        new Set(command.decisions.map((d) => d.taskId)).size !==
+          unfinished.length ||
+        unfinished.some(
+          (task) => !command.decisions.some((d) => d.taskId === task.id),
+        )
+      )
+        fail(
+          "CLOSEOUT",
+          "Choose what happens to every unfinished task before closing.",
+        );
+      const snapshot = sprintSnapshot(tasks);
+      const objectives = sprintObjectives(sprint);
+      const results =
+        command.objectiveOutcomes ??
+        (objectives.length === 1 && command.outcome
+          ? [{ objectiveId: objectives[0].id, outcome: command.outcome }]
+          : []);
+      if (
+        results.length !== objectives.length ||
+        new Set(results.map((result) => result.objectiveId)).size !==
+          objectives.length ||
+        objectives.some(
+          (objective) =>
+            !results.some((result) => result.objectiveId === objective.id),
+        )
+      )
+        fail("CLOSEOUT", "Assess every sprint objective before closing.");
+      // Close first inside this atomic command, allowing explicit transfer to a planned sprint.
+      sprint.status = "closed";
+      sprint.closeout = {
+        at: c.now,
+        actorId: c.actorId,
+        outcome: command.outcome,
+        objectives: objectives.map((objective) => {
+          const result = results.find(
+            (result) => result.objectiveId === objective.id,
+          )!;
+          return { ...objective, outcome: result.outcome, note: result.note };
+        }),
+        objectiveAssignments: { ...sprintAssignments(sprint) },
+        note: command.note,
+        tasks: snapshot,
+        originalTasks: sprintSnapshot(
+          s.tasks.filter((task) =>
+            sprint.initialTasks?.some((original) => original.id === task.id),
+          ),
+        ),
+        decisions: command.decisions,
+      };
+      sprint.updatedAt = c.now;
+      sprint.revision++;
+      staleSprintPlans(s, sprint.id);
+      for (const decision of command.decisions) {
+        const task = taskFor(s, decision.taskId, c.actorId);
+        editable(s, task, c.actorId);
+        if (decision.action !== "sprint" && decision.sprintId)
+          fail(
+            "CLOSEOUT",
+            "Only a sprint transfer can have a destination sprint.",
+          );
+        if (decision.action === "backlog") {
+          const lifecycleEvents = s.lifecycleEvents;
+          Object.assign(
+            s,
+            execute(
+              s,
+              {
+                type: "update_task",
+                id: task.id,
+                patch: { status: "backlog" },
+              },
+              c,
+            ).state,
+            { lifecycleEvents },
+          );
+        } else if (decision.action === "sprint") {
+          if (!decision.sprintId || decision.sprintId === sprint.id)
+            fail(
+              "CLOSEOUT",
+              "Choose a different planned sprint for this task.",
+            );
+          const target = sprintFor(s, decision.sprintId, c.actorId);
+          manageSprint(s, target.id, target.revision, c);
+          if (target.status !== "planned")
+            fail("CLOSEOUT", "Move unfinished work to a planned sprint.");
+          if (target.taskIds.length >= 100)
+            fail("TASKS", "A sprint can contain up to 100 tasks.");
+          selectSprintTasks(s, target, [...target.taskIds, task.id], c);
+          validateSprint(s, target);
+          target.revision++;
+          target.updatedAt = c.now;
+          staleSprintPlans(s, target.id);
+        }
+      }
+      result = sprint.id;
+      break;
+    }
     case "use_kazi_agenda": {
       let cal = s.calendars.find((x) => x.ownerId === c.actorId);
       const value = {
@@ -1047,12 +1492,28 @@ export function execute(
       break;
     }
     case "propose": {
+      if (command.projectId && command.sprintId)
+        fail("SCOPE", "Choose a project or a sprint for this plan.");
+      const sprint = command.sprintId
+        ? sprintFor(s, command.sprintId, c.actorId)
+        : undefined;
+      if (sprint && !isOpenSprint(sprint))
+        fail("STATE", "This sprint is closed. Plan current work instead.");
+      if (sprint && localInstant(sprint.endDate, 24, sprint.timezone) <= c.now)
+        fail(
+          "DATES",
+          "This sprint period has ended. Close it and plan the remaining work.",
+        );
       const p = command.projectId
         ? projectFor(s, command.projectId, c.actorId)
         : undefined;
       const tasks = s.tasks.filter(
         (t) =>
-          (p ? t.projectId === p.id : t.assigneeId === c.actorId) &&
+          (sprint
+            ? sprint.taskIds.includes(t.id)
+            : p
+              ? t.projectId === p.id
+              : t.assigneeId === c.actorId) &&
           canSeeProject(
             s,
             s.projects.find((p) => p.id === t.projectId)!,
@@ -1068,11 +1529,24 @@ export function execute(
           "FORBIDDEN",
           "A project manager must propose work for other people.",
         );
+      if (
+        sprint &&
+        tasks.some(
+          (task) =>
+            task.assigneeId !== c.actorId &&
+            !canManage(s, projectFor(s, task.projectId, c.actorId), c.actorId),
+        )
+      )
+        fail(
+          "FORBIDDEN",
+          "A project manager must propose work for other people.",
+        );
       if (!tasks.some(isSchedulableTask))
         fail("EMPTY", "Move tasks into To do before planning work sessions.");
       const existing = s.proposals.find(
         (x) =>
           x.projectId === command.projectId &&
+          x.sprintId === command.sprintId &&
           x.createdBy === c.actorId &&
           x.status === "awaiting_review" &&
           x.trigger === command.trigger,
@@ -1080,6 +1554,17 @@ export function execute(
       if (existing) {
         const unchanged =
           existing.expiresAt > c.now &&
+          (!sprint || existing.sprintRevision === sprint.revision) &&
+          existing.inputs?.startDate ===
+            (sprint
+              ? dateInZone(
+                  Math.max(
+                    c.now,
+                    localInstant(sprint.startDate, 0, sprint.timezone),
+                  ),
+                  sprint.timezone,
+                )
+              : command.startDate) &&
           Object.entries(existing.taskRevisions).every(
             ([id, revision]) =>
               s.tasks.find((task) => task.id === id)?.revision === revision,
@@ -1141,8 +1626,33 @@ export function execute(
         allTasks: s.tasks,
         busy: busy.filter((b) => prefs[b.ownerId] !== undefined),
         preferences: prefs,
-        startDate: command.startDate,
-        days: Math.min(command.days, me.preferences.horizonDays),
+        startDate: sprint
+          ? dateInZone(
+              Math.max(
+                c.now,
+                localInstant(sprint.startDate, 0, sprint.timezone),
+              ),
+              sprint.timezone,
+            )
+          : command.startDate,
+        days: sprint
+          ? sprintDays(
+              dateInZone(
+                Math.max(
+                  c.now,
+                  localInstant(sprint.startDate, 0, sprint.timezone),
+                ),
+                sprint.timezone,
+              ),
+              sprint.endDate,
+            )
+          : Math.min(command.days, me.preferences.horizonDays),
+        windowStart: sprint
+          ? localInstant(sprint.startDate, 0, sprint.timezone)
+          : undefined,
+        windowEnd: sprint
+          ? localInstant(sprint.endDate, 24, sprint.timezone)
+          : undefined,
         now: c.now,
         recoveryTarget: command.recoveryTarget,
       };
@@ -1163,13 +1673,16 @@ export function execute(
         .filter(
           (v) =>
             v.projectId === command.projectId &&
-            (v.projectId || v.createdBy === c.actorId),
+            v.sprintId === command.sprintId &&
+            (v.projectId || v.sprintId || v.createdBy === c.actorId),
         )
         .sort((a, b) => b.number - a.number)[0];
       const proposal: Proposal = {
         id: c.id(),
         projectId: command.projectId,
-        title: p?.title ?? "Personal plan",
+        sprintId: sprint?.id,
+        sprintRevision: sprint?.revision,
+        title: sprint?.title ?? p?.title ?? "Personal plan",
         revision: 1,
         status: "awaiting_review",
         trigger: command.trigger,
@@ -1187,6 +1700,15 @@ export function execute(
         automatic: !!c.automatic,
         approvedBy: [],
         inputs: {
+          sprintObjectives: sprint
+            ? structuredClone(sprintObjectives(sprint))
+            : undefined,
+          sprintObjectiveAssignments: sprint
+            ? { ...sprintAssignments(sprint) }
+            : undefined,
+          sprintFocus: sprint?.focus,
+          windowStart: common.windowStart,
+          windowEnd: common.windowEnd,
           calendarDestinations: Object.fromEntries(
             s.calendars
               .filter((cal) => prefs[cal.ownerId] && cal.destinationId)
@@ -1251,6 +1773,14 @@ export function execute(
           "STALE",
           "This proposal expired or is no longer awaiting review. Generate a fresh proposal.",
         );
+      if (p.sprintId) {
+        const sprint = sprintFor(s, p.sprintId, c.actorId);
+        if (!isOpenSprint(sprint) || sprint.revision !== p.sprintRevision)
+          fail(
+            "STALE",
+            "The sprint changed. Review a fresh plan before scheduling.",
+          );
+      }
       if (!c.verifiedCalendar)
         fail(
           "CALENDAR",
@@ -1277,8 +1807,18 @@ export function execute(
         if (
           c.automatic &&
           (actor(s, owner).preferences.reviewRequired ||
-            s.projects.find((project) => project.id === p.projectId)
-              ?.reviewRequired === true)
+            s.projects.some(
+              (project) =>
+                project.reviewRequired === true &&
+                (project.id === p.projectId ||
+                  (p.sprintId &&
+                    Object.keys(p.taskRevisions).some((id) =>
+                      s.tasks.some(
+                        (task) =>
+                          task.id === id && task.projectId === project.id,
+                      ),
+                    ))),
+            ))
         )
           fail(
             "REVIEW_REQUIRED",
@@ -1360,7 +1900,8 @@ export function execute(
       const lineageVersions = s.versions.filter(
         (v) =>
           v.projectId === p.projectId &&
-          (v.projectId || v.createdBy === p.createdBy),
+          v.sprintId === p.sprintId &&
+          (v.projectId || v.sprintId || v.createdBy === p.createdBy),
       );
       const latest = lineageVersions.sort((a, b) => b.number - a.number)[0];
       if (latest?.id !== p.parentVersionId)
@@ -1383,6 +1924,7 @@ export function execute(
         lineageId: latest?.lineageId ?? c.id(),
         number: (latest?.number ?? 0) + 1,
         projectId: p.projectId,
+        sprintId: p.sprintId,
         parentId: latest?.id,
         proposalId: p.id,
         trigger: p.trigger,
@@ -1534,6 +2076,7 @@ export function execute(
       const version = s.versions.find((v) => v.id === command.versionId);
       if (!version) fail("FORBIDDEN", "This version is unavailable.");
       if (version.projectId) projectFor(s, version.projectId, c.actorId);
+      else if (version.sprintId) sprintFor(s, version.sprintId, c.actorId);
       else if (version.createdBy !== c.actorId)
         fail("FORBIDDEN", "This plan is private.");
       const proposal = s.proposals.find((p) => p.id === version.proposalId);
@@ -1566,6 +2109,18 @@ export function execute(
       break;
     }
   }
+  if (command.type === "create_task" || command.type === "update_task")
+    for (const sprint of s.sprints ?? [])
+      if (
+        isOpenSprint(sprint) &&
+        sprint.taskIds.some((id) =>
+          s.tasks.some((task) => task.parentId === id),
+        )
+      )
+        fail(
+          "TASKS",
+          "Remove the parent from its sprint before adding subtasks; select the subtasks individually.",
+        );
   const priorTasks = new Map(state.tasks.map((task) => [task.id, task]));
   const priorProjects = new Map(
     state.projects.map((project) => [project.id, project]),

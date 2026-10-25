@@ -1,5 +1,7 @@
 # Tasks, projects, and timeline
 
+Optional [sprints](SPRINTS.md) select existing tasks for a fixed period and objective. They reuse the current Board/List and task review rules, offer calendar previews, and preserve closeout decisions. Tasks has a sprint filter; selecting work never changes its stage or original deadline.
+
 Tasks has one collection with List, Board, and Archive tabs. Project, assignee, stage, priority, work-category tag, due-date, and sort controls filter the same records. The default Personal planning project holds work outside a named project. It can be favorited but cannot be archived.
 
 | Task stage  | Meaning                                 | Scheduling                             |

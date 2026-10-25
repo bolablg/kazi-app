@@ -34,6 +34,7 @@ import {
 import { type Proposal, type Version } from "../shared/model";
 import { addDays, dateInZone, MINUTE } from "../shared/scheduler";
 import { planPath } from "../shared/ids";
+import { sprintSummary } from "../shared/sprints";
 const time = (at: number, zone: string) =>
   new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -92,14 +93,34 @@ export function PlanReview({
       open={!!id}
       onClose={onClose}
       title={
-        p.trigger === "recovery"
-          ? `Review recovery plan: ${p.title}`
-          : "Review weekly plan"
+        p.sprintId
+          ? `Review sprint plan: ${p.title}`
+          : p.trigger === "recovery"
+            ? `Review recovery plan: ${p.title}`
+            : "Review weekly plan"
       }
       description={`${stateLabel[p.status]} · Revision ${p.revision}${demo ? " · Synthetic demonstration" : ""}`}
       wide
     >
       <div className="plan-review">
+        {p.sprintId && (
+          <div className="inline-info">
+            <strong>
+              {p.inputs?.sprintFocus ||
+                p.inputs?.sprintObjectives
+                  ?.map((objective) => objective.title)
+                  .filter(Boolean)
+                  .join(" · ") ||
+                state.sprints
+                  ?.filter((sprint) => sprint.id === p.sprintId)
+                  .map(sprintSummary)[0]}
+            </strong>
+            <p>
+              Sprint plan · {p.inputs?.startDate} · selected work only.
+              Individual calendar approval still applies.
+            </p>
+          </div>
+        )}
         <div className="plan-lineage-banner">
           <span className="lineage-node">
             {parent ? "Plan " + parent.number : "Your work"}
@@ -413,21 +434,28 @@ export function PlannerForm({
   onClose,
   onCreated,
   initialProject,
+  initialSprint,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
   initialProject?: string;
+  initialSprint?: string;
 }) {
   const { state, actorId, dispatch, teams, teamId } = useData(),
     { run } = useUI(),
     [saving, setSaving] = useState(false),
     [recovery, setRecovery] = useState(false),
     [planningTeam, setPlanningTeam] = useState(
-      state.resourceTeams?.[initialProject ?? ""] ??
+      state.resourceTeams?.[initialSprint ?? initialProject ?? ""] ??
         (teamId === "all" ? teams[0]?.id : teamId),
     ),
-    [planningProject, setPlanningProject] = useState(initialProject ?? "");
+    [planningProject, setPlanningProject] = useState(
+      initialSprint ? `sprint:${initialSprint}` : (initialProject ?? ""),
+    );
+  const sprint = state.sprints?.find(
+    (item) => `sprint:${item.id}` === planningProject,
+  );
   const zone = state.members.find((m) => m.id === actorId)!.preferences
       .timezone,
     today = dateInZone(Date.now(), zone);
@@ -443,11 +471,13 @@ export function PlannerForm({
             dispatch(
               {
                 type: "propose",
-                projectId: planningProject || undefined,
-                startDate: String(f.get("start")),
-                days: Number(f.get("days")),
-                trigger: recovery ? "recovery" : "weekly",
-                recoveryTarget: recovery ? String(f.get("target")) : undefined,
+                projectId: sprint ? undefined : planningProject || undefined,
+                sprintId: sprint?.id,
+                startDate: sprint?.startDate ?? String(f.get("start")),
+                days: sprint ? 28 : Number(f.get("days")),
+                trigger: recovery && !sprint ? "recovery" : "weekly",
+                recoveryTarget:
+                  recovery && !sprint ? String(f.get("target")) : undefined,
               },
               { teamId: planningTeam },
             ),
@@ -490,6 +520,18 @@ export function PlannerForm({
             onChange={(event) => setPlanningProject(event.target.value)}
           >
             <option value="">My assigned work</option>
+            {(state.sprints ?? [])
+              .filter(
+                (item) =>
+                  ["planned", "active"].includes(item.status) &&
+                  (!state.resourceTeams ||
+                    state.resourceTeams[item.id] === planningTeam),
+              )
+              .map((item) => (
+                <option key={item.id} value={`sprint:${item.id}`}>
+                  Sprint · {item.title}
+                </option>
+              ))}
             {state.projects
               .filter(
                 (p) =>
@@ -504,35 +546,50 @@ export function PlannerForm({
               ))}
           </select>
         </label>
-        <div className="form-grid">
-          <label>
-            Start date
+        {sprint && (
+          <div className="inline-info">
+            <strong>{sprintSummary(sprint)}</strong>
+            <p>
+              Selected tasks only, from {sprint.startDate} to {sprint.endDate} (
+              {sprint.timezone}). Backlog and work awaiting validation stay
+              outside the allocation. Your saved planning horizon still applies.
+            </p>
+          </div>
+        )}
+        {!sprint && (
+          <div className="form-grid">
+            <label>
+              Start date
+              <input
+                type="date"
+                name="start"
+                defaultValue={today}
+                min={today}
+                required
+                disabled={!!sprint}
+              />
+            </label>
+            <label>
+              Planning window
+              <select name="days" defaultValue="7" disabled={!!sprint}>
+                <option value="7">One week</option>
+                <option value="14">Two weeks</option>
+                <option value="28">Four weeks (within saved horizon)</option>
+              </select>
+            </label>
+          </div>
+        )}
+        {!sprint && (
+          <label className="check-label">
             <input
-              type="date"
-              name="start"
-              defaultValue={today}
-              min={today}
-              required
+              type="checkbox"
+              checked={recovery}
+              onChange={(e) => setRecovery(e.target.checked)}
             />
+            Create a recovery proposal
           </label>
-          <label>
-            Planning window
-            <select name="days" defaultValue="7">
-              <option value="7">One week</option>
-              <option value="14">Two weeks</option>
-              <option value="28">Four weeks (within saved horizon)</option>
-            </select>
-          </label>
-        </div>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={recovery}
-            onChange={(e) => setRecovery(e.target.checked)}
-          />
-          Create a recovery proposal
-        </label>
-        {recovery && (
+        )}
+        {recovery && !sprint && (
           <label>
             Proposed recovery target
             <input
@@ -741,9 +798,11 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
                   <article className="proposal-card" key={p.id}>
                     <div className="section-line">
                       <span className="badge gold">
-                        {p.trigger === "recovery"
-                          ? "Recovery proposal"
-                          : "Weekly proposal"}
+                        {p.sprintId
+                          ? "Sprint proposal"
+                          : p.trigger === "recovery"
+                            ? "Recovery proposal"
+                            : "Weekly proposal"}
                       </span>
                       <GitBranch size={18} />
                     </div>
@@ -808,8 +867,12 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
                     <span className="version-number">{v.number}</span>
                     <div>
                       <h3>
-                        {state.projects.find((p) => p.id === v.projectId)
-                          ?.title ?? "Personal plan"}{" "}
+                        {state.sprints?.find(
+                          (sprint) => sprint.id === v.sprintId,
+                        )?.title ??
+                          state.projects.find((p) => p.id === v.projectId)
+                            ?.title ??
+                          "Personal plan"}{" "}
                         <span>· Plan {v.number}</span>
                       </h3>
                       <p>

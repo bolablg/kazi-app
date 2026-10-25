@@ -469,13 +469,15 @@ export function LiveProvider({
     if (!online)
       throw new Error("Reconnect to save changes or approve a plan.");
     const resourceId =
-      "projectId" in command && command.projectId
-        ? command.projectId
-        : "id" in command
-          ? command.id
-          : "versionId" in command
-            ? command.versionId
-            : undefined;
+      "sprintId" in command && command.sprintId
+        ? command.sprintId
+        : "projectId" in command && command.projectId
+          ? command.projectId
+          : "id" in command
+            ? command.id
+            : "versionId" in command
+              ? command.versionId
+              : undefined;
     const target =
       options?.teamId ??
       (resourceId && state.resourceTeams?.[resourceId]) ??

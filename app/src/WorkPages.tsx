@@ -183,6 +183,7 @@ export function TasksPage(props: WorkProps) {
       ? params.get("project")!
       : "all",
     labelFilter = params.get("tag") ?? params.get("label") ?? "all",
+    sprintFilter = params.get("sprint") ?? "all",
     deadline = params.get("deadline") ?? "all",
     sort = params.get("sort") ?? "deadline";
   const change = (key: string, value: string) => {
@@ -202,6 +203,16 @@ export function TasksPage(props: WorkProps) {
     (task) =>
       task.title.toLowerCase().includes(search.toLowerCase()) &&
       (project === "all" || task.projectId === project) &&
+      (sprintFilter === "all" ||
+        (sprintFilter === "none"
+          ? !(state.sprints ?? []).some(
+              (sprint) =>
+                ["planned", "active"].includes(sprint.status) &&
+                sprint.taskIds.includes(task.id),
+            )
+          : !!state.sprints
+              ?.find((sprint) => sprint.id === sprintFilter)
+              ?.taskIds.includes(task.id))) &&
       (priority === "all" || task.priority === priority) &&
       (assignee === "all" ||
         (assignee === "unassigned"
@@ -316,9 +327,23 @@ export function TasksPage(props: WorkProps) {
               priority !== "all",
               labelFilter !== "all",
               deadline !== "all",
+              sprintFilter !== "all",
             ].filter(Boolean).length
           }
         >
+          <select
+            aria-label="Filter by sprint"
+            value={sprintFilter}
+            onChange={(event) => change("sprint", event.target.value)}
+          >
+            <option value="all">All sprints</option>
+            <option value="none">Outside an open sprint</option>
+            {(state.sprints ?? []).map((sprint) => (
+              <option key={sprint.id} value={sprint.id}>
+                {sprint.title}
+              </option>
+            ))}
+          </select>
           <select
             aria-label="Filter by assignee"
             value={assignee}

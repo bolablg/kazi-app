@@ -14,6 +14,7 @@ import {
   calendarV,
   reportEventV,
   artifactV,
+  sprintV,
 } from "./validators";
 const scoped = { workspaceId: v.id("workspaces"), key: v.string() };
 export default defineSchema({
@@ -74,6 +75,9 @@ export default defineSchema({
     .index("by_key", ["workspaceId", "key"])
     .index("by_subject", ["subject"]),
   projects: defineTable({ ...scoped, data: projectV })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_key", ["workspaceId", "key"]),
+  sprints: defineTable({ ...scoped, data: sprintV })
     .index("by_workspace", ["workspaceId"])
     .index("by_key", ["workspaceId", "key"]),
   tasks: defineTable({ ...scoped, projectRef: v.id("projects"), data: taskV })
