@@ -16,11 +16,9 @@ export function CalendarSubscriptionsPage() {
     <div className="page calendar-subscriptions-page">
       <div className="page-heading">
         <div>
-          <h1>Calendar subscriptions</h1>
-          <p>
-            Take your Kazi agenda to Google Calendar, Outlook, or Apple
-            Calendar.
-          </p>
+          <PageTitle help="Subscribe to your Kazi agenda from Google Calendar, Outlook, or Apple Calendar. Subscription links are private and can be revoked here; calendar clients choose when to refresh them.">
+            Calendar subscriptions
+          </PageTitle>
         </div>
         <Link className="button secondary" to="/calendar">
           <ArrowLeft size={16} />
@@ -409,3 +407,4 @@ function ScopedAgendaSettings({
     </div>
   );
 }
+import { PageTitle } from "./InfoTip";

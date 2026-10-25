@@ -7,6 +7,7 @@ import { statusLabels } from "../shared/model";
 import type { ReportFilter } from "../shared/reports";
 import { useData } from "./data";
 import { Link } from "react-router-dom";
+import { InfoTip } from "./InfoTip";
 
 export function WorkflowReport(props: {
   filter: ReportFilter;
@@ -73,12 +74,15 @@ function StageBody({
       aria-labelledby="report-tab-Workflow"
     >
       <div className="section-line">
-        <div>
+        <div className="section-title-group">
           <h2>Time in each stage</h2>
-          <p>
+          <InfoTip label="About stage durations">
             Repeated visits to a stage are added together for each task before
-            calculating the average and median.
-          </p>
+            calculating the average and median. Completion is the final stage;
+            time after completion is excluded. Working durations use your
+            configured working calendar and are recalculated from saved
+            timestamps when those settings change.
+          </InfoTip>
         </div>
         <Link to="/settings?tab=planning" className="text-button">
           Configure review thresholds
@@ -153,12 +157,7 @@ function StageBody({
           </tbody>
         </table>
       </div>
-      <p className="report-footnote">
-        {report.coverage} Completion is the final stage; waiting time after
-        completion is not a performance duration. Working-calendar settings:{" "}
-        {schedule}. Change them in Settings → Planning. Changing the report
-        calendar recalculates working durations from the saved timestamps.
-      </p>
+      <p className="report-footnote">{report.coverage}</p>
       <section className="report-panel">
         <div className="section-line">
           <h2>Needs a stage review</h2>

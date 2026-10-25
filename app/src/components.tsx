@@ -1,6 +1,7 @@
 import { TaskArtifacts, TaskActivity } from "./TaskCollaboration";
 import { PeoplePicker } from "./PeoplePicker";
 import { MentionInput } from "./Mentions";
+import { InfoTip } from "./InfoTip";
 import { taskPeople } from "../shared/people";
 import { PrioritySelect, StatusSelect } from "./PrioritySelect";
 import { resourceRole } from "../shared/teams";
@@ -178,8 +179,10 @@ export function Modal({
           <div className="modal-heading">
             <div>
               <Dialog.Title>{title}</Dialog.Title>
-              <Dialog.Description>
-                {description ?? "Task and project details."}
+              <Dialog.Description
+                className={description ? undefined : "sr-only"}
+              >
+                {description ?? title}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -280,11 +283,13 @@ export function TaskRows({
                 )
               }
             >
-              {done ? (
-                <Check size={12} />
-              ) : t.status === "in_progress" ? (
-                <span />
-              ) : null}
+              <span className="task-check-glyph">
+                {done ? (
+                  <Check size={12} />
+                ) : t.status === "in_progress" ? (
+                  <span />
+                ) : null}
+              </span>
             </button>
             <button
               className="task-main"
@@ -495,7 +500,6 @@ export function TaskForm({
       open={open}
       onClose={onClose}
       title={parentId ? "Add a subtask" : "New task"}
-      description="Capture what’s on your mind. The plan can come next."
     >
       <form onSubmit={submit} className="form">
         <label>
@@ -665,12 +669,7 @@ export function ProjectForm({
   const { dispatch, teams, teamId } = useData(),
     { run } = useUI();
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New project"
-      description="Give your next project a home."
-    >
+    <Modal open={open} onClose={onClose} title="New project">
       <form
         className="form"
         onSubmit={async (e) => {
@@ -914,7 +913,13 @@ export function TaskDetail({
               maxLength={180}
             />
             <div className="task-description">
-              <label>Description</label>
+              <div className="section-title-group">
+                <label>Description</label>
+                <InfoTip label="About task mentions">
+                  Type @ and search by name, username, or email. Selected people
+                  are notified when you save.
+                </InfoTip>
+              </div>
               <TaskDescription
                 key={task.id}
                 task={task}
@@ -1201,11 +1206,15 @@ function DependencyField({
   );
   return (
     <section className="dependency-editor">
-      <h3>Dependencies</h3>
-      <p>
-        Finish these tasks before starting this one. Choose tasks from any
-        project you can access in the same team.
-      </p>
+      <div className="section-title-group">
+        <h3>Dependencies</h3>
+        <InfoTip label="About dependencies">
+          Finish these tasks before starting this one. Choose tasks from any
+          project you can access in the same team. Green means completed; yellow
+          means in progress or awaiting validation; red means waiting to start.
+          Circular links are rejected when saved.
+        </InfoTip>
+      </div>
       <div className="dependency-graph">
         <div className="dependency-inputs">
           {selected.length ? (
@@ -1289,12 +1298,6 @@ function DependencyField({
             </option>
           ))}
       </select>
-      {selected.length > 0 && (
-        <small>
-          Green: completed · Yellow: underway or awaiting validation · Red:
-          waiting to start. Circular links are rejected when saved.
-        </small>
-      )}
     </section>
   );
 }
@@ -1304,6 +1307,7 @@ function TaskDescription({ task, members }: { task: Task; members: Member[] }) {
   return (
     <MentionInput
       label="Task description"
+      hideHint
       name="description"
       value={text}
       mentions={mentions.filter((m) =>
@@ -1368,11 +1372,8 @@ function CollaboratorField({
         value={selected}
         onChange={setSelected}
         multiple
+        help="Collaborators can comment and receive updates. The worker does the work; the owner validates the outcome."
       />
-      <small>
-        Collaborators can comment and receive updates. The worker does the work;
-        the owner validates the outcome.
-      </small>
     </section>
   );
 }

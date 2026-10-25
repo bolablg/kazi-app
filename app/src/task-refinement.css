@@ -81,7 +81,7 @@
   color: #111;
   border: 1px solid #b4b8c0;
   border-radius: 6px;
-  box-shadow: 0 4px 12px #091e421f;
+  box-shadow: none;
   max-height: min(300px, var(--radix-select-content-available-height));
   overflow-y: auto;
 }

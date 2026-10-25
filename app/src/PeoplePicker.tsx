@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Search, X, Check } from "lucide-react";
 import type { Member } from "../shared/model";
 import { searchPeople } from "../shared/people";
+import { InfoTip } from "./InfoTip";
 import "./people.css";
 
 export function PersonAvatar({ member }: { member: Member }) {
@@ -41,6 +42,7 @@ export function PeoplePicker({
   multiple = false,
   allowUnassigned = false,
   disabled = false,
+  help,
 }: {
   label: string;
   name?: string;
@@ -50,6 +52,7 @@ export function PeoplePicker({
   multiple?: boolean;
   allowUnassigned?: boolean;
   disabled?: boolean;
+  help?: string;
 }) {
   const id = useId(),
     [query, setQuery] = useState(""),
@@ -75,7 +78,14 @@ export function PeoplePicker({
   };
   return (
     <div className="people-field">
-      <label htmlFor={id}>{label}</label>
+      {help ? (
+        <div className="section-title-group">
+          <label htmlFor={id}>{label}</label>
+          <InfoTip label={`About ${label.toLowerCase()}`}>{help}</InfoTip>
+        </div>
+      ) : (
+        <label htmlFor={id}>{label}</label>
+      )}
       {name &&
         value.map((personId) => (
           <input key={personId} type="hidden" name={name} value={personId} />

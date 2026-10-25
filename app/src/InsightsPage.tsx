@@ -1,5 +1,6 @@
 import { WorkflowReport } from "./WorkflowReport";
-import { useEffect, useState } from "react";
+import { InfoTip, PageTitle } from "./InfoTip";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { usePaginatedQuery } from "convex/react";
 import { ArrowUpRight, Check, Clock3, Download, Flag } from "lucide-react";
@@ -50,6 +51,12 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
   const tab = tabs.includes(params.get("tab") ?? "")
     ? params.get("tab")!
     : "Summary";
+  const tabList = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabList.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [tab]);
   const select = (key: string, value: string) =>
     setParams((previous) => {
       const next = new URLSearchParams(previous);
@@ -76,8 +83,9 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
     <div className="page reports-page">
       <div className="page-heading">
         <div>
-          <h1>Insights</h1>
-          <p>Understand your time, progress, and what gets finished.</p>
+          <PageTitle help="Track completion, delivery reliability, goals, and time spent in each workflow stage. Durations come from status history, with calendar-time and working-time views; no manual time logging is required.">
+            Insights
+          </PageTitle>
         </div>
         <span className="reports-period-label">
           {demo ? "Demo data · " : ""}
@@ -171,6 +179,7 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
         </span>
       </div>
       <div
+        ref={tabList}
         className="overview-tabs report-tabs"
         role="tablist"
         aria-label="Insights views"
@@ -182,7 +191,27 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
             role="tab"
             aria-selected={tab === name}
             aria-controls="report-content"
+            tabIndex={tab === name ? 0 : -1}
             onClick={() => select("tab", name)}
+            onKeyDown={(event) => {
+              const current = tabs.indexOf(name);
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? tabs.length - 1
+                    : event.key === "ArrowRight"
+                      ? (current + 1) % tabs.length
+                      : event.key === "ArrowLeft"
+                        ? (current + tabs.length - 1) % tabs.length
+                        : null;
+              if (next === null) return;
+              event.preventDefault();
+              select("tab", tabs[next]);
+              tabList.current
+                ?.querySelectorAll<HTMLButtonElement>("button")
+                [next]?.focus();
+            }}
           >
             {name}
           </button>
@@ -342,6 +371,14 @@ function ReportBody({
       {tab === "Performance" && (
         <>
           <Trend report={report} metric="completed" />
+          <div className="section-title-group">
+            <h2>Lead & cycle time</h2>
+            <InfoTip label="About lead and cycle time">
+              Lead and cycle time measure elapsed calendar time, including
+              waiting. They do not measure hours worked. A task needs a recorded
+              start to contribute to cycle time.
+            </InfoTip>
+          </div>
           <div className="report-flow-metrics">
             <Metric
               value={elapsed(report.medianLeadMinutes)}
@@ -364,11 +401,6 @@ function ReportBody({
               detail="Rejected, blocked, or discontinued tasks"
             />
           </div>
-          <p className="report-footnote">
-            Lead and cycle time measure elapsed calendar time, including
-            waiting. They do not measure hours worked. A task needs a recorded
-            start to contribute to cycle time.
-          </p>
         </>
       )}
       {(tab === "Summary" || tab === "Performance") && (
@@ -380,7 +412,13 @@ function ReportBody({
       {tab === "Workload" && (
         <section className="report-panel">
           <div className="section-line">
-            <h2>Current workload by person</h2>
+            <div className="section-title-group">
+              <h2>Current workload by person</h2>
+              <InfoTip label="About workload measures">
+                Estimates support planning; task counts and calendar
+                reservations are not measures of individual productivity.
+              </InfoTip>
+            </div>
             <span>Live snapshot</span>
           </div>
           <div className="report-table-wrap">
@@ -442,10 +480,6 @@ function ReportBody({
               </tbody>
             </table>
           </div>
-          <p className="report-footnote">
-            Estimates support planning; task counts and calendar reservations
-            are not measures of individual productivity.
-          </p>
         </section>
       )}
       {tab === "Goals" && (
@@ -569,7 +603,14 @@ function PlannedFocus({ report }: { report: Report }) {
   return (
     <section className="report-panel">
       <div className="section-line">
-        <h2>Planned focus by project</h2>
+        <div className="section-title-group">
+          <h2>Planned focus by project</h2>
+          <InfoTip label="About planned focus">
+            Confirmed app reservations only. Private busy events and unapproved
+            proposals are excluded. Planned time does not imply a task was
+            worked on or completed.
+          </InfoTip>
+        </div>
         <span>{duration(report.scheduledMinutes)} confirmed</span>
       </div>
       {total > 0 ? (
@@ -616,11 +657,6 @@ function PlannedFocus({ report }: { report: Report }) {
           <p>Approve a calendar plan to see how planned focus is allocated.</p>
         </div>
       )}
-      <p className="report-footnote">
-        Confirmed app reservations only. Private busy events and unapproved
-        proposals are excluded. Planned time does not imply a task was worked on
-        or completed.
-      </p>
     </section>
   );
 }
@@ -743,7 +779,13 @@ function Performance({
     <>
       <section className="report-panel">
         <div className="section-line">
-          <h2>Delivery performance</h2>
+          <div className="section-title-group">
+            <h2>Delivery performance</h2>
+            <InfoTip label="About on-time delivery">
+              On-time rate uses completed tasks with a due date, saved at
+              completion. Later deadline edits do not change the result.
+            </InfoTip>
+          </div>
           <span>Selected period</span>
         </div>
         <div className="completion-breakdown">
@@ -763,10 +805,6 @@ function Performance({
             </div>
           ))}
         </div>
-        <p className="report-footnote">
-          On-time rate uses completed tasks with a due date, saved at
-          completion. Later deadline edits do not change the result.
-        </p>
       </section>
       <section className="report-panel">
         <div className="section-line">
@@ -880,7 +918,15 @@ function ProjectGoals({
   return (
     <section className="report-panel">
       <div className="section-line">
-        <h2>Project goals & milestones</h2>
+        <div className="section-title-group">
+          <h2>Project goals & milestones</h2>
+          <InfoTip label="About project progress">
+            Project progress counts current non-canceled tasks without subtasks;
+            it is not a historical percentage or a measure of business impact.
+            Mark key deliverables as “Project milestone” in task details to
+            track explicit achievements.
+          </InfoTip>
+        </div>
         <span>Current scope · task-based progress</span>
       </div>
       {report.goals.length ? (
@@ -922,12 +968,6 @@ function ProjectGoals({
           Add project tasks to track progress toward your goals.
         </p>
       )}
-      <p className="report-footnote">
-        Project progress counts current non-canceled tasks without subtasks; it
-        is not a historical percentage or a measure of business impact. Mark key
-        deliverables as “Project milestone” in task details to track explicit
-        achievements.
-      </p>
     </section>
   );
 }

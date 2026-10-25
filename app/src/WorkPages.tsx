@@ -1,4 +1,6 @@
 import { resourceRole } from "../shared/teams";
+import { PageTitle } from "./InfoTip";
+import { ResponsiveFilters } from "./ResponsiveFilters";
 import { ProjectTimeline } from "./ProjectTimeline";
 import { TaskArchive } from "./TaskArchive";
 import { isArchivedTask, isOpenTask } from "../shared/workflow";
@@ -239,8 +241,9 @@ export function TasksPage(props: WorkProps) {
     <div className="page tasks-page">
       <div className="page-heading">
         <div>
-          <h1>Tasks</h1>
-          <p>Manage work across projects and Personal planning.</p>
+          <PageTitle help="Manage work across projects and Personal planning. List, Board, and Archive show the same tasks with the filters you choose.">
+            Tasks
+          </PageTitle>
         </div>
         <button
           className="button primary"
@@ -299,82 +302,94 @@ export function TasksPage(props: WorkProps) {
               </option>
             ))}
         </select>
-        <select
-          aria-label="Filter by assignee"
-          value={assignee}
-          onChange={(event) => change("assignee", event.target.value)}
+        <ResponsiveFilters
+          activeCount={
+            [
+              assignee !== "all",
+              status !== "all",
+              priority !== "all",
+              labelFilter !== "all",
+              deadline !== "all",
+            ].filter(Boolean).length
+          }
         >
-          <option value="all">Everyone</option>
-          <option value="unassigned">Unassigned</option>
-          {state.members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.id === actorId ? "Me" : m.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by status"
-          value={status}
-          onChange={(event) => change("status", event.target.value)}
-        >
-          <option value="all">All stages</option>
-          <option value="active">Unfinished</option>
-          {taskStatusOptions
-            .filter((key) => key !== "archived")
-            .map((key) => (
-              <option key={key} value={key}>
-                {statusLabels[key]}
+          <select
+            aria-label="Filter by assignee"
+            value={assignee}
+            onChange={(event) => change("assignee", event.target.value)}
+          >
+            <option value="all">Everyone</option>
+            <option value="unassigned">Unassigned</option>
+            {state.members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.id === actorId ? "Me" : m.name}
               </option>
             ))}
-        </select>
-        <select
-          aria-label="Filter by priority"
-          value={priority}
-          onChange={(event) => change("priority", event.target.value)}
-        >
-          <option value="all">All priorities</option>
-          {["high", "medium", "low"].map((p) => (
-            <option key={p} value={p}>
-              {p} priority
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by tag"
-          value={
-            labels.some((label) => taskLabelKey(label) === labelFilter)
-              ? labelFilter
-              : "all"
-          }
-          onChange={(event) => change("tag", event.target.value)}
-        >
-          <option value="all">All tags</option>
-          {labels.map((label) => (
-            <option key={taskLabelKey(label)} value={taskLabelKey(label)}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter by deadline"
-          value={deadline}
-          onChange={(event) => change("deadline", event.target.value)}
-        >
-          <option value="all">All deadlines</option>
-          <option value="overdue">Overdue</option>
-          <option value="today">Due today</option>
-          <option value="week">Next 7 days</option>
-          <option value="none">No deadline</option>
-        </select>
-        <select
-          aria-label="Sort tasks"
-          value={sort}
-          onChange={(event) => change("sort", event.target.value)}
-        >
-          <option value="deadline">Due date</option>
-          <option value="title">Task name</option>
-          <option value="priority">Priority</option>
-        </select>
+          </select>
+          <select
+            aria-label="Filter by status"
+            value={status}
+            onChange={(event) => change("status", event.target.value)}
+          >
+            <option value="all">All stages</option>
+            <option value="active">Unfinished</option>
+            {taskStatusOptions
+              .filter((key) => key !== "archived")
+              .map((key) => (
+                <option key={key} value={key}>
+                  {statusLabels[key]}
+                </option>
+              ))}
+          </select>
+          <select
+            aria-label="Filter by priority"
+            value={priority}
+            onChange={(event) => change("priority", event.target.value)}
+          >
+            <option value="all">All priorities</option>
+            {["high", "medium", "low"].map((p) => (
+              <option key={p} value={p}>
+                {p} priority
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by tag"
+            value={
+              labels.some((label) => taskLabelKey(label) === labelFilter)
+                ? labelFilter
+                : "all"
+            }
+            onChange={(event) => change("tag", event.target.value)}
+          >
+            <option value="all">All tags</option>
+            {labels.map((label) => (
+              <option key={taskLabelKey(label)} value={taskLabelKey(label)}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by deadline"
+            value={deadline}
+            onChange={(event) => change("deadline", event.target.value)}
+          >
+            <option value="all">All deadlines</option>
+            <option value="overdue">Overdue</option>
+            <option value="today">Due today</option>
+            <option value="week">Next 7 days</option>
+            <option value="none">No deadline</option>
+          </select>
+          <select
+            aria-label="Sort tasks"
+            value={sort}
+            onChange={(event) => change("sort", event.target.value)}
+          >
+            <option value="deadline">Due date</option>
+            <option value="title">Task name</option>
+            <option value="priority">Priority</option>
+          </select>
+        </ResponsiveFilters>
       </div>
       {project === state.workspace.inboxId && (
         <form

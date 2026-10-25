@@ -14,6 +14,8 @@ playwright-report/
 
 # Local-only files
 /local/
+# Internal design references and generated explorations
+/.stitch/
 
 # Local Convex state and development-only signing keys
 .convex/

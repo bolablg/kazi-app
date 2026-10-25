@@ -155,16 +155,16 @@ input[type="radio"] {
 }
 .report-metrics > div {
   background: var(--tone-wash);
-  border-top: 3px solid var(--tone);
+  border: 1px solid var(--ui-line, #dcdfe4);
 }
 .report-metrics > div:first-child {
   padding-left: 20px;
 }
 .report-metrics > div:last-child {
-  border-top: 3px solid var(--tone);
+  border: 1px solid var(--ui-line, #dcdfe4);
 }
 .report-flow-metrics > div {
-  border-top: 3px solid var(--tone);
+  border: 0;
   padding-top: 14px;
 }
 .trend-bars i.created-bar,
@@ -215,7 +215,7 @@ input[type="radio"] {
 .board-column {
   background: color-mix(in srgb, var(--stage-wash) 65%, white);
   border-color: #8c929a;
-  border-top: 3px solid var(--stage);
+  border-width: 1px;
   border-radius: 7px;
 }
 .board-column > h3 {

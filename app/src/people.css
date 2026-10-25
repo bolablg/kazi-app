@@ -58,7 +58,7 @@
   border-radius: 9px;
   padding: 5px;
   background: white;
-  box-shadow: 0 5px 18px #172b4d16;
+  box-shadow: none;
 }
 .people-options [role="option"] {
   display: flex;
