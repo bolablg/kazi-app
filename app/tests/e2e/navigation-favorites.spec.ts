@@ -10,7 +10,7 @@ test("consolidated navigation keeps one calendar, URL-backed plan tabs, project 
   page,
 }) => {
   const nav = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(nav.getByRole("link")).toHaveCount(6);
+  await expect(nav.getByRole("link")).toHaveCount(7);
   for (const name of ["Inbox", "All tasks", "My week", "Planning"])
     await expect(nav.getByRole("link", { name, exact: true })).toHaveCount(0);
   await page.goto("/week?project=website");

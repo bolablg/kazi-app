@@ -22,6 +22,7 @@ import { AccountMenu } from "./AccountPages";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import {
   LayoutDashboard,
+  CalendarDays,
   ChartNoAxesCombined,
   List as ListIcon,
   Plug,
@@ -59,10 +60,11 @@ import {
   cx,
 } from "./components";
 import { OverviewPage } from "./OverviewPage";
+import { CalendarPage } from "./CalendarPage";
 import { TasksPage, ProjectsPage, ProjectDetail } from "./WorkPages";
 import { PlansPage, PlanReview } from "./PlanningPages";
-const ReportsPage = lazy(() =>
-  import("./ReportsPage").then((module) => ({ default: module.ReportsPage })),
+const InsightsPage = lazy(() =>
+  import("./InsightsPage").then((module) => ({ default: module.InsightsPage })),
 );
 const TeamPage = lazy(() =>
   import("./SettingsPages").then((module) => ({ default: module.TeamPage })),
@@ -84,8 +86,9 @@ const primary = [
   { path: "/", label: "Overview", icon: LayoutDashboard },
   { path: "/tasks", label: "Tasks", icon: ListIcon },
   { path: "/projects", label: "Projects", icon: Folder },
+  { path: "/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/plans", label: "Plans", icon: Layers },
-  { path: "/reports", label: "Reports", icon: ChartNoAxesCombined },
+  { path: "/insights", label: "Insights", icon: ChartNoAxesCombined },
   { path: "/notifications", label: "Notifications", icon: Bell },
 ];
 export default function App() {
@@ -241,6 +244,33 @@ function Shell() {
     legacyParams.set("assignee", legacyParams.get("person") ?? actorId);
     legacyParams.delete("person");
     return <Navigate to={"/tasks?" + legacyParams} replace />;
+  }
+  if (
+    location.pathname === "/" &&
+    ["calendar", "schedule"].includes(legacyParams.get("view") ?? "")
+  ) {
+    return (
+      <Navigate
+        to={{
+          pathname: "/calendar",
+          search: location.search,
+          hash: location.hash,
+        }}
+        replace
+      />
+    );
+  }
+  if (location.pathname === "/reports") {
+    return (
+      <Navigate
+        to={{
+          pathname: "/insights",
+          search: location.search,
+          hash: location.hash,
+        }}
+        replace
+      />
+    );
   }
   if (location.pathname === "/tasks" && legacyParams.has("tab")) {
     if (legacyParams.get("tab") === "inbox")
@@ -469,6 +499,7 @@ function Shell() {
                 }
               >
                 <Route path="/" element={<OverviewPage {...props} />} />
+                <Route path="/calendar" element={<CalendarPage {...props} />} />
                 <Route
                   path="/my-tasks"
                   element={
@@ -546,16 +577,16 @@ function Shell() {
                   }
                 />
                 <Route
-                  path="/reports"
+                  path="/insights"
                   element={
                     <Suspense
                       fallback={
                         <p role="status" className="muted">
-                          Loading reports…
+                          Loading insights…
                         </p>
                       }
                     >
-                      <ReportsPage openTask={openTask} />
+                      <InsightsPage openTask={openTask} />
                     </Suspense>
                   }
                 />

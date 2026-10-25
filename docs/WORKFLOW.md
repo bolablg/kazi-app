@@ -15,15 +15,15 @@ Stages can be changed directly, by pointer/touch/keyboard drag, or through the s
 
 Global and project boards show the same tasks. Moving a task updates every view and its reporting history. Future Kazi reservations are released when work leaves execution or its owner changes; accepted plan snapshots remain unchanged.
 
-Overview opens on Today, with Calendar and Schedule beside it. Tasks holds the complete lists and boards; Plans holds proposal review and accepted history.
+Overview opens directly on the daily dashboard, without a Today tab. Calendar is a separate menu item with Calendar and Schedule tabs. Tasks holds the complete lists and boards; Plans holds proposal review and accepted history; Insights holds analytics.
 
-## Today
+## Daily overview
 
-Today is a short daily snapshot within the selected teams, project, and person. Needs attention combines overdue commitments, upcoming deadlines today, and work waiting for your validation. Validation requests belong to the owner even when another person is the worker. Overdue uses the actual deadline instant; a timed deadline that has already passed appears under Overdue rather than Due today. Backlog ideas, completed tasks, and archived work do not count toward deadline attention.
+Overview is a short daily snapshot within the selected teams, project, and person. Needs attention combines overdue commitments, upcoming deadlines today, and work waiting for your validation. Validation requests belong to the owner even when another person is the worker. Overdue uses the actual deadline instant; a timed deadline that has already passed appears under Overdue rather than Due today. Backlog ideas, completed tasks, and archived work do not count toward deadline attention.
 
 My focus shows In progress first, then To do work whose planned start has arrived and whose prerequisites are completed. Favorites uses the same stars as the sidebar and project pages. Recent shows recently updated named projects. Recent activity shows comments and system updates on relevant tasks, including their history after archiving. Every task opens its full task page.
 
-Today displays a bounded selection with full counts. Use Tasks for the complete collection. Calendar keeps its month, week, and day ranges; Schedule keeps the chronological agenda. Explicit Calendar and Schedule bookmarks retain their view, and Today remains the default when opening Overview on phone, tablet, or desktop.
+Overview displays a bounded selection with full counts. Use Tasks for the complete collection. Calendar keeps its month, week, and day ranges; Schedule keeps the chronological agenda. Calendar and Schedule live at `/calendar`; old `/?view=calendar` and `/?view=schedule` bookmarks redirect there with their range and filters intact. Person and project filters persist in the URL through reload and browser history. Overview stays focused on daily priorities on phone, tablet, and desktop.
 
 ## Project lifecycle
 
@@ -57,4 +57,4 @@ Files use private storage with authenticated task access. Transfers have single-
 
 **To Brainstorm** is a backlog disposition, not another stage. Give retained ideas a review date; until that date, they do not count as overdue backlog. Review reminders prompt promotion, archiving, or a later review. Saved per-person thresholds default to Backlog 90 days, To do 14, In progress 7, and To validate 2.
 
-Every task/project change appends a timestamped immutable lifecycle fact in the transaction. The task page shows paginated history; Reports → Workflow calculates mean/median stage duration from known entries/exits and flags current aging work. Unknown historical entries are disclosed rather than invented.
+Every task/project change appends a timestamped immutable lifecycle fact in the transaction. The task page shows paginated history; Insights → Workflow calculates mean/median stage duration from known entries/exits and flags current aging work. Unknown historical entries are disclosed rather than invented.
