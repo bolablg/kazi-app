@@ -51,10 +51,38 @@ export const bootstrap = mutation({
       profile = await ctx.db.get(id);
     }
     if (profile) {
+      // Only authenticated issuer claims may update the searchable directory.
+      // These display fields never replace verified-email invitation checks.
+      const username =
+        typeof user.preferredUsername === "string"
+          ? user.preferredUsername
+          : undefined;
+      const identityFields = {
+        ...(user.name ? { name: user.name.slice(0, 180) } : {}),
+        ...(user.email ? { email: user.email.slice(0, 320) } : {}),
+        ...(username !== undefined ? { username: username.slice(0, 180) } : {}),
+      };
+      if (
+        Object.entries(identityFields).some(
+          ([key, value]) =>
+            profile![key as "name" | "email" | "username"] !== value,
+        )
+      )
+        await ctx.db.patch(profile._id, identityFields);
       const memberships = await ctx.db
         .query("memberships")
         .withIndex("by_subject", (q) => q.eq("subject", user.subject))
         .take(10);
+      for (const member of memberships)
+        if (
+          Object.entries(identityFields).some(
+            ([key, value]) =>
+              member.data[key as "name" | "email" | "username"] !== value,
+          )
+        )
+          await ctx.db.patch(member._id, {
+            data: { ...member.data, ...identityFields },
+          });
       if (
         !memberships.some(
           (member) => member.workspaceId === profile!.activeWorkspaceId,
@@ -215,7 +243,7 @@ async function createTeamAs(
     .take(11);
   if (existing.length >= 10)
     throw new ConvexError("Initial rollout supports ten workspaces per user.");
-  return createWorkspace(
+  const workspaceId = await createWorkspace(
     ctx,
     subject,
     profile?.name ?? "You",
@@ -223,6 +251,19 @@ async function createTeamAs(
     "team",
     args.name.trim(),
   );
+  if (profile?.username) {
+    const member = await ctx.db
+      .query("memberships")
+      .withIndex("by_key", (q) =>
+        q.eq("workspaceId", workspaceId).eq("key", subject),
+      )
+      .unique();
+    if (member)
+      await ctx.db.patch(member._id, {
+        data: { ...member.data, username: profile.username },
+      });
+  }
+  return workspaceId;
 }
 export const createTeam = mutation({
   args: { name: v.string() },
@@ -564,6 +605,9 @@ export const acceptInvite = mutation({
           id: user.subject,
           name: user.name ?? "Teammate",
           email: user.email ?? "",
+          ...(typeof user.preferredUsername === "string"
+            ? { username: user.preferredUsername }
+            : {}),
           role: invite.data.role,
           color: "clay",
           preferences: { ...defaults },

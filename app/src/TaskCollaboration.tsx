@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
-import type { Activity, Task, TaskArtifact } from "../shared/model";
+import type { Activity, Task, TaskArtifact, Mention } from "../shared/model";
+import { taskPeople } from "../shared/people";
+import { MentionInput, MentionText } from "./Mentions";
 import { statusLabels } from "../shared/model";
 import { stageColors } from "./PrioritySelect";
 import { checkFile, fileSize } from "../shared/artifacts";
@@ -293,6 +295,7 @@ function CommentComposer({ task }: { task: Task }) {
   const { state, actorId, dispatch, uploadArtifact, online } = useData(),
     { run, notify } = useUI();
   const [body, setBody] = useState(""),
+    [mentions, setMentions] = useState<Mention[]>([]),
     [files, setFiles] = useState<File[]>([]),
     [attached, setAttached] = useState<string[]>([]),
     [busy, setBusy] = useState(false);
@@ -317,12 +320,14 @@ function CommentComposer({ task }: { task: Task }) {
             return dispatch({
               type: "comment",
               id: task.id,
-              body: body.trim(),
+              body,
+              mentions,
               attachmentIds: ids,
             });
           }, "Comment posted");
           if (result) {
             setBody("");
+            setMentions([]);
             setFiles([]);
             setAttached([]);
           }
@@ -333,13 +338,16 @@ function CommentComposer({ task }: { task: Task }) {
     >
       <Avatar name={author?.name ?? "You"} color={author?.color} small />
       <div className="comment-compose-body">
-        <textarea
-          aria-label="Add a comment"
-          placeholder="Write a comment…"
+        <MentionInput
+          label="Add a comment"
+          placeholder="Write a comment… @mention a teammate"
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={5000}
-          rows={3}
+          mentions={mentions}
+          onChange={(text, mentions) => {
+            setBody(text);
+            setMentions(mentions);
+          }}
+          members={taskPeople(state, task.projectId)}
           disabled={busy}
         />
         {(files.length > 0 || attached.length > 0) && (
@@ -511,7 +519,15 @@ function ActivityRows({ events }: { events: Activity[] }) {
                     event.message !== "Created task" && <p>{event.message}</p>}
                 </div>
               ) : (
-                event.message && <p>{event.message}</p>
+                event.message && (
+                  <p>
+                    <MentionText
+                      text={event.message}
+                      mentions={event.mentions}
+                      members={state.members}
+                    />
+                  </p>
+                )
               )}
               {!!event.attachmentIds?.length && (
                 <div className="artifact-grid">

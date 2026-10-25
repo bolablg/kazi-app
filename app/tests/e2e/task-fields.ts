@@ -17,3 +17,7 @@ export async function choosePriority(page: Page, value: Task["priority"]) {
     })
     .click();
 }
+export async function choosePerson(page: Page, label: string, name: string) {
+  await page.getByRole("combobox", { name: label, exact: true }).fill(name);
+  await page.getByRole("option").filter({ hasText: name }).click();
+}

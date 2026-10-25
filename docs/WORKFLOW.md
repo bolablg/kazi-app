@@ -1,6 +1,6 @@
 # Tasks, projects, and timeline
 
-Tasks has one collection with List, Board, and Archive tabs. Project, assignee, stage, priority, work-category label, due-date, and sort controls filter the same records. The default Personal planning project holds work outside a named project. It can be favorited but cannot be archived.
+Tasks has one collection with List, Board, and Archive tabs. Project, assignee, stage, priority, work-category tag, due-date, and sort controls filter the same records. The default Personal planning project holds work outside a named project. It can be favorited but cannot be archived.
 
 | Task stage  | Meaning                                 | Scheduling                             |
 | ----------- | --------------------------------------- | -------------------------------------- |
@@ -39,6 +39,8 @@ Clicking a task opens a URL-backed full page across the main content area. The t
 
 The **owner** requests and accepts the work; the **worker** executes it. The same person can fill both roles. Submitting to To validate notifies the owner. The owner approves to complete, or returns to In progress with a required explanation and a worker notification. Administrators retain administrative authority. A worker cannot change the reviewer or approve another owner's work by changing the status field.
 
+New tasks start with **Task belongs to**: Personal is private to you; a team task follows that team's project access. Selecting a different scope changes the available projects and people. Subtasks inherit their parent's team and project. Owner and Worker are searchable fields; type a name, username, or email and select a person. Collaborators use the same search with removable person chips. Suggestions only include members of the task's team who already have access to its project. A collaborator can comment and receive updates; collaboration does not grant task-editing or review authority.
+
 Dependencies are separate tasks that must finish first. The task page displays connected nodes with status text: green Completed, yellow In progress/To validate, and red waiting work. Subtasks appear directly under the description as clickable rows; each opens its own task page, with a link back to the parent. Collaborators use removable avatar/name chips. Circular dependencies are rejected by shared validation.
 
 Dependencies may span projects the actor can access **within the same team**. The picker and connected nodes identify the project; another team's tasks are excluded. Subtasks remain within their parent's project. A dependency indicates a prerequisite; it does not copy the task or automatically change its status.
@@ -48,6 +50,8 @@ Board titles show at most 96 characters and two lines, with an ellipsis when sho
 ## Task activity and artifacts
 
 The full task page has one Activity feed with a comment composer and paginated history. Comments, file attachments, and system updates appear together. Status updates show the previous and new stage. Comments support multiline text and up to ten attachments, including attachment-only comments. New comments notify the owner, worker, and collaborators who retain project access. Comments and artifacts are timestamped; they do not count as execution progress or logged time.
+
+Type **@** followed by a name, username, or email in a description or comment, then select a suggestion. A selected mention is highlighted and refers to the person's stable account ID. Mentions add that person as a collaborator and notify them when the description is saved or the comment is posted. Plain typed @text does not notify anyone until a person is selected. Saving an unchanged description does not repeat mention notifications; repeated mentions of the same person in one comment produce one notification. Mentions never grant access to another team's work or a private project. Editing the text of a mention turns it into plain text until a person is selected again.
 
 Attach files directly under Description or under Artifacts. Files are limited to 20 MB each and 100 active artifacts per task. HTTPS links may reference Google Drive or other services; Kazi stores the link without fetching its contents or changing source permissions. Removing an artifact detaches it while preserving the historical activity. An uploader or task editor may remove an artifact. Source documents remain at their original provider.
 

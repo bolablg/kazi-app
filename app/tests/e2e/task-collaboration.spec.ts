@@ -72,10 +72,12 @@ test("comments support files, persist after reload, and keep description links w
     .getByRole("button", { name: "Post comment", exact: true })
     .click();
   await expect(
-    conversation.getByText(
-      "The first draft is ready. Please review the attached brief.",
-      { exact: true },
-    ),
+    conversation
+      .locator(".task-conversation-list")
+      .getByText(
+        "The first draft is ready. Please review the attached brief.",
+        { exact: true },
+      ),
   ).toBeVisible();
 
   await expect(
@@ -102,10 +104,12 @@ test("comments support files, persist after reload, and keep description links w
   const fresh = page.getByRole("region", { name: "Task activity" });
 
   await expect(
-    fresh.getByText(
-      "The first draft is ready. Please review the attached brief.",
-      { exact: true },
-    ),
+    fresh
+      .locator(".task-conversation-list")
+      .getByText(
+        "The first draft is ready. Please review the attached brief.",
+        { exact: true },
+      ),
   ).toBeVisible();
   const downloading = page.waitForEvent("download");
   await fresh

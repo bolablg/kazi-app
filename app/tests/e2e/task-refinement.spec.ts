@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { choosePriority, chooseStatus } from "./task-fields";
 
-test("task activity, subtask navigation, label tokens, and keyboard menus work together", async ({
+test("task activity, subtask navigation, tag tokens, and keyboard menus work together", async ({
   page,
 }) => {
   await page.goto("/projects");
@@ -30,11 +30,11 @@ test("task activity, subtask navigation, label tokens, and keyboard menus work t
   await page.keyboard.press("Escape");
   await expect(task).toBeVisible();
   await expect(priority).toHaveAttribute("aria-expanded", "false");
-  const labels = task.getByLabel("Task labels", { exact: true });
+  const labels = task.getByLabel("Task tags", { exact: true });
   await labels.fill("Research,Design,");
   await expect(task.locator(".label-token")).toHaveText(["Research", "Design"]);
   await task
-    .getByRole("button", { name: "Remove Research label", exact: true })
+    .getByRole("button", { name: "Remove Research tag", exact: true })
     .click();
   await labels.fill("Review");
   await labels.press("Enter");

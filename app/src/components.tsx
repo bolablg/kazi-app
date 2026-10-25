@@ -1,4 +1,7 @@
 import { TaskArtifacts, TaskActivity } from "./TaskCollaboration";
+import { PeoplePicker } from "./PeoplePicker";
+import { MentionInput } from "./Mentions";
+import { taskPeople } from "../shared/people";
 import { PrioritySelect, StatusSelect } from "./PrioritySelect";
 import { resourceRole } from "../shared/teams";
 import { canEditTask, isArchivedTask } from "../shared/workflow";
@@ -36,6 +39,8 @@ import {
   type Task,
   type Project,
   type Command,
+  type Member,
+  type Mention,
   statusLabels,
   taskWorkflow,
   taskStatusOptions,
@@ -161,7 +166,15 @@ export function Modal({
     >
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
-        <Dialog.Content className={cx("modal", wide && "wide")}>
+        <Dialog.Content
+          className={cx("modal", wide && "wide")}
+          onEscapeKeyDown={(event) => {
+            if (
+              document.activeElement?.getAttribute("aria-expanded") === "true"
+            )
+              event.preventDefault();
+          }}
+        >
           <div className="modal-heading">
             <div>
               <Dialog.Title>{title}</Dialog.Title>
@@ -381,19 +394,67 @@ export function TaskForm({
   projectId?: string;
   parentId?: string;
 }) {
-  const { state, actorId, dispatch, online } = useData(),
+  const {
+      state: scopedState,
+      captureState,
+      actorId,
+      dispatch,
+      online,
+      teams,
+      teamId,
+    } = useData(),
     { run } = useUI();
+  const state = captureState ?? scopedState;
   const [saving, setSaving] = useState(false),
     [chosenProject, setChosenProject] = useState(
-      projectId ?? state.workspace.inboxId,
+      projectId ?? scopedState.workspace.inboxId,
     );
+  const [description, setDescription] = useState(""),
+    [descriptionMentions, setDescriptionMentions] = useState<Mention[]>([]),
+    [owner, setOwner] = useState([actorId]),
+    [worker, setWorker] = useState([actorId]),
+    [collaborators, setCollaborators] = useState<string[]>([]);
   useEffect(() => {
-    if (open) setChosenProject(projectId ?? state.workspace.inboxId);
-  }, [open, projectId, state.workspace.inboxId]);
-  const project = state.projects.find((p) => p.id === chosenProject),
-    team = state.resourceTeams?.[chosenProject];
-  const availableMembers =
-    (team ? state.teamMemberships?.[team] : state.members) ?? state.members;
+    if (open) {
+      const personal = state.teams?.find((t) => t.kind === "personal");
+      setChosenProject(
+        projectId ??
+          (teamId === "all" && personal
+            ? personal.inboxId
+            : scopedState.workspace.inboxId),
+      );
+      setDescription("");
+      setDescriptionMentions([]);
+      setOwner([actorId]);
+      setWorker([actorId]);
+      setCollaborators([]);
+    }
+  }, [open, projectId, scopedState.workspace.inboxId]);
+  const team = state.resourceTeams?.[chosenProject] ?? teams[0]?.id;
+  const availableMembers = taskPeople(state, chosenProject);
+  const scopeTeams = teams.filter((t) =>
+    state.projects.some(
+      (p) => (state.resourceTeams?.[p.id] ?? teams[0]?.id) === t.id,
+    ),
+  );
+  const changeProject = (id: string) => {
+    const allowed = new Set(taskPeople(state, id).map((m) => m.id));
+    setChosenProject(id);
+    setOwner((current) =>
+      current.filter((id) => allowed.has(id)).length
+        ? current.filter((id) => allowed.has(id))
+        : [actorId],
+    );
+    setWorker((current) =>
+      current.filter((id) => allowed.has(id) || id === "unassigned").length
+        ? current
+        : [actorId],
+    );
+    setCollaborators((current) => current.filter((id) => allowed.has(id)));
+    setDescriptionMentions((current) =>
+      current.filter((m) => allowed.has(m.memberId)),
+    );
+  };
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -401,24 +462,29 @@ export function TaskForm({
     setSaving(true);
     const result = await run(
       () =>
-        dispatch({
-          type: "create_task",
-          title: String(f.get("title")),
-          description: String(f.get("description")),
-          projectId: String(f.get("projectId")) || undefined,
-          assigneeId: String(f.get("assigneeId")),
-          ownerId: String(f.get("ownerId")),
-          status: f.get("status") as "backlog" | "todo",
-          startDate: String(f.get("startDate")) || undefined,
-          priority: f.get("priority") as Task["priority"],
-          estimatedMinutes: f.get("estimate")
-            ? Number(f.get("estimate"))
-            : undefined,
-          deadline: String(f.get("deadline")) || undefined,
-          dependencies: [],
-          labels: parseTaskLabels(String(f.get("labels") ?? "")),
-          parentId,
-        }),
+        dispatch(
+          {
+            type: "create_task",
+            title: String(f.get("title")),
+            description: String(f.get("description")),
+            descriptionMentions,
+            projectId: chosenProject,
+            assigneeId: String(f.get("assigneeId")),
+            ownerId: String(f.get("ownerId")),
+            collaborators,
+            status: f.get("status") as "backlog" | "todo",
+            startDate: String(f.get("startDate")) || undefined,
+            priority: f.get("priority") as Task["priority"],
+            estimatedMinutes: f.get("estimate")
+              ? Number(f.get("estimate"))
+              : undefined,
+            deadline: String(f.get("deadline")) || undefined,
+            dependencies: [],
+            labels: parseTaskLabels(String(f.get("labels") ?? "")),
+            parentId,
+          },
+          { teamId: team },
+        ),
       parentId ? "Subtask added" : "Task captured. One less thing to remember.",
     );
     setSaving(false);
@@ -433,6 +499,37 @@ export function TaskForm({
     >
       <form onSubmit={submit} className="form">
         <label>
+          Task belongs to
+          <select
+            aria-label="Task belongs to"
+            value={team}
+            disabled={!!parentId}
+            onChange={(e) => {
+              const target =
+                state.teams?.find((t) => t.id === e.target.value)?.inboxId ??
+                state.projects.find(
+                  (p) =>
+                    (state.resourceTeams?.[p.id] ?? teams[0]?.id) ===
+                      e.target.value && !p.archived,
+                )?.id;
+              if (target) changeProject(target);
+            }}
+          >
+            {scopeTeams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.kind === "personal"
+                  ? "Personal · only you"
+                  : t.name + " · team"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="task-scope-note">
+          {teams.find((t) => t.id === team)?.kind === "personal"
+            ? "Private to you. Choose a team for shared work."
+            : "Shared within this team, following the selected project’s access."}
+        </p>
+        <label>
           What needs to get done?
           <input
             autoFocus
@@ -442,14 +539,23 @@ export function TaskForm({
             placeholder="e.g. Sketch the first onboarding flow"
           />
         </label>
-        <label>
-          Description <span className="optional">optional</span>
-          <textarea
+        <div>
+          <label>
+            Description <span className="optional">optional</span>
+          </label>
+          <MentionInput
+            label="Description"
             name="description"
-            rows={3}
+            value={description}
+            mentions={descriptionMentions}
+            onChange={(text, mentions) => {
+              setDescription(text);
+              setDescriptionMentions(mentions);
+            }}
+            members={availableMembers}
             placeholder="Notes, links, or what a good outcome looks like…"
           />
-        </label>
+        </div>
         <div className="form-grid">
           <label>
             Project
@@ -457,10 +563,15 @@ export function TaskForm({
               name="projectId"
               aria-label="Project"
               value={chosenProject}
-              onChange={(e) => setChosenProject(e.target.value)}
+              disabled={!!parentId}
+              onChange={(e) => changeProject(e.target.value)}
             >
               {state.projects
-                .filter((p) => !p.archived)
+                .filter(
+                  (p) =>
+                    !p.archived &&
+                    (state.resourceTeams?.[p.id] ?? teams[0]?.id) === team,
+                )
                 .map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
@@ -468,31 +579,21 @@ export function TaskForm({
                 ))}
             </select>
           </label>
-          <label>
-            Owner
-            <select name="ownerId" aria-label="Owner" defaultValue={actorId}>
-              {availableMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Worker
-            <select
-              name="assigneeId"
-              aria-label="Worker"
-              defaultValue={actorId}
-            >
-              {availableMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id === actorId ? "Me" : m.name}
-                </option>
-              ))}
-              <option value="unassigned">Unassigned</option>
-            </select>
-          </label>
+          <PeoplePicker
+            label="Owner"
+            name="ownerId"
+            members={availableMembers}
+            value={owner}
+            onChange={setOwner}
+          />
+          <PeoplePicker
+            label="Worker"
+            name="assigneeId"
+            members={availableMembers}
+            value={worker}
+            onChange={setWorker}
+            allowUnassigned
+          />
           <label>
             Initial stage
             <select
@@ -528,10 +629,18 @@ export function TaskForm({
             <PrioritySelect />
           </label>
         </div>
+        <PeoplePicker
+          label="Collaborators"
+          name="collaborator"
+          members={availableMembers}
+          value={collaborators}
+          onChange={setCollaborators}
+          multiple
+        />
         <TaskLabelField />
         <div className="form-note">
           <CornerDownLeft size={14} />
-          Work outside a named project goes into Personal planning.
+          Work outside a named project goes into this scope’s planning project.
         </div>
         <div className="modal-footer">
           <button type="button" className="button secondary" onClick={onClose}>
@@ -673,9 +782,11 @@ export function TaskDetail({
     { run } = useUI();
   const task = state.tasks.find((t) => t.id === id);
   const [subtask, setSubtask] = useState(false);
+  const [editingProject, setEditingProject] = useState(task?.projectId ?? "");
   const taskPage = useRef<HTMLElement>(null);
   useEffect(() => {
     taskPage.current?.focus();
+    if (task) setEditingProject(task.projectId);
   }, [task?.id]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
@@ -693,8 +804,9 @@ export function TaskDetail({
   }, [onClose]);
   if (!task) return null;
   const team = state.resourceTeams?.[task.id],
-    taskMembers =
-      (team ? state.teamMemberships?.[team] : state.members) ?? state.members;
+    taskMembers = taskPeople(state, editingProject || task.projectId);
+  const homeTeam =
+    state.teams?.find((entry) => entry.id === team) ?? state.workspace;
   const children = state.tasks.filter((t) => t.parentId === task.id);
   const patch = (patch: Extract<Command, { type: "update_task" }>["patch"]) =>
     run(
@@ -715,6 +827,9 @@ export function TaskDetail({
             All tasks
           </button>
           <span className="task-page-project">
+            <span className="task-home-scope">
+              {homeTeam.kind === "personal" ? "Personal" : homeTeam.name} ·{" "}
+            </span>
             {task.parentId && (
               <button
                 type="button"
@@ -768,6 +883,9 @@ export function TaskDetail({
                 title: String(f.get("title")),
                 milestone: f.get("milestone") === "on",
                 description: String(f.get("description")),
+                descriptionMentions: JSON.parse(
+                  String(f.get("descriptionMentions") ?? "[]"),
+                ),
                 assigneeId: String(f.get("assigneeId")),
                 ownerId: String(f.get("ownerId")),
                 brainstorm: f.get("brainstorm") === "on",
@@ -795,16 +913,14 @@ export function TaskDetail({
               required
               maxLength={180}
             />
-            <label className="task-description">
-              Description
-              <textarea
-                name="description"
-                aria-label="Task description"
-                rows={3}
-                defaultValue={task.description}
-                placeholder="What needs to happen? Add the context and the outcome you want."
+            <div className="task-description">
+              <label>Description</label>
+              <TaskDescription
+                key={task.id}
+                task={task}
+                members={taskMembers}
               />
-            </label>
+            </div>
             {!task.parentId && (
               <section className="task-subtasks" aria-label="Subtasks">
                 {children.length > 0 && <h2>Subtasks</h2>}
@@ -858,50 +974,37 @@ export function TaskDetail({
                       defaultValue={task.status}
                     />
                   </label>
-                  <label>
-                    <span title="Requests the work and validates its result">
-                      Owner
-                    </span>
-                    <select
-                      aria-label="Owner"
-                      name="ownerId"
-                      defaultValue={
-                        task.ownerId ??
-                        state.projects.find((p) => p.id === task.projectId)
-                          ?.ownerId
-                      }
-                    >
-                      {taskMembers.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span title="Does the work; can also be the task owner">
-                      Worker
-                    </span>
-                    <select
-                      name="assigneeId"
-                      aria-label="Worker"
-                      defaultValue={task.assigneeId ?? "unassigned"}
-                    >
-                      <option value="unassigned">Unassigned</option>
-                      {taskMembers.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <TaskPersonField
+                    key={"owner:" + task.id + editingProject}
+                    label="Owner"
+                    name="ownerId"
+                    members={taskMembers}
+                    initial={
+                      task.ownerId ??
+                      state.projects.find((p) => p.id === task.projectId)
+                        ?.ownerId ??
+                      actorId
+                    }
+                  />
+                  <TaskPersonField
+                    key={"worker:" + task.id + editingProject}
+                    label="Worker"
+                    name="assigneeId"
+                    members={taskMembers}
+                    initial={task.assigneeId ?? "unassigned"}
+                    allowUnassigned
+                  />
                   <label>
                     <span>Priority</span>
                     <PrioritySelect defaultValue={task.priority} />
                   </label>
                   <label>
                     <span>Project</span>
-                    <select name="projectId" defaultValue={task.projectId}>
+                    <select
+                      name="projectId"
+                      value={editingProject || task.projectId}
+                      onChange={(e) => setEditingProject(e.target.value)}
+                    >
                       {state.projects
                         .filter(
                           (p) =>
@@ -977,7 +1080,11 @@ export function TaskDetail({
                 aria-label="Task connections"
               >
                 <DependencyField task={task} openTask={onOpen} />
-                <CollaboratorField task={task} />
+                <CollaboratorField
+                  key={task.id + editingProject + task.collaborators.join(",")}
+                  task={task}
+                  members={taskMembers}
+                />
                 <TaskLabelField defaultValue={task.labels} />
               </section>
             </div>
@@ -1191,60 +1298,80 @@ function DependencyField({
     </section>
   );
 }
-function CollaboratorField({ task }: { task: Task }) {
-  const { state } = useData();
-  const [selected, setSelected] = useState(task.collaborators);
-  const team = state.resourceTeams?.[task.id],
-    members = team
-      ? (state.teamMemberships?.[team] ?? state.members)
-      : state.members;
+function TaskDescription({ task, members }: { task: Task; members: Member[] }) {
+  const [text, setText] = useState(task.description),
+    [mentions, setMentions] = useState(task.descriptionMentions ?? []);
+  return (
+    <MentionInput
+      label="Task description"
+      name="description"
+      value={text}
+      mentions={mentions.filter((m) =>
+        members.some((person) => person.id === m.memberId),
+      )}
+      members={members}
+      onChange={(text, mentions) => {
+        setText(text);
+        setMentions(mentions);
+      }}
+      placeholder="What needs to happen? Add context or @mention a teammate."
+    />
+  );
+}
+function TaskPersonField({
+  label,
+  name,
+  members,
+  initial,
+  allowUnassigned,
+}: {
+  label: string;
+  name: string;
+  members: Member[];
+  initial: string;
+  allowUnassigned?: boolean;
+}) {
+  const [value, setValue] = useState([
+    members.some((m) => m.id === initial) || initial === "unassigned"
+      ? initial
+      : allowUnassigned
+        ? "unassigned"
+        : (members[0]?.id ?? ""),
+  ]);
+  return (
+    <PeoplePicker
+      label={label}
+      name={name}
+      members={members}
+      value={value}
+      onChange={setValue}
+      allowUnassigned={allowUnassigned}
+    />
+  );
+}
+function CollaboratorField({
+  task,
+  members,
+}: {
+  task: Task;
+  members: Member[];
+}) {
+  const [selected, setSelected] = useState(
+    task.collaborators.filter((id) => members.some((m) => m.id === id)),
+  );
   return (
     <section className="collaborator-editor">
-      <h3>Collaborators</h3>
-      <div className="collaborator-chips">
-        {selected.map((id) => {
-          const member = members.find((m) => m.id === id);
-          return (
-            member && (
-              <span className="collaborator-chip" key={id}>
-                <input type="hidden" name="collaborator" value={id} />
-                <Avatar name={member.name} color={member.color} small />
-                <span>{member.name}</span>
-                <button
-                  type="button"
-                  className="icon-button"
-                  aria-label={"Remove collaborator " + member.name}
-                  onClick={() => setSelected(selected.filter((x) => x !== id))}
-                >
-                  <X size={12} />
-                </button>
-              </span>
-            )
-          );
-        })}
-        {!selected.length && (
-          <span className="muted">No collaborators added</span>
-        )}
-      </div>
-      <select
-        aria-label="Add collaborator"
-        value=""
-        onChange={(e) => {
-          if (e.target.value) setSelected([...selected, e.target.value]);
-        }}
-      >
-        <option value="">Add a person…</option>
-        {members
-          .filter((m) => m.id !== task.assigneeId && !selected.includes(m.id))
-          .map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-      </select>
+      <PeoplePicker
+        label="Collaborators"
+        name="collaborator"
+        members={members}
+        value={selected}
+        onChange={setSelected}
+        multiple
+      />
       <small>
-        The worker is accountable for execution; the task owner reviews the
-        outcome.
+        Collaborators can comment and receive updates. The worker does the work;
+        the owner validates the outcome.
       </small>
     </section>
   );

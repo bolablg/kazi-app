@@ -174,11 +174,12 @@ export function TasksPage(props: WorkProps) {
     project = state.projects.some((p) => p.id === params.get("project"))
       ? params.get("project")!
       : "all",
-    labelFilter = params.get("label") ?? "all",
+    labelFilter = params.get("tag") ?? params.get("label") ?? "all",
     deadline = params.get("deadline") ?? "all",
     sort = params.get("sort") ?? "deadline";
   const change = (key: string, value: string) => {
     const next = new URLSearchParams(window.location.search);
+    if (key === "tag") next.delete("label");
     next.set(key, value);
     setParams(next, { replace: key === "search" });
   };
@@ -339,15 +340,15 @@ export function TasksPage(props: WorkProps) {
           ))}
         </select>
         <select
-          aria-label="Filter by label"
+          aria-label="Filter by tag"
           value={
             labels.some((label) => taskLabelKey(label) === labelFilter)
               ? labelFilter
               : "all"
           }
-          onChange={(event) => change("label", event.target.value)}
+          onChange={(event) => change("tag", event.target.value)}
         >
-          <option value="all">All labels</option>
+          <option value="all">All tags</option>
           {labels.map((label) => (
             <option key={taskLabelKey(label)} value={taskLabelKey(label)}>
               {label}
