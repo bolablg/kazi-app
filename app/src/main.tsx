@@ -13,6 +13,7 @@ import "./workspace.css";
 import "./collaboration.css";
 import "./task-refinement.css";
 import "./typography.css";
+import "./theme.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker

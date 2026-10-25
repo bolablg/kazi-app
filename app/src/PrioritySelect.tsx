@@ -2,16 +2,16 @@ import { statusLabels, taskStatusOptions, type Task } from "../shared/model";
 import { TaskChoice } from "./TaskChoice";
 
 export const stageColors: Record<string, string> = {
-  backlog: "#7e8188",
-  todo: "#526780",
-  in_progress: "#0c66e4",
-  to_validate: "#946600",
-  done: "#1f845a",
-  archived: "#76797f",
-  idea: "#7e8188",
-  blocked: "#76797f",
-  rejected: "#76797f",
-  canceled: "#76797f",
+  backlog: "var(--status-backlog)",
+  todo: "var(--status-todo)",
+  in_progress: "var(--status-progress)",
+  to_validate: "var(--status-review)",
+  done: "var(--status-done)",
+  archived: "var(--status-archived)",
+  idea: "var(--status-backlog)",
+  blocked: "var(--status-archived)",
+  rejected: "var(--status-archived)",
+  canceled: "var(--status-archived)",
 };
 export function PrioritySelect({
   defaultValue = "medium",
