@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useData, type Data } from "./data";
 import { Modal, useUI } from "./components";
+import { InfoTip } from "./InfoTip";
 const endpoint = () => {
   const configured = import.meta.env.VITE_CONVEX_SITE_URL;
   if (configured) return configured.replace(/\/$/, "") + "/mcp";
@@ -32,10 +33,25 @@ const dateTime = (at?: number) =>
   at ? new Date(at).toLocaleString() : "Never used";
 const credentialStatus = (t: Data["tokens"][number]) =>
   t.revoked ? "Revoked" : t.expiresAt <= Date.now() ? "Expired" : "Active";
+const clientConfiguration = (token = "YOUR_KAZI_TOKEN") =>
+  JSON.stringify(
+    {
+      mcpServers: {
+        kazi: {
+          type: "http",
+          url: endpoint(),
+          headers: { Authorization: "Bearer " + token },
+        },
+      },
+    },
+    null,
+    2,
+  );
 export function ConnectionsOverview() {
   const { state, actorId, demo, tokens } = useData();
   const cal = state.calendars.find((c) => c.ownerId === actorId);
   const agents = tokens.filter((t) => t.lastUsedAt);
+  const active = tokens.filter((t) => credentialStatus(t) === "Active").length;
   return (
     <div className="settings-form connections-overview">
       <section className="settings-section">
@@ -74,15 +90,26 @@ export function ConnectionsOverview() {
             <small>Connect Codex, Claude Code, and other MCP clients</small>
           </span>
           <span className="connection-status">
-            <i />
-            {demo ? "Not configured" : "Configured"}
+            <i className={active ? "connected" : ""} />
+            {demo
+              ? "Not configured"
+              : active
+                ? `${active} active credential${active === 1 ? "" : "s"}`
+                : "Ready to connect"}
           </span>
           <ArrowUpRight size={15} />
         </Link>
       </section>
       <section className="settings-section">
         <div className="section-line">
-          <h2>Agents & clients</h2>
+          <div className="section-title-group">
+            <h2>Agents & clients</h2>
+            <InfoTip label="About agents and clients">
+              Your agent uses Kazi through an MCP client such as Codex or Claude
+              Code. Clients appear after an authenticated request; last seen
+              does not indicate a persistent connection.
+            </InfoTip>
+          </div>
           <Link className="text-button" to="/connections?tab=mcp">
             Manage access <ArrowUpRight size={13} />
           </Link>
@@ -91,8 +118,7 @@ export function ConnectionsOverview() {
         <p className="muted settings-footnote">
           {agents.length} clients seen ·{" "}
           {tokens.filter((t) => credentialStatus(t) === "Active").length} active
-          credentials. Last seen records authenticated requests; it does not
-          indicate a persistent connection.
+          credentials.
         </p>
       </section>
       {demo && (
@@ -156,7 +182,7 @@ function AgentTable() {
     <div className="connection-empty">
       <Plug size={22} />
       <div>
-        <strong>No agents connected yet</strong>
+        <strong>No clients seen yet</strong>
         <p>
           Create a credential, then use it in your MCP client. The client will
           appear here after its first authenticated request.
@@ -176,31 +202,101 @@ export function McpSettings() {
       <section className="settings-section">
         <div className="section-line">
           <div>
-            <h2>MCP server</h2>
-            <p>Use your Kazi account from an MCP client.</p>
+            <div className="section-title-group">
+              <h2>Connect an MCP client</h2>
+              <InfoTip label="About MCP setup">
+                MCP lets an agent use Kazi through a compatible client. Use a
+                Streamable HTTP server, with a separate scoped credential for
+                each client. Approval of a proposed plan still happens in Kazi.
+              </InfoTip>
+            </div>
           </div>
           <span className="badge neutral">
-            {demo ? "Not configured" : "Configured"}
+            {demo ? "Not configured" : "Server ready"}
           </span>
         </div>
-        <div className="endpoint-row">
-          <code>
-            {demo ? "Configure Convex to get your endpoint" : endpoint()}
-          </code>
-          <button
-            className="icon-button"
-            aria-label="Copy MCP endpoint"
-            disabled={demo}
-            onClick={() =>
-              run(
-                () => navigator.clipboard.writeText(endpoint()),
-                "Endpoint copied",
-              )
-            }
-          >
-            <Copy size={15} />
-          </button>
-        </div>
+        <ol className="mcp-setup-steps" aria-label="MCP setup steps">
+          <li>
+            <span className="mcp-step-number" aria-hidden="true">
+              1
+            </span>
+            <div>
+              <strong>Create a credential</strong>
+              <p>Choose a client name and the permissions it needs below.</p>
+              <button
+                className="button secondary"
+                onClick={() => setOpen(true)}
+              >
+                <Plus size={14} />
+                Add connection
+              </button>
+            </div>
+          </li>
+          <li>
+            <span className="mcp-step-number" aria-hidden="true">
+              2
+            </span>
+            <div>
+              <strong>Add Kazi to your client</strong>
+              <p>
+                Use this server URL and{" "}
+                <code>Authorization: Bearer YOUR_KAZI_TOKEN</code>.
+              </p>
+              <div className="endpoint-row">
+                <code>
+                  {demo ? "Configure Convex to get your endpoint" : endpoint()}
+                </code>
+                <button
+                  className="icon-button"
+                  aria-label="Copy MCP endpoint"
+                  disabled={demo}
+                  onClick={() =>
+                    run(
+                      () => navigator.clipboard.writeText(endpoint()),
+                      "Endpoint copied",
+                    )
+                  }
+                >
+                  <Copy size={15} />
+                </button>
+              </div>
+              <button
+                className="text-button"
+                disabled={demo}
+                onClick={() =>
+                  run(
+                    () => navigator.clipboard.writeText(clientConfiguration()),
+                    "Setup template copied; replace YOUR_KAZI_TOKEN",
+                  )
+                }
+              >
+                <Copy size={14} />
+                Copy JSON template
+              </button>
+              <InfoTip label="Using the MCP setup template">
+                This HTTP JSON template works with clients such as Claude Code.
+                Replace YOUR_KAZI_TOKEN with your token. Other clients may use a
+                different configuration format or a setup form; enter the server
+                URL and authorization header there instead.
+              </InfoTip>
+            </div>
+          </li>
+          <li>
+            <span className="mcp-step-number" aria-hidden="true">
+              3
+            </span>
+            <div>
+              <strong>Connect and verify</strong>
+              <p>
+                Ask your client to list your Kazi tasks. It will appear in
+                Agents & clients after its first request.
+              </p>
+              <Link className="text-button" to="/connections?tab=activity">
+                View tool activity <ArrowUpRight size={13} />
+              </Link>
+            </div>
+          </li>
+        </ol>
         <div className="diagnostic-row">
           <span>Transport</span>
           <strong>Streamable HTTP</strong>
@@ -216,10 +312,6 @@ export function McpSettings() {
             <h2>Credentials</h2>
             <p>Create one credential for each client or device.</p>
           </div>
-          <button className="button secondary" onClick={() => setOpen(true)}>
-            <Plus size={14} />
-            Add connection
-          </button>
         </div>
         {tokens.length ? (
           <div className="connection-table-wrap">
@@ -274,12 +366,15 @@ export function McpSettings() {
         )}
       </section>
       <section className="settings-section">
-        <h2>Agents & clients</h2>
+        <div className="section-title-group">
+          <h2>Agents & clients</h2>
+          <InfoTip label="About client access">
+            Client names and versions are self-reported. Each credential grants
+            your own permissions within its selected scopes. Revoke its
+            credential to stop future access.
+          </InfoTip>
+        </div>
         <AgentTable />
-        <p className="muted settings-footnote">
-          Client names are reported by the client. A credential grants your own
-          permissions; plan approval still opens in Kazi.
-        </p>
       </section>
       <Modal
         open={open}
@@ -323,6 +418,23 @@ export function McpSettings() {
               <Copy size={14} />
               Copy token
             </button>
+            <button
+              className="button secondary"
+              onClick={() =>
+                run(
+                  () =>
+                    navigator.clipboard.writeText(clientConfiguration(token)),
+                  "Client configuration copied",
+                )
+              }
+            >
+              <Copy size={14} />
+              Copy client configuration
+            </button>
+            <p className="inline-info">
+              This token is only shown once. Keep it private; the copied
+              configuration includes the token.
+            </p>
             <p>
               In your client, add a Streamable HTTP server with the endpoint
               above and the header <code>Authorization: Bearer YOUR_TOKEN</code>

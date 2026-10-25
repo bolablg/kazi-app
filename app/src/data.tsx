@@ -27,6 +27,7 @@ import {
   clearDemoFiles,
   downloadBlob,
 } from "./artifactFiles";
+import { LoadingScreen } from "./LoadingScreen";
 import { seedState, DEMO_USER } from "../shared/fixtures";
 export interface Data {
   local?: boolean;
@@ -413,7 +414,7 @@ export function LiveProvider({
     ),
     [error, setError] = useState(""),
     [inviteUrl, setInviteUrl] = useState("");
-  const entries = useQuery(api.commands.allSnapshot, primaryId ? {} : "skip");
+  const entries = useQuery(api.commands.allSnapshot, {});
   const ordered = entries
     ? [...entries].sort(
         (a, b) => Number(b.id === primaryId) - Number(a.id === primaryId),
@@ -462,18 +463,8 @@ export function LiveProvider({
         <button onClick={() => location.reload()}>Try again</button>
       </div>
     );
-  if (!workspaceId || !state)
-    return (
-      <div className="startup">
-        <div className="logo-symbol">k</div>
-        <h1>Loading Kazi</h1>
-        <p>
-          {online
-            ? "Loading your tasks and projects…"
-            : "You’re offline. Reconnect to load your private data."}
-        </p>
-      </div>
-    );
+  if (!primaryId || !workspaceId || !state)
+    return <LoadingScreen online={online} />;
   const dispatch = async (command: Command, options?: { teamId?: string }) => {
     if (!online)
       throw new Error("Reconnect to save changes or approve a plan.");

@@ -2,6 +2,12 @@
 
 Kazi's agenda combines deadlines and approved focus sessions. You can review and approve plans without connecting an outside calendar. Calendar, Insights, and the subscription feed use the same scheduling records, while plan history preserves previous accepted versions.
 
+## Day details
+
+Select any empty part of a month cell or a day’s time grid to show its full agenda below the calendar. The date buttons support keyboard selection. When the detail panel is off-screen, selecting a day brings it into view; reduced-motion preferences are respected. Individual task entries still open the full task.
+
+Include proposals adds unapproved sessions with a dashed outline. Short sessions use a single title line rather than squeezing several lines into the time slot. Their full title, time, and proposal state remain available in the selected day’s agenda and the event’s accessible name.
+
 ## Subscribe from another app
 
 Open **Calendar → Subscribe & export → Create calendar link**. Choose all your projects or one project, and whether to include deadline reminders. The sidebar’s Teams filter determines whether the link follows one team or all your current memberships. Copy the private URL into your calendar app's subscription controls:

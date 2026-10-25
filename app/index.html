@@ -13,10 +13,85 @@
     />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/startup.css" />
     <title>Kazi · Tasks & projects</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        class="loading-shell"
+        role="status"
+        aria-label="Opening Kazi"
+        aria-busy="true"
+      >
+        <div class="loading-brand">
+          <span class="loading-mark">k</span><strong>Kazi</strong>
+        </div>
+        <div class="loading-sidebar" aria-hidden="true">
+          <span class="loading-bar"></span><span class="loading-bar"></span
+          ><span class="loading-bar"></span><span class="loading-bar"></span
+          ><span class="loading-bar"></span>
+        </div>
+        <div class="loading-header" aria-hidden="true">
+          <span class="loading-bar"></span>
+        </div>
+        <div class="loading-content" aria-hidden="true">
+          <div class="loading-bar loading-title"></div>
+          <div class="loading-tiles">
+            <div class="loading-tile">
+              <span class="loading-bar"></span><span class="loading-bar"></span>
+            </div>
+            <div class="loading-tile">
+              <span class="loading-bar"></span><span class="loading-bar"></span>
+            </div>
+            <div class="loading-tile">
+              <span class="loading-bar"></span><span class="loading-bar"></span>
+            </div>
+          </div>
+          <div class="loading-panels">
+            <div class="loading-panel">
+              <div class="loading-bar loading-title"></div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+            </div>
+            <div class="loading-panel">
+              <div class="loading-bar loading-title"></div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+              <div class="loading-row">
+                <span class="loading-dot"></span
+                ><span class="loading-bar"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <noscript>Kazi needs JavaScript enabled to open your account.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

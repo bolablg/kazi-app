@@ -448,6 +448,18 @@ const mcp = httpAction(async (ctx, request) => {
             now: Date.now(),
             person,
             project: String(input.projectId ?? "all"),
+            attentionPage:
+              input.attentionPage === undefined
+                ? undefined
+                : Number(input.attentionPage),
+            focusPage:
+              input.focusPage === undefined
+                ? undefined
+                : Number(input.focusPage),
+            activityPage:
+              input.activityPage === undefined
+                ? undefined
+                : Number(input.activityPage),
           });
         }
         case "get_calendar":
