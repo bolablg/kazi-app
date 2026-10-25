@@ -119,21 +119,6 @@ summary:focus-visible {
   align-items: center;
   gap: 8px;
 }
-.wordmark .kazi-mark {
-  width: 23px;
-  height: 23px;
-  border-radius: 5px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  background: #e9e7ee;
-  color: #111111;
-  font-family: inherit;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  align-self: auto;
-}
 .workspace-picker {
   background: transparent;
   padding: 4px 9px;

@@ -2,7 +2,7 @@
 
 Review date: October 25, 2026.
 
-Kazi uses a shared, flat interface with coral as the primary action color, black text, and distinct colors for task status, priority, tags, and projects. Desktop Overview, mobile task, and tablet Insights references were developed with Stitch, then adapted to Kazi’s existing navigation and workflows. Generated design explorations remain local; the screenshots below show the implemented app.
+Kazi uses a shared, flat interface with Momentum orange as the primary action color, black text, and distinct colors for task status, priority, tags, and projects. Desktop Overview, mobile task, and tablet Insights references were developed with Stitch, then adapted to Kazi’s existing navigation and workflows. Generated design explorations remain local; the screenshots below show the implemented app.
 
 ## Changes checked
 
@@ -17,13 +17,13 @@ Kazi uses a shared, flat interface with coral as the primary action color, black
 
 ## Coverage
 
-| Check | Coverage |
-| --- | --- |
-| Broad layout regression | 360, 390, 768, 1024, 1440, and 1920 px |
-| Detailed flat-surface and clipping audit | 35 routes at 390, 768, and 1440 px; 105 route/viewport combinations |
-| Screen families | Overview, task List/Board/Archive, projects and project views, full task, Calendar month/week/day, Schedule, subscriptions, all five Insights tabs, Plans/history, account/planning/general/data settings, Connections tabs, teams/people, Favorites, and notifications |
-| Interaction checks | Help bubbles, filter persistence, dialogs, priority menus, keyboard navigation, task editing, drag and drop, mentions, comments, attachments, plan approval, calendar navigation, and PWA offline/update flows |
-| Manual visual review | Overview, task board, full task, and Planning settings in the browser; phone and tablet implementation screenshots |
+| Check                                    | Coverage                                                                                                                                                                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Broad layout regression                  | 360, 390, 768, 1024, 1440, and 1920 px                                                                                                                                                                                                                                  |
+| Detailed flat-surface and clipping audit | 35 routes at 390, 768, and 1440 px; 105 route/viewport combinations                                                                                                                                                                                                     |
+| Screen families                          | Overview, task List/Board/Archive, projects and project views, full task, Calendar month/week/day, Schedule, subscriptions, all five Insights tabs, Plans/history, account/planning/general/data settings, Connections tabs, teams/people, Favorites, and notifications |
+| Interaction checks                       | Help bubbles, filter persistence, dialogs, priority menus, keyboard navigation, task editing, drag and drop, mentions, comments, attachments, plan approval, calendar navigation, and PWA offline/update flows                                                          |
+| Manual visual review                     | Overview, task board, full task, and Planning settings in the browser; phone and tablet implementation screenshots                                                                                                                                                      |
 
 Automated checks inspect rendered elements and pseudo-elements for shadows, even border widths on cards and actions, page-level horizontal overflow, and clipped header actions. Source checks reject new shadow and blur declarations. Additional assertions check mobile filter touch sizes and readable form text.
 
@@ -63,3 +63,16 @@ The follow-up passed 176 unit/backend tests, three deployment guards, build/form
 ![MCP setup on phone](screenshots/mcp-setup-phone.png)
 
 ![Refresh skeleton on tablet before JavaScript](screenshots/refresh-skeleton-768.png)
+
+## Momentum identity
+
+- The final identity uses orange, pink, and cobalt in a rising signal beside an outlined Kazi wordmark. The same vector logo appears in navigation, sign-in, and the HTML/React loading shell. The main action color and authentication controls use the matching orange with black text.
+- Transparent SVG/PNG favicons include actual 16px and 32px rasters. Installed app and Apple touch icons have an opaque dark background. The separate maskable export keeps the full symbol inside the central 80% diameter safe circle.
+- Navigation checks at 390, 768, and 1440px verify loaded artwork, vertical centering within one pixel, no horizontal overflow, and no shadows. Asset tests verify exported dimensions, opacity, safe-area clearance, and all three colors remaining distinguishable at favicon sizes.
+- Production-build PWA checks verify that manifest icon dimensions match their declared sizes and the logo remains available after an offline reload. Static artwork is cached without adding private account data to service-worker caches.
+
+Local validation passed 179 unit/backend tests, three deployment guards, the build and formatting checks, and all three focused responsive branding/PWA browser cases. Automated checks use synthetic records; physical-device launcher appearance and icon refresh timing depend on the operating system.
+
+![Momentum identity](brand/momentum-preview.png)
+
+![Momentum navigation on phone](screenshots/momentum-390.png)

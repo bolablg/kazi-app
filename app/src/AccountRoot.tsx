@@ -5,6 +5,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { LiveProvider } from "./data";
 import App from "./App";
 import { LoadingScreen } from "./LoadingScreen";
+import { Brand } from "./Brand";
 
 const pendingClose = new WeakMap<
   ConvexReactClient,
@@ -24,8 +25,7 @@ export function AccountRoot({ url }: { url: string }) {
       <div className="auth-page">
         <div className="auth-story">
           <span className="wordmark">
-            <span className="kazi-mark">k</span>
-            <strong>Kazi</strong>
+            <Brand />
           </span>
           <h1>Welcome to Kazi</h1>
           <p>Manage your tasks, projects, and connected tools.</p>

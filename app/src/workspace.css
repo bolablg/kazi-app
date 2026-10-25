@@ -92,15 +92,6 @@ body {
   color: #111;
   gap: 10px;
 }
-.wordmark .kazi-mark {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #111;
-  background: #111;
-  color: #fff;
-  border-radius: 6px;
-  font-size: 23px;
-}
 .sidebar-search {
   color: #111;
   background: #fff;
