@@ -53,10 +53,14 @@ export function TaskBoard({
   tasks,
   openTask,
   addTask,
+  readOnly = false,
+  addTaskLabel = "Add task",
 }: {
   tasks: Task[];
   openTask: (id: string) => void;
-  addTask: () => void;
+  addTask?: () => void;
+  readOnly?: boolean;
+  addTaskLabel?: string;
 }) {
   const { state, actorId, dispatch, online } = useData(),
     { run } = useUI();
@@ -96,7 +100,7 @@ export function TaskBoard({
     useSensor(KeyboardSensor, { coordinateGetter: coordinates }),
   );
   const movable = (t: Task) =>
-    online && !saving && canEditTask(state, t, actorId);
+    !readOnly && online && !saving && canEditTask(state, t, actorId);
   const move = async (task: Task, status: Task["status"]) => {
     if (!movable(task) || task.status === status) return;
     setSaving(true);
@@ -187,10 +191,10 @@ export function TaskBoard({
                     />
                   ))}
               </div>
-              {status === "todo" && (
+              {status === "todo" && !readOnly && addTask && (
                 <button className="add-inline" onClick={addTask}>
                   <Plus size={15} />
-                  Add task
+                  {addTaskLabel}
                 </button>
               )}
             </BoardColumn>

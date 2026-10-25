@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { PageTitle } from "./InfoTip";
 import { Clock3 } from "lucide-react";
 import { TodayOverview } from "./TodayOverview";
+import { CurrentSprint } from "./SprintPages";
 import { type WorkProps } from "./WorkPages";
 import {
   WorkViewFilters,
@@ -28,6 +29,7 @@ export function OverviewPage(props: WorkProps) {
       <div className="overview-view-bar">
         <WorkViewFilters page="Overview" scope={scope} />
       </div>
+      <CurrentSprint project={scope.project} person={scope.person} />
       <TodayOverview
         {...props}
         person={scope.person}

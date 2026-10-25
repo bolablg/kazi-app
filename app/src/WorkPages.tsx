@@ -17,6 +17,7 @@ import {
   Plus,
   Clock3,
   CalendarDays,
+  ChartGantt,
   MoreHorizontal,
   Globe2,
   BookOpen,
@@ -182,6 +183,7 @@ export function TasksPage(props: WorkProps) {
       ? params.get("project")!
       : "all",
     labelFilter = params.get("tag") ?? params.get("label") ?? "all",
+    sprintFilter = params.get("sprint") ?? "all",
     deadline = params.get("deadline") ?? "all",
     sort = params.get("sort") ?? "deadline";
   const change = (key: string, value: string) => {
@@ -201,6 +203,16 @@ export function TasksPage(props: WorkProps) {
     (task) =>
       task.title.toLowerCase().includes(search.toLowerCase()) &&
       (project === "all" || task.projectId === project) &&
+      (sprintFilter === "all" ||
+        (sprintFilter === "none"
+          ? !(state.sprints ?? []).some(
+              (sprint) =>
+                ["planned", "active"].includes(sprint.status) &&
+                sprint.taskIds.includes(task.id),
+            )
+          : !!state.sprints
+              ?.find((sprint) => sprint.id === sprintFilter)
+              ?.taskIds.includes(task.id))) &&
       (priority === "all" || task.priority === priority) &&
       (assignee === "all" ||
         (assignee === "unassigned"
@@ -315,9 +327,23 @@ export function TasksPage(props: WorkProps) {
               priority !== "all",
               labelFilter !== "all",
               deadline !== "all",
+              sprintFilter !== "all",
             ].filter(Boolean).length
           }
         >
+          <select
+            aria-label="Filter by sprint"
+            value={sprintFilter}
+            onChange={(event) => change("sprint", event.target.value)}
+          >
+            <option value="all">All sprints</option>
+            <option value="none">Outside an open sprint</option>
+            {(state.sprints ?? []).map((sprint) => (
+              <option key={sprint.id} value={sprint.id}>
+                {sprint.title}
+              </option>
+            ))}
+          </select>
           <select
             aria-label="Filter by assignee"
             value={assignee}
@@ -538,7 +564,8 @@ export function ProjectDetail(props: WorkProps) {
     [viewParams, setViewParams] = useSearchParams(),
     [membersOpen, setMembersOpen] = useState(false);
   const viewTabs = useRef<HTMLDivElement>(null);
-  const view = viewParams.get("view") ?? "list";
+  const requestedView = viewParams.get("view") ?? "list";
+  const view = requestedView === "timeline" ? "gantt" : requestedView;
   useEffect(() => {
     viewTabs.current
       ?.querySelector('[aria-pressed="true"]')
@@ -678,12 +705,12 @@ export function ProjectDetail(props: WorkProps) {
             Board
           </button>
           <button
-            className={view === "timeline" ? "active" : ""}
-            aria-pressed={view === "timeline"}
-            onClick={() => setView("timeline")}
+            className={view === "gantt" ? "active" : ""}
+            aria-pressed={view === "gantt"}
+            onClick={() => setView("gantt")}
           >
-            <CalendarDays size={15} />
-            Timeline
+            <ChartGantt size={15} />
+            Gantt
           </button>
           <button
             className={view === "archive" ? "active" : ""}
@@ -710,7 +737,7 @@ export function ProjectDetail(props: WorkProps) {
           openTask={props.openTask}
           expanded
         />
-      ) : view === "timeline" ? (
+      ) : view === "gantt" ? (
         <ProjectTimeline
           project={project}
           tasks={allProjectTasks.filter((t) => !isArchivedTask(t))}

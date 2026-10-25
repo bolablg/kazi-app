@@ -1,32 +1,9 @@
 import { localAuthPlugin } from "./scripts/local-auth.ts";
 import { developmentMcpPlugin } from "./scripts/mcp-development.ts";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { developmentReload } from "./scripts/development-reload.ts";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-function developmentReload(enabled: boolean): Plugin {
-  return {
-    name: "kazi-development-reload",
-    apply: "serve",
-    configureServer(server) {
-      if (!enabled) return;
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const changed = (file: string) => {
-        if (
-          !/\/(src|shared|convex)\//.test(file) ||
-          !/\.(tsx?|css)$/.test(file)
-        )
-          return;
-        clearTimeout(timer);
-        timer = setTimeout(() => server.ws.send({ type: "full-reload" }), 900);
-      };
-      server.watcher.on("change", changed);
-      server.httpServer?.on("close", () => {
-        clearTimeout(timer);
-        server.watcher.off("change", changed);
-      });
-    },
-  };
-}
 export default defineConfig(({ mode }) => ({
   // Browser fixtures must remain local even when `convex dev` updates .env.local.
   define:
@@ -41,8 +18,8 @@ export default defineConfig(({ mode }) => ({
         ? { "import.meta.env.VITE_KAZI_MCP_URL": JSON.stringify("") }
         : undefined,
   plugins: [
-    react(),
     developmentReload(mode === "development"),
+    react(),
     developmentMcpPlugin(
       mode === "development",
       loadEnv(mode, process.cwd(), ""),

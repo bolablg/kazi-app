@@ -45,6 +45,7 @@ import {
   RefreshCw,
   Leaf,
   ChevronRight,
+  Flag,
 } from "lucide-react";
 import { useData } from "./data";
 import {
@@ -64,6 +65,8 @@ import { CalendarPage } from "./CalendarPage";
 import { CalendarSubscriptionsPage } from "./AgendaSettings";
 import { TasksPage, ProjectsPage, ProjectDetail } from "./WorkPages";
 import { PlansPage, PlanReview } from "./PlanningPages";
+import { SprintsPage, SprintDetail } from "./SprintPages";
+import { SprintPlanner } from "./SprintPlanner";
 const InsightsPage = lazy(() =>
   import("./InsightsPage").then((module) => ({ default: module.InsightsPage })),
 );
@@ -87,6 +90,7 @@ const primary = [
   { path: "/", label: "Overview", icon: LayoutDashboard },
   { path: "/tasks", label: "Tasks", icon: ListIcon },
   { path: "/projects", label: "Projects", icon: Folder },
+  { path: "/sprints", label: "Sprints", icon: Flag },
   { path: "/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/plans", label: "Plans", icon: Layers },
   { path: "/insights", label: "Insights", icon: ChartNoAxesCombined },
@@ -141,6 +145,9 @@ function Shell() {
     needRefresh: [needsUpdate],
     updateServiceWorker,
   } = useRegisterSW();
+  useEffect(() => {
+    if (import.meta.env.DEV && needsUpdate) void updateServiceWorker(true);
+  }, [needsUpdate, updateServiceWorker]);
   const addTask = (projectId?: string) => {
     setTaskProject(projectId);
     setTaskForm(true);
@@ -209,7 +216,28 @@ function Shell() {
         { replace: true },
       );
   };
-  const closeTask = () =>
+  const closeTask = () => {
+    if (background?.pathname.startsWith("/sprints/")) {
+      navigate(
+        { pathname: background.pathname, search: background.search },
+        { replace: true },
+      );
+      return;
+    }
+    if (
+      background &&
+      ["gantt", "timeline"].includes(
+        new URLSearchParams(background.search).get("view") ?? "",
+      ) &&
+      resourceRoute(state, background.pathname, background.search).kind ===
+        "project"
+    ) {
+      navigate(
+        { pathname: background.pathname, search: background.search },
+        { replace: true },
+      );
+      return;
+    }
     navigate(
       {
         pathname: "/tasks",
@@ -222,6 +250,7 @@ function Shell() {
       },
       { replace: true },
     );
+  };
   const props = {
     openTask,
     addTask,
@@ -244,7 +273,9 @@ function Shell() {
                   ? "Settings"
                   : location.pathname === "/favorites"
                     ? "Favorites"
-                    : "Welcome"));
+                    : location.pathname.startsWith("/sprints/")
+                      ? "Sprints"
+                      : "Welcome"));
   const legacyParams = new URLSearchParams(location.search);
   if (location.pathname === "/" && legacyParams.get("view") === "list") {
     legacyParams.set("view", "list");
@@ -406,7 +437,7 @@ function Shell() {
             approve, or confirm calendar changes.
           </div>
         )}
-        {needsUpdate && (
+        {import.meta.env.PROD && needsUpdate && (
           <div className="connection-banner update">
             <RefreshCw size={16} />A Kazi update is available.
             <button
@@ -447,6 +478,11 @@ function Shell() {
               id={resource.task.id}
               onClose={closeTask}
               onOpen={openTask}
+              backLabel={
+                background?.pathname.startsWith("/sprints/")
+                  ? "Back to sprint"
+                  : undefined
+              }
             />
           ) : (
             <Suspense
@@ -485,6 +521,19 @@ function Shell() {
                   }
                 />
                 <Route path="/tasks" element={<TasksPage {...props} />} />
+                <Route path="/sprints" element={<SprintsPage />} />
+                <Route
+                  path="/sprints/new"
+                  element={<SprintPlanner {...props} />}
+                />
+                <Route
+                  path="/sprints/:id/edit"
+                  element={<SprintPlanner {...props} />}
+                />
+                <Route
+                  path="/sprints/:id"
+                  element={<SprintDetail {...props} />}
+                />
                 <Route path="/projects" element={<ProjectsPage {...props} />} />
                 <Route path="/favorites" element={<FavoritesPage />} />
                 <Route

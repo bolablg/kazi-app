@@ -736,7 +736,7 @@ input[type="checkbox"] {
   padding: 0 0 24px;
   gap: 20px;
   border-bottom: 1px solid var(--ui-line, #e5e7eb);
-  margin-bottom: 0;
+  margin-bottom: 24px;
 }
 .overview-summary > div {
   display: flex;
@@ -1273,6 +1273,7 @@ input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px 0;
     padding-bottom: 20px;
+    margin-bottom: 20px;
   }
   .overview-summary > div {
     flex-direction: column;

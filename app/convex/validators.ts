@@ -143,6 +143,93 @@ export const sessionV = v.object({
   updatedAt: v.optional(v.number()),
   error: v.optional(v.string()),
 });
+const sprintTaskV = v.object({
+  id: v.string(),
+  projectId: v.string(),
+  title: v.string(),
+  status: taskV.fields.status,
+});
+const sprintObjectiveV = v.object({
+  id: v.string(),
+  title: v.string(),
+  successCriteria: v.string(),
+  leadId: v.optional(v.string()),
+});
+const sprintOutcomeV = v.union(
+  v.literal("achieved"),
+  v.literal("partial"),
+  v.literal("missed"),
+);
+export const sprintV = v.object({
+  id: v.string(),
+  title: v.string(),
+  objective: v.string(),
+  successCriteria: v.string(),
+  focus: v.optional(v.string()),
+  automaticName: v.optional(v.boolean()),
+  objectives: v.optional(v.array(sprintObjectiveV)),
+  objectiveAssignments: v.optional(v.record(v.string(), v.string())),
+  startDate: v.string(),
+  endDate: v.string(),
+  timezone: v.string(),
+  ownerId: v.string(),
+  status: v.union(
+    v.literal("planned"),
+    v.literal("active"),
+    v.literal("closed"),
+    v.literal("canceled"),
+  ),
+  taskIds: v.array(v.string()),
+  projectIds: v.array(v.string()),
+  revision: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  startedAt: v.optional(v.number()),
+  initialTasks: v.optional(v.array(sprintTaskV)),
+  initialObjectives: v.optional(v.array(sprintObjectiveV)),
+  initialObjectiveAssignments: v.optional(v.record(v.string(), v.string())),
+  changes: v.array(
+    v.object({
+      at: v.number(),
+      actorId: v.string(),
+      added: v.array(v.string()),
+      removed: v.array(v.string()),
+      objectives: v.optional(v.array(sprintObjectiveV)),
+      objectiveAssignments: v.optional(v.record(v.string(), v.string())),
+    }),
+  ),
+  closeout: v.optional(
+    v.object({
+      at: v.number(),
+      actorId: v.string(),
+      outcome: v.optional(sprintOutcomeV),
+      objectives: v.optional(
+        v.array(
+          v.object({
+            ...sprintObjectiveV.fields,
+            outcome: sprintOutcomeV,
+            note: v.optional(v.string()),
+          }),
+        ),
+      ),
+      objectiveAssignments: v.optional(v.record(v.string(), v.string())),
+      note: v.string(),
+      tasks: v.array(sprintTaskV),
+      originalTasks: v.array(sprintTaskV),
+      decisions: v.array(
+        v.object({
+          taskId: v.string(),
+          action: v.union(
+            v.literal("backlog"),
+            v.literal("outside"),
+            v.literal("sprint"),
+          ),
+          sprintId: v.optional(v.string()),
+        }),
+      ),
+    }),
+  ),
+});
 export const allocationV = v.object({
   sessions: v.array(sessionV),
   unscheduled: v.array(
@@ -156,6 +243,8 @@ export const allocationV = v.object({
 export const proposalV = v.object({
   id: v.string(),
   projectId: v.optional(v.string()),
+  sprintId: v.optional(v.string()),
+  sprintRevision: v.optional(v.number()),
   title: v.string(),
   revision: v.number(),
   status: v.union(
@@ -181,6 +270,11 @@ export const proposalV = v.object({
   approvedBy: v.array(v.string()),
   inputs: v.optional(
     v.object({
+      windowStart: v.optional(v.number()),
+      windowEnd: v.optional(v.number()),
+      sprintObjectives: v.optional(v.array(sprintObjectiveV)),
+      sprintObjectiveAssignments: v.optional(v.record(v.string(), v.string())),
+      sprintFocus: v.optional(v.string()),
       calendarDestinations: v.optional(v.record(v.string(), v.string())),
       tasks: v.array(taskV),
       preferences: v.record(v.string(), preferencesV),
@@ -204,6 +298,7 @@ export const versionV = v.object({
   lineageId: v.string(),
   number: v.number(),
   projectId: v.optional(v.string()),
+  sprintId: v.optional(v.string()),
   parentId: v.optional(v.string()),
   proposalId: v.string(),
   trigger: v.string(),
@@ -215,6 +310,11 @@ export const versionV = v.object({
   algorithm: v.string(),
   inputs: v.optional(
     v.object({
+      windowStart: v.optional(v.number()),
+      windowEnd: v.optional(v.number()),
+      sprintObjectives: v.optional(v.array(sprintObjectiveV)),
+      sprintObjectiveAssignments: v.optional(v.record(v.string(), v.string())),
+      sprintFocus: v.optional(v.string()),
       calendarDestinations: v.optional(v.record(v.string(), v.string())),
       tasks: v.array(taskV),
       preferences: v.record(v.string(), preferencesV),

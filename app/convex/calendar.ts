@@ -614,6 +614,7 @@ export const refreshScope = internalAction({
     workspaceId: v.id("workspaces"),
     subject: v.string(),
     projectId: v.optional(v.string()),
+    sprintId: v.optional(v.string()),
     proposalId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<void> => {
@@ -622,6 +623,31 @@ export const refreshScope = internalAction({
       subject: args.subject,
     });
     let owners = [args.subject];
+    if (args.sprintId) {
+      const sprint = visibleState(s, args.subject).sprints?.find(
+        (item) => item.id === args.sprintId,
+      );
+      if (!sprint) throw new ConvexError("This sprint is unavailable.");
+      const tasks = s.tasks.filter((task) => sprint.taskIds.includes(task.id));
+      const member = s.members.find((m) => m.id === args.subject)!;
+      if (
+        tasks.some(
+          (task) =>
+            task.assigneeId !== args.subject &&
+            projectFor(s, task.projectId, args.subject).ownerId !==
+              args.subject &&
+            !["owner", "admin"].includes(member.role),
+        )
+      )
+        throw new ConvexError(
+          "A project manager must propose work for teammates.",
+        );
+      owners = [
+        ...new Set(
+          tasks.flatMap((task) => (task.assigneeId ? [task.assigneeId] : [])),
+        ),
+      ];
+    }
     if (args.projectId) {
       const project = projectFor(s, args.projectId, args.subject),
         member = s.members.find((m) => m.id === args.subject)!;
