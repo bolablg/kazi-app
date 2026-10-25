@@ -174,7 +174,19 @@ createRoot(document.getElementById("root")!).render(
           <ClerkProvider
             publishableKey={key}
             appearance={{
-              variables: { fontFamily: '"Atlassian Sans", sans-serif' },
+              variables: {
+                fontFamily: '"Atlassian Sans", sans-serif',
+                colorPrimary: "#a63224",
+                colorForeground: "#111111",
+              },
+              elements: {
+                formButtonPrimary: {
+                  backgroundColor: "#f36f58",
+                  color: "#111111",
+                  boxShadow: "none",
+                  "&:hover": { backgroundColor: "#e85d47" },
+                },
+              },
             }}
             signInUrl={location.origin}
             signUpUrl={location.origin}
