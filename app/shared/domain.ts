@@ -1444,7 +1444,9 @@ export function execute(
     }
     case "invite": {
       if (!manager(s, c.actorId) || s.workspace.kind !== "team")
-        fail("FORBIDDEN", "Team owners and admins can invite people.");
+        fail("FORBIDDEN", "Team owners and managers can invite people.");
+      if (command.role === "admin" && me.role !== "owner")
+        fail("FORBIDDEN", "Only the team owner can invite a manager.");
       command.projectIds.forEach((id) => projectFor(s, id, c.actorId));
       if (command.role === "guest" && !command.projectIds.length)
         fail("PROJECT_REQUIRED", "Choose at least one project for a guest.");
@@ -1472,6 +1474,24 @@ export function execute(
       i.status = "revoked";
       break;
     }
+    case "set_member_role": {
+      if (me.role !== "owner" || s.workspace.kind !== "team")
+        fail("FORBIDDEN", "Only the team owner can change member roles.");
+      const member = actor(s, command.id);
+      if (member.role === "owner" || member.id === c.actorId)
+        fail("OWNER", "The team owner's role cannot be changed.");
+      if (member.role === command.role) break;
+      const labels = { admin: "Manager", member: "Member", guest: "Guest" };
+      const previous = member.role;
+      member.role = command.role;
+      audit(
+        s,
+        c,
+        `Changed ${member.name}'s role from ${labels[previous]} to ${labels[command.role]}`,
+      );
+      result = member.id;
+      break;
+    }
     case "remove_member": {
       if (!manager(s, c.actorId))
         fail("FORBIDDEN", "A workspace manager must remove members.");
@@ -1479,7 +1499,7 @@ export function execute(
       if (member.role === "owner" || member.id === c.actorId)
         fail("OWNER", "The workspace owner cannot be removed.");
       if (member.role === "admin" && me.role !== "owner")
-        fail("FORBIDDEN", "Only the owner can remove an admin.");
+        fail("FORBIDDEN", "Only the owner can remove a manager.");
       s.members = s.members.filter((m) => m.id !== command.id);
       s.projects.forEach((p) => {
         p.memberIds = p.memberIds.filter((id) => id !== command.id);

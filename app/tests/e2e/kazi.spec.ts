@@ -329,9 +329,9 @@ test("profile menu opens inline account settings without a profile-launch button
   await expect(
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "General", exact: true }).click();
+  await page.getByRole("button", { name: "Planning", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Application details" }),
+    page.getByRole("heading", { name: "Workflow review thresholds" }),
   ).toBeVisible();
 });
 test("Connections shows truthful statuses, MCP setup, and empty client activity", async ({

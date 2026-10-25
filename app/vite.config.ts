@@ -27,6 +27,15 @@ function developmentReload(enabled: boolean): Plugin {
   };
 }
 export default defineConfig(({ mode }) => ({
+  // Browser fixtures must remain local even when `convex dev` updates .env.local.
+  define:
+    mode === "e2e"
+      ? {
+          "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(""),
+          "import.meta.env.VITE_CONVEX_URL": JSON.stringify(""),
+          "import.meta.env.VITE_KAZI_LOCAL_DEV": JSON.stringify("false"),
+        }
+      : undefined,
   plugins: [
     react(),
     developmentReload(mode === "development"),
