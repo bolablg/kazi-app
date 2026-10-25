@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => ({
         name: "Kazi — Tasks & projects",
         short_name: "Kazi",
         description: "Tasks, projects, and work schedules.",
-        theme_color: "#fff8f3",
+        theme_color: "#f36f58",
         background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
