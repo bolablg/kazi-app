@@ -7,7 +7,7 @@ Kazi uses a shared, flat interface with coral as the primary action color, black
 ## Changes checked
 
 - Full-width pages with a desktop sidebar and a navigation drawer on smaller screens.
-- Consistent headings, aligned icons, compact task rows, bordered sections, and bounded board/table scrolling.
+- Consistent headings, aligned icons, compact task rows, and bounded board/table scrolling. Spacing and typography separate page and section headings; light neutral dividers remain where they guide dense lists, tables, and calendar grids.
 - No application box shadows, text shadows, drop shadows, background blur, offset edges, or thick decorative side/top borders on cards and buttons. Keyboard focus uses an outline inside the control.
 - Optional explanations beside relevant headings use an ⓘ button. Bubbles support hover, keyboard focus, click to keep open, Escape, and outside-click dismissal. Their position stays inside the viewport.
 - Essential field labels, user content, errors, scheduling consent, and report coverage remain visible.

@@ -59,7 +59,7 @@
   text-overflow: ellipsis;
   font-size: 12px;
   padding-left: 12px;
-  border-left: 1px solid #111;
+  border-left: 1px solid var(--ui-line, #e5e7eb);
 }
 .calendar-heading-actions {
   display: flex;

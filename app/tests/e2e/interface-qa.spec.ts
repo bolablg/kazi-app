@@ -115,6 +115,9 @@ for (const width of [390, 768, 1440]) {
         );
       expect(clipped, route).toEqual([]);
       await assertFlatSurfaces(page);
+      const heading = page.locator(".page-heading");
+      if (await heading.count())
+        await expect(heading).toHaveCSS("border-bottom-width", "0px");
       if (
         (route === "/" && width === 1440) ||
         (route === "/insights?tab=Summary" && width === 768) ||

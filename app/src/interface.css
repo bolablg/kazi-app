@@ -1,7 +1,7 @@
 /* Shared interface rules refined from Kazi's Stitch references. */
 :root {
-  --ui-line: #dcdfe4;
-  --ui-structural: #242424;
+  --ui-line: #e5e7eb;
+  --ui-structural: #c8cdd4;
   --ui-meta: #55565c;
   --ui-surface: #f8f9fb;
   --ui-radius: 10px;
@@ -284,8 +284,8 @@
 .today-panel-heading {
   min-height: 58px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--ui-structural);
-  background: var(--ui-surface);
+  border-bottom: 0;
+  background: transparent;
   border-radius: 11px 11px 0 0;
 }
 .today-panel-heading h2 {
@@ -381,7 +381,7 @@
 .settings-section > .section-line,
 .report-panel > .section-line {
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ui-structural);
+  border-bottom: 0;
 }
 .settings-section > h2 {
   margin-bottom: 16px;
@@ -395,7 +395,7 @@
   border-radius: 7px;
 }
 .settings-save {
-  border-top: 1px solid var(--ui-structural);
+  border-top: 0;
   padding-block: 16px;
 }
 .team-directory article {
@@ -895,4 +895,42 @@
 .day-due-items button,
 .overview-event-row:not(.busy) {
   border-width: 1px;
+}
+
+/* Space and typography separate sections; light rules only guide dense views. */
+.page-heading {
+  border-bottom: 0;
+  padding-bottom: 8px;
+}
+.sidebar,
+.topbar,
+.account-menu,
+.tabs,
+.overview-tabs,
+.section-tabs,
+.task-group-heading,
+.list-label,
+.report-insights,
+.review-setting,
+.calendar-scroll,
+.overview-calendar-wrap,
+.overview-time-calendar,
+.calendar-scale-control,
+.task-page-toolbar,
+.team-scope-label {
+  border-color: var(--ui-line);
+}
+.task-description,
+.task-artifacts,
+.task-conversation {
+  border-bottom: 0;
+}
+.task-activity,
+.task-subtasks,
+.task-page .detail-save {
+  border-top: 0;
+}
+.report-panel > .section-line,
+.settings-section > .section-line {
+  border-bottom: 0;
 }
