@@ -1,0 +1,279 @@
+/* Color expresses place, workflow, and outcome; typography and dividers stay crisp. */
+:root {
+  --brand: #f47c65;
+  --brand-hover: #ee6a51;
+  --brand-ink: #b83b2b;
+  --brand-wash: #fff0e9;
+  --status-backlog: #7552a3;
+  --status-todo: #1764c0;
+  --status-progress: #006f6b;
+  --status-review: #9b6300;
+  --status-done: #1b734e;
+  --status-archived: #69707d;
+  --focus: #1764c0;
+}
+::selection {
+  background: #ffdacb;
+  color: #111;
+}
+:is(button, a, input, select, textarea, summary):focus-visible {
+  outline-color: var(--focus);
+}
+[data-tone="blue"] {
+  --tone: #1764c0;
+  --tone-wash: #edf3ff;
+}
+[data-tone="coral"] {
+  --tone: #ba3f30;
+  --tone-wash: #fff0e9;
+}
+[data-tone="teal"] {
+  --tone: #006f6b;
+  --tone-wash: #e7f5f1;
+}
+[data-tone="green"] {
+  --tone: #1b734e;
+  --tone-wash: #eaf6ed;
+}
+[data-tone="amber"] {
+  --tone: #946000;
+  --tone-wash: #fff5db;
+}
+[data-tone="violet"] {
+  --tone: #7552a3;
+  --tone-wash: #f1ebfa;
+}
+.sidebar {
+  background: #fff8f3;
+}
+.wordmark .kazi-mark {
+  background: var(--brand);
+  border-color: var(--brand-ink);
+  color: #111;
+}
+.sidebar-search {
+  border-color: #c7b8ad;
+}
+.nav-item {
+  --nav-color: var(--brand-ink);
+  --nav-wash: var(--brand-wash);
+  border: 1px solid transparent;
+}
+.nav-item[href="/"] {
+  --nav-color: #7552a3;
+  --nav-wash: #eee6f8;
+}
+.nav-item[href="/tasks"] {
+  --nav-color: #007d79;
+  --nav-wash: #dcefe8;
+}
+.nav-item[href="/projects"] {
+  --nav-color: #1764c0;
+  --nav-wash: #e2ecff;
+}
+.nav-item[href="/plans"] {
+  --nav-color: #ad531d;
+  --nav-wash: #ffead7;
+}
+.nav-item[href="/reports"] {
+  --nav-color: #1f845a;
+  --nav-wash: #deefdf;
+}
+.nav-item > svg {
+  color: var(--nav-color);
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border-radius: 7px;
+  background: var(--nav-wash);
+}
+.nav-item.active,
+.nav-item.active:hover {
+  background: var(--nav-wash);
+  border-color: color-mix(in srgb, var(--nav-color) 28%, transparent);
+  color: #111;
+}
+.nav-item:hover,
+.sidebar-project:hover {
+  background: #f4e9e0;
+}
+.sidebar-project.active {
+  background: var(--brand-wash);
+}
+.nav-count {
+  background: var(--brand);
+  color: #111;
+}
+.nav-dot {
+  background: var(--brand);
+}
+.button.primary,
+.page .button.primary {
+  background: var(--brand);
+  border-color: var(--brand-ink);
+  color: #111;
+  box-shadow: none;
+}
+.button.primary :is(span, svg) {
+  color: inherit;
+}
+.button.primary:hover,
+.page .button.primary:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-ink);
+  transform: none;
+}
+.button.secondary:hover,
+.icon-button:hover {
+  background: var(--brand-wash);
+}
+.overview-tabs button[aria-selected="true"],
+.tabs button.active,
+.tabs button[aria-selected="true"] {
+  border-bottom-color: var(--brand-ink);
+  color: #a83324;
+}
+.overview-tabs button:hover {
+  color: var(--brand-ink);
+}
+.calendar-scale-control button[aria-pressed="true"] {
+  background: var(--brand-ink);
+  color: #fff;
+}
+.time-basis-control button[aria-pressed="true"] {
+  background: #ffe1d3;
+  color: #8f2f22;
+}
+.today .calendar-date-button > span:first-child {
+  background: var(--brand-ink);
+  color: #fff;
+}
+.overview-summary {
+  gap: 12px;
+}
+.overview-summary > div[data-tone] {
+  background: var(--tone-wash);
+  border: 1px solid color-mix(in srgb, var(--tone) 25%, white);
+  border-radius: 6px;
+  padding: 16px;
+}
+.overview-summary strong,
+.report-metrics strong,
+.report-flow-metrics strong {
+  color: var(--tone);
+}
+.report-metrics > div {
+  background: var(--tone-wash);
+  border-top: 3px solid var(--tone);
+}
+.report-metrics > div:first-child {
+  padding-left: 20px;
+}
+.report-metrics > div:last-child {
+  border-top: 3px solid var(--tone);
+}
+.report-flow-metrics > div {
+  border-top: 3px solid var(--tone);
+  padding-top: 14px;
+}
+.trend-bars i.created-bar,
+.trend-series .created-bar {
+  background: #5e8cde;
+}
+:is(.status-label, .status-dot, .subtask-status).backlog,
+.board-column[data-status="backlog"],
+.activity-stage[data-status="backlog"] {
+  --stage: var(--status-backlog);
+  --stage-wash: #f1ebfa;
+}
+:is(.status-label, .status-dot, .subtask-status).todo,
+.board-column[data-status="todo"],
+.activity-stage[data-status="todo"] {
+  --stage: var(--status-todo);
+  --stage-wash: #e7efff;
+}
+:is(.status-label, .status-dot, .subtask-status).in_progress,
+.board-column[data-status="in_progress"],
+.activity-stage[data-status="in_progress"] {
+  --stage: var(--status-progress);
+  --stage-wash: #e0f3ed;
+}
+:is(.status-label, .status-dot, .subtask-status).to_validate,
+.board-column[data-status="to_validate"],
+.activity-stage[data-status="to_validate"] {
+  --stage: var(--status-review);
+  --stage-wash: #fff2cf;
+}
+:is(.status-label, .status-dot, .subtask-status).done,
+.board-column[data-status="done"],
+.activity-stage[data-status="done"] {
+  --stage: var(--status-done);
+  --stage-wash: #e4f3e4;
+}
+.status-label:is(.backlog, .todo, .in_progress, .to_validate, .done),
+.activity-stage {
+  background: var(--stage-wash, #f1f2f4);
+  color: #111;
+}
+.status-dot:is(.backlog, .todo, .in_progress, .to_validate, .done) {
+  background: var(--stage, var(--status-archived));
+}
+.subtask-status {
+  color: var(--stage, var(--status-archived));
+}
+.board-column {
+  background: color-mix(in srgb, var(--stage-wash) 65%, white);
+  border-color: #8c929a;
+  border-top: 3px solid var(--stage);
+  border-radius: 7px;
+}
+.board-column > h3 {
+  padding: 4px 0 14px;
+}
+.board-column > h3 > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  background: var(--stage-wash);
+  color: var(--stage);
+  border: 1px solid color-mix(in srgb, var(--stage) 30%, white);
+  border-radius: 5px;
+}
+.board-task {
+  border-color: #aeb5bc;
+  box-shadow: none;
+}
+.board-task:hover {
+  border-color: var(--stage, var(--brand));
+  box-shadow: none;
+}
+.board-column.drop-target {
+  background: var(--stage-wash);
+  outline-color: var(--stage);
+}
+.task-check.checked {
+  background: var(--status-done);
+  border-color: var(--status-done);
+  color: #fff;
+}
+.task-check:hover {
+  background: #e4f3e4;
+  border-color: var(--status-done);
+}
+.task-check.checked:hover {
+  background: #196947;
+}
+@media (max-width: 1023px) {
+  .overview-summary > div[data-tone] {
+    padding: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .report-metrics > div,
+  .report-metrics > div:first-child,
+  .report-metrics > div:nth-child(3) {
+    padding: 18px 12px;
+  }
+}

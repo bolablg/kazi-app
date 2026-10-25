@@ -485,7 +485,10 @@ function ActivityRows({ events }: { events: Activity[] }) {
                   <div>
                     {event.fromStatus && (
                       <>
-                        <span className="activity-stage">
+                        <span
+                          className="activity-stage"
+                          data-status={event.fromStatus}
+                        >
                           <i
                             style={{
                               background: stageColors[event.fromStatus],
@@ -496,7 +499,10 @@ function ActivityRows({ events }: { events: Activity[] }) {
                         <ArrowRight size={13} />
                       </>
                     )}
-                    <span className="activity-stage">
+                    <span
+                      className="activity-stage"
+                      data-status={event.toStatus}
+                    >
                       <i style={{ background: stageColors[event.toStatus] }} />
                       {statusLabels[event.toStatus]}
                     </span>
