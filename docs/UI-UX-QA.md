@@ -71,7 +71,7 @@ The follow-up passed 176 unit/backend tests, three deployment guards, build/form
 - Navigation checks at 390, 768, and 1440px verify loaded artwork, vertical centering within one pixel, no horizontal overflow, and no shadows. Asset tests verify exported dimensions, opacity, safe-area clearance, and all three colors remaining distinguishable at favicon sizes.
 - Production-build PWA checks verify that manifest icon dimensions match their declared sizes and the logo remains available after an offline reload. Static artwork is cached without adding private account data to service-worker caches.
 
-Local validation passed 179 unit/backend tests, three deployment guards, the build and formatting checks, and all three focused responsive branding/PWA browser cases. Automated checks use synthetic records; physical-device launcher appearance and icon refresh timing depend on the operating system.
+Local validation passed 179 unit/backend tests, three deployment guards, the build and formatting checks, and focused responsive branding/PWA browser checks. Automated checks use synthetic records; physical-device launcher appearance and icon refresh timing depend on the operating system.
 
 ![Momentum identity](brand/momentum-preview.png)
 
