@@ -15,7 +15,15 @@ Stages can be changed directly, by pointer/touch/keyboard drag, or through the s
 
 Global and project boards show the same tasks. Moving a task updates every view and its reporting history. Future Kazi reservations are released when work leaves execution or its owner changes; accepted plan snapshots remain unchanged.
 
-Use Overview for Calendar and Schedule, Tasks for lists and boards, and Plans for proposal review and accepted history.
+Overview opens on Today, with Calendar and Schedule beside it. Tasks holds the complete lists and boards; Plans holds proposal review and accepted history.
+
+## Today
+
+Today is a short daily snapshot within the selected teams, project, and person. Needs attention combines overdue commitments, upcoming deadlines today, and work waiting for your validation. Validation requests belong to the owner even when another person is the worker. Overdue uses the actual deadline instant; a timed deadline that has already passed appears under Overdue rather than Due today. Backlog ideas, completed tasks, and archived work do not count toward deadline attention.
+
+My focus shows In progress first, then To do work whose planned start has arrived and whose prerequisites are completed. Favorites uses the same stars as the sidebar and project pages. Recent shows recently updated named projects. Recent activity shows comments and system updates on relevant tasks, including their history after archiving. Every task opens its full task page.
+
+Today displays a bounded selection with full counts. Use Tasks for the complete collection. Calendar keeps its month, week, and day ranges; Schedule keeps the chronological agenda. Explicit Calendar and Schedule bookmarks retain their view, and Today remains the default when opening Overview on phone, tablet, or desktop.
 
 ## Project lifecycle
 
