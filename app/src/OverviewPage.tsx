@@ -194,11 +194,11 @@ export function OverviewPage(props: WorkProps) {
         </Link>
       </div>
       <div className="overview-summary" aria-label="Work summary">
-        <div>
+        <div data-tone="blue">
           <strong>{tasks.length}</strong>
           <span>Open tasks</span>
         </div>
-        <div>
+        <div data-tone="coral">
           <strong>
             {
               tasks.filter((t) => deadlineAt(t.deadline, zone) < Date.now())
@@ -207,13 +207,13 @@ export function OverviewPage(props: WorkProps) {
           </strong>
           <span>Overdue</span>
         </div>
-        <div>
+        <div data-tone="teal">
           <strong>
             {duration(occupiedMinutes(periodEvents, "scheduled"))}
           </strong>
           <span>Scheduled this {activeScale}</span>
         </div>
-        <div>
+        <div data-tone="violet">
           <strong>{duration(occupiedMinutes(periodEvents, "busy"))}</strong>
           <span>Calendar busy time {demo && "· demo"}</span>
         </div>

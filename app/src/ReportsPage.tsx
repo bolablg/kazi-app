@@ -278,6 +278,7 @@ function ReportBody({
       <div className="report-metrics" aria-label="Report summary">
         <Metric
           value={String(report.completed.length)}
+          tone="green"
           label="Tasks completed"
           detail={
             previous
@@ -287,16 +288,19 @@ function ReportBody({
         />
         <Metric
           value={report.onTimeRate === null ? "—" : `${report.onTimeRate}%`}
+          tone="blue"
           label="On-time delivery"
           detail={`${report.onTime} of ${report.withDeadline.length} finishes with a due date`}
         />
         <Metric
           value={String(report.late.length)}
+          tone="amber"
           label="Finished late"
           detail="Due date saved at completion"
         />
         <Metric
           value={String(report.overdue.length)}
+          tone="coral"
           label="Overdue now"
           detail="Open tasks past their due date"
         />
@@ -490,13 +494,15 @@ function Metric({
   value,
   label,
   detail,
+  tone = "blue",
 }: {
   value: string;
   label: string;
   detail: string;
+  tone?: "blue" | "green" | "amber" | "coral";
 }) {
   return (
-    <div>
+    <div data-tone={tone}>
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{detail}</small>
