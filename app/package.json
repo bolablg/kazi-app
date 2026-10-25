@@ -5,6 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "brand:generate": "node scripts/generate-brand.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "build:vercel": "node scripts/build-vercel.mjs",

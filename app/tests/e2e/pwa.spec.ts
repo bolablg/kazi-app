@@ -19,6 +19,17 @@ test("production PWA precaches its shell and reloads into a read-only offline vi
   expect(
     manifest.icons.some((i: { sizes: string }) => i.sizes === "512x512"),
   ).toBe(true);
+  for (const icon of manifest.icons) {
+    const response = await page.request.get(icon.src);
+    expect(response.ok()).toBe(true);
+    const bytes = await response.body();
+    expect(`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`).toBe(
+      icon.sizes,
+    );
+  }
+  await expect(
+    page.locator('link[rel="icon"][type="image/svg+xml"]'),
+  ).toHaveAttribute("href", "/momentum-favicon.svg");
   await context.setOffline(true);
   await page.reload();
   await expect(
@@ -26,6 +37,13 @@ test("production PWA precaches its shell and reloads into a read-only offline vi
       name: "Overview",
     }),
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator(".wordmark img")
+        .evaluate((e: HTMLImageElement) => e.complete && e.naturalWidth > 0),
+    )
+    .toBe(true);
   await expect(
     page.getByText(/You’re offline. This is a read-only view/),
   ).toBeVisible();
@@ -59,6 +77,10 @@ test("service-worker caches contain only static assets and no live account API d
     false,
   );
   expect(cached.some((url) => url.includes("/assets/"))).toBe(true);
+  expect(cached.some((url) => url.includes("/brand/kazi-logo.svg"))).toBe(true);
+  expect(cached.some((url) => url.includes("/momentum-maskable.png"))).toBe(
+    true,
+  );
   expect(cached.some((url) => /atlassian-sans-latin.*\.woff2/.test(url))).toBe(
     true,
   );

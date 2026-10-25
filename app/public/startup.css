@@ -29,16 +29,12 @@ body {
   background: #fcf7f3;
   font-size: 24px;
 }
-.loading-mark {
-  display: grid;
-  place-items: center;
-  background: #f36f58;
-  border-radius: 6px;
-  width: 30px;
-  height: 30px;
-  font-size: 25px;
-  font-weight: 700;
-  line-height: 1;
+.kazi-logo {
+  display: block;
+  flex: 0 0 auto;
+  width: 116px;
+  height: auto;
+  max-width: 100%;
 }
 .loading-sidebar {
   grid-area: 2 / 1;

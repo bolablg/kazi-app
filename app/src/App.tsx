@@ -1,4 +1,5 @@
 import { PageLoading } from "./LoadingScreen";
+import { Brand } from "./Brand";
 import { SidebarFavorites, FavoritesPage, TeamScope } from "./Favorites";
 import {
   projectPath,
@@ -298,8 +299,7 @@ function Shell() {
           aria-label="Kazi home"
           onClick={() => setMobile(false)}
         >
-          <span className="kazi-mark">k</span>
-          <strong>Kazi</strong>
+          <Brand />
         </Link>
         <div className="sidebar-scroll">
           <button

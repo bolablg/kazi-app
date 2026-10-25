@@ -80,27 +80,27 @@ createRoot(document.getElementById("root")!).render(
             appearance={{
               variables: {
                 fontFamily: '"Atlassian Sans", sans-serif',
-                colorPrimary: "#a63224",
+                colorPrimary: "#8a3c0c",
                 colorForeground: "#111111",
               },
               elements: {
                 formButtonPrimary: {
-                  backgroundColor: "#f36f58",
+                  backgroundColor: "#ff8a32",
                   color: "#111111",
                   boxShadow: "none",
                   "&[data-variant='solid'][data-color='primary']": {
-                    border: "1px solid #a63224",
+                    border: "1px solid #8a3c0c",
                     boxShadow: "none",
                     "&::after": { background: "none" },
                     "&:focus, &:focus-visible, &:focus:not(:focus-visible)": {
                       boxShadow: "none",
                     },
                     "&:focus-visible": {
-                      outline: "2px solid #a63224",
+                      outline: "2px solid #8a3c0c",
                       outlineOffset: "-3px",
                     },
                   },
-                  "&:hover": { backgroundColor: "#e85d47" },
+                  "&:hover": { backgroundColor: "#f57b24" },
                 },
               },
             }}
