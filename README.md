@@ -6,7 +6,7 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Kazi overview](docs/screenshots/overview-1440.png)
+![Today in Kazi](docs/screenshots/today-1440.png)
 
 ## Manage the work
 
@@ -21,6 +21,8 @@ Each task has an owner and a worker; they can be the same person. Workers submit
 Create teams, invite people, and control access to projects. If you belong to several teams, use the team filter to focus on the work you need to see.
 
 ## Plan your day, week, and month
+
+Overview opens on **Today**, with priorities, work ready to start, favorite and recent projects, and recent task activity. **Calendar** and **Schedule** sit beside it when you need to see how the day fits together.
 
 The agenda combines deadlines and scheduled focus sessions in daily, weekly, and monthly views. Review proposed plans before accepting them, adjust your working hours and capacity, and keep previous plan versions when priorities change.
 

@@ -54,6 +54,7 @@ Named tools and `execute_action` expose the same data actions as the app, with s
 | Favorites                                                   | `favorite_project`; `list_projects` with `favorite:true`                                                                                                     |
 | Project timeline                                            | `get_project_timeline`, task start/deadline/dependency updates                                                                                               |
 | Calendar / Schedule                                         | `get_agenda`, `get_calendar`, `get_week_availability`                                                                                                        |
+| Today overview                                              | `get_today_overview` with optional `teamIds`, `person`, and `projectId`                                                                                      |
 | Proposal, alternatives, recovery, approval, release         | `propose_plan`, `select_alternative`, `propose_recovery_plan`, `approve_plan`, `release_sessions`, `reject_plan`                                             |
 | Plan history and review URL                                 | `get_plan_history`, `get_proposal`, `get_plan_review_link`                                                                                                   |
 | Review, validation, return reason                           | `review_task`                                                                                                                                                |
@@ -125,6 +126,8 @@ Each credential records last use, last tool, and tool-call count. Connections â†
 ## Multiple teams and review
 
 Read tools for tasks, projects, agenda, plan history, reports, and data export accept selected `teamIds`; every team is authorized before merging. Task/project rows return their originating `teamId`, which a client uses as `workspaceId` for writes. A read scope never grants team management. `create_team` requires `people:manage`; `review_task` requires `tasks:write` plus task-owner/admin domain authority. Lifecycle pagination checks both historical project access and current task access. Invitation delivery uses the same optional Resend outbox as the UI.
+
+`get_today_overview` requires `read` and uses the same daily summary as Overview â†’ Today. It returns the caller's local date and timezone, full attention/focus/project counts, up to six tasks per attention category, five focus tasks, four favorite and recent projects each, and six recent task updates. The app displays up to four attention tasks. `person` defaults to the caller; use `all` for all authorized workers. Validation requests remain scoped to the caller as owner, including tasks assigned to another worker. Optional `projectId` and selected `teamIds` restrict the summary without widening access. This is a snapshot; use task and activity list tools for the complete records.
 
 `create_calendar_link` and `export_agenda` accept `allTeams`; subscriptions recheck current memberships on every request. Presentation actions such as opening a full task page, scrolling columns, and choosing a view remain client UI operations over these same records.
 

@@ -1,6 +1,7 @@
 import { projectStyle } from "./projectColors";
 import { TaskLabels } from "./TaskLabels";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { TodayOverview } from "./TodayOverview";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
@@ -9,6 +10,7 @@ import {
   Rows3,
   Clock3,
   ArrowUpRight,
+  Sun,
 } from "lucide-react";
 import { useData } from "./data";
 import { duration, cx } from "./components";
@@ -50,19 +52,38 @@ export function OverviewPage(props: WorkProps) {
   const { state, actorId, demo } = useData();
   const zone = state.members.find((m) => m.id === actorId)!.preferences
     .timezone;
-  const today = dateInZone(Date.now(), zone);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const refresh = () => setNow(Date.now());
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+  const today = dateInZone(now, zone);
   const [params, setParams] = useSearchParams();
-  const [defaultView] = useState(() =>
-    window.matchMedia("(max-width: 700px)").matches ? "schedule" : "calendar",
-  );
-  const view = ["calendar", "schedule"].includes(params.get("view") ?? "")
+  const view = ["today", "calendar", "schedule"].includes(
+    params.get("view") ?? "",
+  )
     ? params.get("view")!
-    : defaultView;
+    : "today";
   const [anchor, setAnchor] = useState(today),
     [selected, setSelected] = useState(today),
-    [project, setProject] = useState("all"),
-    [person, setPerson] = useState(actorId),
+    [projectFilter, setProject] = useState("all"),
+    [personFilter, setPerson] = useState(actorId),
     [drafts, setDrafts] = useState(false);
+  const project = state.projects.some(
+    (item) => item.id === projectFilter && !item.archived,
+  )
+    ? projectFilter
+    : "all";
+  const person =
+    personFilter === "all" ||
+    state.members.some((member) => member.id === personFilter)
+      ? personFilter
+      : actorId;
   const scale: CalendarScale = ["month", "week", "day"].includes(
     params.get("range") ?? "",
   )
@@ -186,62 +207,43 @@ export function OverviewPage(props: WorkProps) {
       <div className="page-heading">
         <div>
           <h1>Overview</h1>
-          <p>Your deadlines, focus time, and availability.</p>
+          <p>
+            {view === "today"
+              ? "Your priorities, projects, and recent updates."
+              : "Your deadlines, focus time, and availability."}
+          </p>
         </div>
         <Link className="button secondary" to="/plans?create=true">
           <Clock3 size={16} />
           Create a plan
         </Link>
       </div>
-      <div className="overview-summary" aria-label="Work summary">
-        <div data-tone="blue">
-          <strong>{tasks.length}</strong>
-          <span>Open tasks</span>
-        </div>
-        <div data-tone="coral">
-          <strong>
-            {
-              tasks.filter((t) => deadlineAt(t.deadline, zone) < Date.now())
-                .length
-            }
-          </strong>
-          <span>Overdue</span>
-        </div>
-        <div data-tone="teal">
-          <strong>
-            {duration(occupiedMinutes(periodEvents, "scheduled"))}
-          </strong>
-          <span>Scheduled this {activeScale}</span>
-        </div>
-        <div data-tone="violet">
-          <strong>{duration(occupiedMinutes(periodEvents, "busy"))}</strong>
-          <span>Calendar busy time {demo && "· demo"}</span>
-        </div>
-      </div>
-      {recovery && (
-        <div className="review-strip overview-review-strip">
-          <span className="status-dot blocked" />
-          <span>
-            <strong>{recovery.title}</strong> requires review
-          </span>
-          <button
-            className="button secondary"
-            onClick={() => props.openPlan(recovery.id)}
-          >
-            Review Plan{" "}
-            {(state.versions.find((v) => v.id === recovery.parentVersionId)
-              ?.number ?? 0) + 1}
-            <ArrowUpRight size={14} />
-          </button>
-        </div>
-      )}
       <div className="overview-view-bar">
         <div
           className="overview-tabs"
           role="tablist"
           aria-label="Overview views"
+          onKeyDown={(event) => {
+            const views = ["today", "calendar", "schedule"];
+            const index = views.indexOf(view);
+            const next =
+              event.key === "ArrowRight"
+                ? (index + 1) % views.length
+                : event.key === "ArrowLeft"
+                  ? (index + views.length - 1) % views.length
+                  : event.key === "Home"
+                    ? 0
+                    : event.key === "End"
+                      ? views.length - 1
+                      : undefined;
+            if (next === undefined) return;
+            event.preventDefault();
+            updateView(views[next]);
+            document.getElementById("tab-" + views[next])?.focus();
+          }}
         >
           {[
+            { id: "today", label: "Today", icon: Sun },
             { id: "calendar", label: "Calendar", icon: CalendarDays },
             { id: "schedule", label: "Schedule", icon: Rows3 },
           ].map((v) => (
@@ -250,6 +252,7 @@ export function OverviewPage(props: WorkProps) {
               role="tab"
               id={"tab-" + v.id}
               aria-selected={view === v.id}
+              tabIndex={view === v.id ? 0 : -1}
               aria-controls={"overview-" + v.id}
               onClick={() => updateView(v.id)}
             >
@@ -264,7 +267,9 @@ export function OverviewPage(props: WorkProps) {
             value={person}
             onChange={(e) => setPerson(e.target.value)}
           >
-            <option value={actorId}>Assigned to me</option>
+            <option value={actorId}>
+              {view === "today" ? "My work" : "Assigned to me"}
+            </option>
             <option value="all">Everyone</option>
             {state.members
               .filter((m) => m.id !== actorId)
@@ -295,215 +300,280 @@ export function OverviewPage(props: WorkProps) {
         role="tabpanel"
         aria-labelledby={"tab-" + view}
       >
-        <div className="overview-period">
-          <div className="period-navigation">
-            <button
-              className="icon-button"
-              aria-label={"Previous " + activeScale}
-              onClick={() => move(-1)}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              className="icon-button"
-              aria-label={"Next " + activeScale}
-              onClick={() => move(1)}
-            >
-              <ChevronRight size={18} />
-            </button>
-            <h2>{title}</h2>
-            <button
-              className="button secondary"
-              onClick={() => {
-                setAnchor(today);
-                setSelected(today);
-              }}
-            >
-              Today
-            </button>
-          </div>
-          {view === "calendar" && (
-            <div
-              className="calendar-scale-control"
-              role="group"
-              aria-label="Calendar range"
-            >
-              {(["month", "week", "day"] as CalendarScale[]).map((value) => (
-                <button
-                  key={value}
-                  aria-pressed={scale === value}
-                  onClick={() => changeScale(value)}
-                >
-                  {value[0].toUpperCase() + value.slice(1)}
-                </button>
-              ))}
-            </div>
-          )}
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={drafts}
-              onChange={(e) => setDrafts(e.target.checked)}
-            />
-            Include proposals
-          </label>
-        </div>
-        {view === "calendar" ? (
+        {view === "today" ? (
+          <TodayOverview
+            {...props}
+            person={person}
+            project={project}
+            now={now}
+          />
+        ) : (
           <>
-            {scale === "month" ? (
-              <div className="overview-calendar-wrap">
-                <table
-                  className="overview-calendar"
-                  aria-label="Monthly work calendar"
+            <div className="overview-summary" aria-label="Work summary">
+              <div data-tone="blue">
+                <strong>{tasks.length}</strong>
+                <span>Open tasks</span>
+              </div>
+              <div data-tone="coral">
+                <strong>
+                  {
+                    tasks.filter((t) => deadlineAt(t.deadline, zone) < now)
+                      .length
+                  }
+                </strong>
+                <span>Overdue</span>
+              </div>
+              <div data-tone="teal">
+                <strong>
+                  {duration(occupiedMinutes(periodEvents, "scheduled"))}
+                </strong>
+                <span>Scheduled this {activeScale}</span>
+              </div>
+              <div data-tone="violet">
+                <strong>
+                  {duration(occupiedMinutes(periodEvents, "busy"))}
+                </strong>
+                <span>Calendar busy time {demo && "· demo"}</span>
+              </div>
+            </div>
+            {recovery && (
+              <div className="review-strip overview-review-strip">
+                <span className="status-dot blocked" />
+                <span>
+                  <strong>{recovery.title}</strong> requires review
+                </span>
+                <button
+                  className="button secondary"
+                  onClick={() => props.openPlan(recovery.id)}
                 >
-                  <thead>
-                    <tr>
-                      {[
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                        "Sunday",
-                      ].map((d) => (
-                        <th scope="col" key={d}>
-                          <span className="weekday-full">{d}</span>
-                          <span className="weekday-short">{d.slice(0, 3)}</span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: cellCount / 7 }, (_, week) => (
-                      <tr key={week}>
-                        {days.slice(week * 7, week * 7 + 7).map((day) => {
-                          const rows = byDay.get(day) ?? [];
-                          return (
-                            <td
-                              key={day}
-                              className={cx(
-                                day.slice(0, 7) !== month.slice(0, 7) &&
-                                  "outside-month",
-                                selected === day && "selected-day",
-                                day === today && "today",
-                              )}
-                            >
-                              <button
-                                className="calendar-date-button"
-                                aria-label={
-                                  labelDate(day) + ", " + rows.length + " items"
-                                }
-                                aria-pressed={selected === day}
-                                onClick={() => setSelected(day)}
-                              >
-                                <span>{Number(day.slice(-2))}</span>
-                                <span className="mobile-item-count">
-                                  {rows.length ? rows.length : ""}
-                                </span>
-                              </button>
-                              <div className="month-events">
-                                {rows.slice(0, 3).map((e) => (
+                  Review Plan{" "}
+                  {(state.versions.find(
+                    (v) => v.id === recovery.parentVersionId,
+                  )?.number ?? 0) + 1}
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+            )}
+            <div className="overview-period">
+              <div className="period-navigation">
+                <button
+                  className="icon-button"
+                  aria-label={"Previous " + activeScale}
+                  onClick={() => move(-1)}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label={"Next " + activeScale}
+                  onClick={() => move(1)}
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <h2>{title}</h2>
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    setAnchor(today);
+                    setSelected(today);
+                  }}
+                >
+                  Today
+                </button>
+              </div>
+              {view === "calendar" && (
+                <div
+                  className="calendar-scale-control"
+                  role="group"
+                  aria-label="Calendar range"
+                >
+                  {(["month", "week", "day"] as CalendarScale[]).map(
+                    (value) => (
+                      <button
+                        key={value}
+                        aria-pressed={scale === value}
+                        onClick={() => changeScale(value)}
+                      >
+                        {value[0].toUpperCase() + value.slice(1)}
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={drafts}
+                  onChange={(e) => setDrafts(e.target.checked)}
+                />
+                Include proposals
+              </label>
+            </div>
+            {view === "calendar" ? (
+              <>
+                {scale === "month" ? (
+                  <div className="overview-calendar-wrap">
+                    <table
+                      className="overview-calendar"
+                      aria-label="Monthly work calendar"
+                    >
+                      <thead>
+                        <tr>
+                          {[
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday",
+                          ].map((d) => (
+                            <th scope="col" key={d}>
+                              <span className="weekday-full">{d}</span>
+                              <span className="weekday-short">
+                                {d.slice(0, 3)}
+                              </span>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: cellCount / 7 }, (_, week) => (
+                          <tr key={week}>
+                            {days.slice(week * 7, week * 7 + 7).map((day) => {
+                              const rows = byDay.get(day) ?? [];
+                              return (
+                                <td
+                                  key={day}
+                                  className={cx(
+                                    day.slice(0, 7) !== month.slice(0, 7) &&
+                                      "outside-month",
+                                    selected === day && "selected-day",
+                                    day === today && "today",
+                                  )}
+                                >
                                   <button
-                                    key={e.id}
-                                    className={cx("month-event", e.kind)}
-                                    style={projectStyle(
-                                      state.projects.find(
-                                        (p) => p.id === e.projectId,
-                                      )?.color,
-                                    )}
-                                    onClick={() =>
-                                      e.taskId
-                                        ? props.openTask(e.taskId)
-                                        : setSelected(day)
+                                    className="calendar-date-button"
+                                    aria-label={
+                                      labelDate(day) +
+                                      ", " +
+                                      rows.length +
+                                      " items"
                                     }
-                                    title={kinds[e.kind] + ": " + e.title}
-                                  >
-                                    <i />
-                                    <span>
-                                      {e.start !== undefined && (
-                                        <small>{time(e.start, zone)} </small>
-                                      )}
-                                      {e.title}
-                                    </span>
-                                  </button>
-                                ))}
-                                {rows.length > 3 && (
-                                  <button
-                                    className="more-day-events"
+                                    aria-pressed={selected === day}
                                     onClick={() => setSelected(day)}
                                   >
-                                    +{rows.length - 3} more
+                                    <span>{Number(day.slice(-2))}</span>
+                                    <span className="mobile-item-count">
+                                      {rows.length ? rows.length : ""}
+                                    </span>
                                   </button>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                                  <div className="month-events">
+                                    {rows.slice(0, 3).map((e) => (
+                                      <button
+                                        key={e.id}
+                                        className={cx("month-event", e.kind)}
+                                        style={projectStyle(
+                                          state.projects.find(
+                                            (p) => p.id === e.projectId,
+                                          )?.color,
+                                        )}
+                                        onClick={() =>
+                                          e.taskId
+                                            ? props.openTask(e.taskId)
+                                            : setSelected(day)
+                                        }
+                                        title={kinds[e.kind] + ": " + e.title}
+                                      >
+                                        <i />
+                                        <span>
+                                          {e.start !== undefined && (
+                                            <small>
+                                              {time(e.start, zone)}{" "}
+                                            </small>
+                                          )}
+                                          {e.title}
+                                        </span>
+                                      </button>
+                                    ))}
+                                    {rows.length > 3 && (
+                                      <button
+                                        className="more-day-events"
+                                        onClick={() => setSelected(day)}
+                                      >
+                                        +{rows.length - 3} more
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <CalendarTimeGrid
+                    days={days}
+                    events={events}
+                    zone={zone}
+                    selected={selected}
+                    onSelectDay={setSelected}
+                    onOpenTask={props.openTask}
+                  />
+                )}
+                <div className="overview-calendar-legend">
+                  <span>
+                    <i className="deadline" />
+                    Deadline
+                  </span>
+                  <span>
+                    <i className="scheduled" />
+                    Scheduled work
+                  </span>
+                  <span>
+                    <i className="busy" />
+                    Private busy time
+                  </span>
+                  {drafts && (
+                    <span>
+                      <i className="proposed" />
+                      Proposal
+                    </span>
+                  )}
+                  <small>{zone}</small>
+                </div>
+                <section className="selected-day-agenda">
+                  <div className="section-line">
+                    <h2>{labelDate(selected)}</h2>
+                    <span>{(byDay.get(selected) ?? []).length} items</span>
+                  </div>
+                  {renderEvents(byDay.get(selected) ?? [])}
+                </section>
+              </>
             ) : (
-              <CalendarTimeGrid
-                days={days}
-                events={events}
-                zone={zone}
-                selected={selected}
-                onSelectDay={setSelected}
-                onOpenTask={props.openTask}
-              />
-            )}
-            <div className="overview-calendar-legend">
-              <span>
-                <i className="deadline" />
-                Deadline
-              </span>
-              <span>
-                <i className="scheduled" />
-                Scheduled work
-              </span>
-              <span>
-                <i className="busy" />
-                Private busy time
-              </span>
-              {drafts && (
-                <span>
-                  <i className="proposed" />
-                  Proposal
-                </span>
-              )}
-              <small>{zone}</small>
-            </div>
-            <section className="selected-day-agenda">
-              <div className="section-line">
-                <h2>{labelDate(selected)}</h2>
-                <span>{(byDay.get(selected) ?? []).length} items</span>
+              <div className="overview-schedule">
+                {[...new Set(periodEvents.map((e) => e.date))].map((day) => (
+                  <section key={day}>
+                    <h2>{labelDate(day)}</h2>
+                    {renderEvents(byDay.get(day) ?? [])}
+                  </section>
+                ))}
+                {!periodEvents.length && (
+                  <p className="overview-empty">
+                    No deadlines or calendar blocks this month.
+                  </p>
+                )}
               </div>
-              {renderEvents(byDay.get(selected) ?? [])}
-            </section>
-          </>
-        ) : (
-          <div className="overview-schedule">
-            {[...new Set(periodEvents.map((e) => e.date))].map((day) => (
-              <section key={day}>
-                <h2>{labelDate(day)}</h2>
-                {renderEvents(byDay.get(day) ?? [])}
-              </section>
-            ))}
-            {!periodEvents.length && (
-              <p className="overview-empty">
-                No deadlines or calendar blocks this month.
-              </p>
             )}
-          </div>
+            <p className="overview-note">
+              Deadlines are not time reservations. Proposals are not scheduled
+              until approved. Busy time reflects your own calendar
+              {demo ? " fixture" : ""}.
+            </p>
+          </>
         )}
-        <p className="overview-note">
-          Deadlines are not time reservations. Proposals are not scheduled until
-          approved. Busy time reflects your own calendar
-          {demo ? " fixture" : ""}.
-        </p>
       </section>
     </div>
   );

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
-  await page.goto("/?view=list");
+  await page.goto("/");
   await page.waitForLoadState("networkidle");
 });
 const nav = async (page: import("@playwright/test").Page, name: string) => {
@@ -150,6 +150,10 @@ test("previews a weekly plan without accepting or scheduling it", async ({
 test("comments and system status changes share one activity feed without time reporting", async ({
   page,
 }) => {
+  await nav(page, "Tasks");
+  await expect(
+    page.getByRole("heading", { name: "Tasks", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: /^Refine the homepage direction/ })
     .click();
@@ -434,10 +438,14 @@ test("Tasks preserves assigned-task bookmarks and mobile settings", async ({
   ).toBe(true);
 });
 
-test("Overview owns Calendar and Schedule while task lists stay in Tasks", async ({
+test("Overview opens Today and keeps Calendar and Schedule beside it", async ({
   page,
 }) => {
   await nav(page, "Overview");
+  await expect(
+    page.getByRole("tab", { name: "Today", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
   const before = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
@@ -523,6 +531,7 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
   test(`full-width readable layouts at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 700 ? 844 : 1080 });
     for (const route of [
+      "/",
       "/?view=calendar",
       "/my-tasks",
       "/tasks?tab=inbox",
@@ -555,6 +564,25 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
         expect(
           await form.evaluate((e) => e.getBoundingClientRect().width),
         ).toBeGreaterThan(sizes.page - (width < 701 ? 40 : 75));
+      }
+      if (route === "/") {
+        await expect(
+          page.getByRole("tab", { name: "Today", exact: true }),
+        ).toHaveAttribute("aria-selected", "true");
+        for (const name of [
+          "Needs attention",
+          "My focus",
+          "Projects",
+          "Recent activity",
+        ])
+          await expect(
+            page.getByRole("region", { name: new RegExp("^" + name) }),
+          ).toBeVisible();
+        if ([390, 768, 1440, 1920].includes(width))
+          await page.screenshot({
+            animations: "disabled",
+            path: `../docs/screenshots/today-${width}.png`,
+          });
       }
     }
     if (width <= 1023) {

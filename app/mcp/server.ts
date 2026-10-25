@@ -308,6 +308,16 @@ export function createKaziServer(
     workspace,
   );
   register(
+    "get_today_overview",
+    "Read the same Today overview as the app: overdue and upcoming tasks due today, tasks you own awaiting validation, ready-to-start focus work, favorite/recently updated projects, and recent task activity. Uses your timezone and selected accessible teams; lists are bounded and counts include all matches. Read-only.",
+    {
+      ...workspace,
+      teamIds: z.array(z.string()).min(1).max(10).optional(),
+      person: z.string().optional(),
+      projectId: z.string().optional(),
+    },
+  );
+  register(
     "get_agenda",
     "Read your confirmed/proposed calendar events and deadlines in a date range. No private external event text.",
     {
