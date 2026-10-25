@@ -224,7 +224,13 @@ test("MCP setup explains each step while keeping client and activity features", 
   await page.goto("/connections?tab=mcp");
   const steps = page.getByRole("list", { name: "MCP setup steps" });
   await expect(steps.getByRole("listitem")).toHaveCount(3);
-  await expect(steps).toContainText("Authorization: Bearer YOUR_KAZI_TOKEN");
+  await expect(steps).toContainText("Copy agent setup");
+  await page
+    .getByText("Manual setup & server details", { exact: true })
+    .click();
+  await expect(page.locator(".mcp-manual-content")).toContainText(
+    "Authorization: Bearer YOUR_KAZI_TOKEN",
+  );
   await expect(
     page.getByRole("heading", { name: "Agents & clients", exact: true }),
   ).toBeVisible();

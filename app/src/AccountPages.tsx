@@ -139,6 +139,13 @@ export function AccountSettings() {
           routing="hash"
           fallback={<p role="status">Loading your account…</p>}
           appearance={{
+            variables: {
+              colorPrimary: "#8A3C0C",
+              colorForeground: "#111111",
+              colorMutedForeground: "#55565C",
+              fontFamily: '"Atlassian Sans", sans-serif',
+              borderRadius: "0.5rem",
+            },
             elements: {
               rootBox: { width: "100%", maxWidth: "none" },
               cardBox: {
@@ -154,12 +161,17 @@ export function AccountSettings() {
                 backgroundColor: "#fff",
               },
               navbar: {
-                backgroundColor: "#fff8f5",
+                backgroundColor: "#fff9f5",
                 borderRight: "1px solid #e5e8ee",
                 boxShadow: "none",
               },
               scrollBox: { borderRadius: "0", boxShadow: "none" },
               pageScrollBox: { backgroundColor: "#fff" },
+              navbarButton: {
+                minHeight: "44px",
+                borderRadius: "8px",
+                padding: "10px 12px",
+              },
             },
           }}
         />
@@ -169,7 +181,7 @@ export function AccountSettings() {
     <div className="settings-form account-settings">
       <section className="settings-section">
         <h2>My account</h2>
-        <div className="account-profile">
+        <div className="account-profile account-identity">
           <Avatar name={me.name} color="blue" />
           <div>
             <strong>{me.name}</strong>
@@ -179,12 +191,22 @@ export function AccountSettings() {
             {local ? "Local development" : "Demo account"}
           </span>
         </div>
-        <div className="diagnostic-row">
-          <span>Role</span>
-          <strong>
-            {me.role === "owner" ? "Owner · administrator access" : me.role}
-          </strong>
-        </div>
+        <dl className="account-identity-details">
+          <div>
+            <dt>Email</dt>
+            <dd>{me.email}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>
+              {me.role === "owner"
+                ? "Owner"
+                : me.role === "admin"
+                  ? "Manager"
+                  : me.role}
+            </dd>
+          </div>
+        </dl>
         <p className="inline-info">
           {local ? "This local development session" : "This demo"} uses a sample
           account. Profile and security settings are available when you sign in

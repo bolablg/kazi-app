@@ -2,6 +2,8 @@
 
 Open **Insights** for Summary, Workload, Performance, Workflow, and Goals. All share a global team filter, person filter, project filter, and Last 7/30/90 days or a custom period up to 366 days. Days use the viewer's saved timezone. The app does not require manual time logging, and logged minutes are not used as performance metrics.
 
+The info icon beside **Insights** explains the calculations. Select the time zone beside the title to open **Settings → Planning → Working hours & capacity**. Choose a zone or use **Use device time zone**, then save preferences. The device shortcut changes the draft; traveling does not automatically replace your saved time zone.
+
 ## Delivery and flow
 
 - **Tasks completed / throughput:** distinct leaf tasks finished in the selected period. If a task is reopened and completed again in the period, its latest finish counts once. Parent-task completions are excluded to avoid counting the same work twice.

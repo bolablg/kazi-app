@@ -5,17 +5,42 @@ const publicDir = new URL("../public/", import.meta.url);
 const brandDir = new URL("brand/", publicDir);
 const body = (svg) =>
   svg.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
-const mark = body(await readFile(new URL("kazi-mark.svg", brandDir), "utf8"));
+const markSource = await readFile(new URL("kazi-mark.svg", brandDir), "utf8");
+const mark = body(markSource);
 const wordmark = body(
   await readFile(new URL("../branding/wordmark.svg", import.meta.url), "utf8"),
 );
 const svg = (width, height, content) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${content}</svg>\n`;
+// Align the visible symbol to the capital K, rather than its taller SVG canvas.
+async function inkBounds(source) {
+  const { data, info } = await sharp(Buffer.from(source))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let left = info.width,
+    right = -1,
+    top = info.height,
+    bottom = -1;
+  for (let y = 0; y < info.height; y++)
+    for (let x = 0; x < info.width; x++) {
+      if (data[(y * info.width + x) * 4 + 3] < 128) continue;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  return { left, top, width: right - left + 1, height: bottom - top + 1 };
+}
+const symbolBounds = await inkBounds(markSource);
+const capitalBounds = await inkBounds(svg(210, 256, wordmark));
+const symbolScale = capitalBounds.height / symbolBounds.height;
+const wordmarkX = Math.ceil(symbolBounds.width * symbolScale + 32);
 const lockup = (dark = false) =>
   svg(
-    1168,
-    376,
-    `${mark}<g transform="translate(528 120)">${dark ? wordmark.replaceAll("#111111", "#FFFFFF") : wordmark}</g>`,
+    wordmarkX + 640,
+    256,
+    `<g data-brand-part="symbol" transform="translate(${-symbolBounds.left * symbolScale} ${capitalBounds.top - symbolBounds.top * symbolScale}) scale(${symbolScale})">${mark}</g><g data-brand-part="wordmark" transform="translate(${wordmarkX} 0)">${dark ? wordmark.replaceAll("#111111", "#FFFFFF") : wordmark}</g>`,
   );
 await mkdir(brandDir, { recursive: true });
 await writeFile(new URL("kazi-logo.svg", brandDir), lockup());

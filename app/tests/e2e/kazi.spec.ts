@@ -308,7 +308,7 @@ test("profile menu opens inline account settings without a profile-launch button
     page.getByRole("heading", { name: "My account", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Owner · administrator access", { exact: true }),
+    page.locator(".account-identity-details dd").filter({ hasText: /^Owner$/ }),
   ).toBeVisible();
   await expect(
     page.getByText("Profile and security settings are available", {
@@ -351,6 +351,9 @@ test("Connections shows truthful statuses, MCP setup, and empty client activity"
   await expect(
     page.getByText("No MCP credentials", { exact: true }),
   ).toBeVisible();
+  await page
+    .getByText("Manual setup & server details", { exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Copy MCP endpoint" }),
   ).toBeDisabled();

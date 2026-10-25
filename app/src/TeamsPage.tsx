@@ -44,9 +44,18 @@ export function TeamPage({ directory = false }: { directory?: boolean }) {
   return (
     <div className="page teams-page">
       <div className="page-heading">
-        <PageTitle help="Create a team to work together. As its owner, you can invite people and choose who manages the team. Personal tasks stay separate.">
-          Teams & people
-        </PageTitle>
+        <div className="account-page-heading">
+          <span
+            className="account-page-emblem"
+            data-tone="pink"
+            aria-hidden="true"
+          >
+            <Users size={24} />
+          </span>
+          <PageTitle help="Create a team to work together. As its owner, you can invite people and choose who manages the team. Personal tasks stay separate.">
+            Teams & people
+          </PageTitle>
+        </div>
         <div className="integration-actions">
           <button
             className="button secondary"
@@ -71,14 +80,15 @@ export function TeamPage({ directory = false }: { directory?: boolean }) {
               className="team-card"
               data-tone={["blue", "coral", "teal", "violet"][index % 4]}
             >
-              <div className="team-card-heading">
+              <div className="team-identity">
                 <span className="team-emblem">
                   <Users size={24} />
                 </span>
-                <TeamFavoriteButton team={team} />
+                <div>
+                  <h2 title={team.name}>{team.name}</h2>
+                  <RoleBadge role={team.role} />
+                </div>
               </div>
-              <h2>{team.name}</h2>
-              <RoleBadge role={team.role} />
               <div className="team-card-actions">
                 <button
                   className="button secondary"
@@ -101,6 +111,7 @@ export function TeamPage({ directory = false }: { directory?: boolean }) {
                   <ArrowUpRight size={15} />
                 </button>
               </div>
+              <TeamFavoriteButton team={team} />
             </article>
           ))}
         </div>

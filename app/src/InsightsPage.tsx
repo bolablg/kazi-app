@@ -2,9 +2,16 @@ import { WorkflowReport } from "./WorkflowReport";
 import { ScrollTable } from "./ScrollTable";
 import { InfoTip, PageTitle } from "./InfoTip";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePaginatedQuery } from "convex/react";
-import { ArrowUpRight, Check, Clock3, Download, Flag } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  Clock3,
+  Download,
+  Flag,
+  Globe2,
+} from "lucide-react";
 import { api } from "../convex/_generated/api";
 import type { ReportEvent } from "../shared/model";
 import { addDays, dateInZone } from "../shared/scheduler";
@@ -84,14 +91,46 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
     <div className="page reports-page">
       <div className="page-heading">
         <div>
-          <PageTitle help="Track completion, delivery reliability, goals, and time spent in each workflow stage. Durations come from status history, with calendar-time and working-time views; no manual time logging is required.">
+          <PageTitle
+            help={
+              <>
+                <strong>How Insights work</strong>
+                <p>
+                  Completion, delivery, and stage durations come from status
+                  history and due dates. Calendar time counts all elapsed time;
+                  working time uses your configured working days and hours. No
+                  manual time logging is required.
+                </p>
+                <p>
+                  Completion trends count each task without subtasks once per
+                  period, keeping its latest finish if reopened. The saved
+                  finish retains its due date and worker. Undated finishes are
+                  excluded; missing start dates are not inferred.
+                </p>
+                <p>
+                  Workload uses confirmed calendar reservations and estimates.
+                  Current workload, overdue work, and project progress are live
+                  snapshots. Comparisons use an equal previous period for ranges
+                  up to 183 days.
+                </p>
+              </>
+            }
+          >
             Insights
           </PageTitle>
         </div>
-        <span className="reports-period-label">
-          {demo ? "Demo data · " : ""}
-          {zone}
-        </span>
+        <div className="reports-context">
+          {demo && <span className="badge neutral">Demo data</span>}
+          <Link
+            className="report-timezone"
+            to="/settings?tab=planning&section=working-hours"
+            aria-label={`Change time zone, currently ${zone}`}
+            title={`Time zone: ${zone}. Change in Planning settings.`}
+          >
+            <Globe2 size={15} />
+            <span>{zone.replaceAll("_", " ")}</span>
+          </Link>
+        </div>
       </div>
       <div className="report-toolbar">
         <label>
@@ -512,20 +551,6 @@ function ReportBody({
           )}
         </section>
       )}
-      <details className="report-method">
-        <summary>How these insights work</summary>
-        <p>
-          Performance comes from task creation, status changes, and due dates.
-          Workload uses confirmed calendar reservations and estimates. No manual
-          time logging is required. Completion metrics count tasks without
-          subtasks once per period, keeping the latest finish if reopened.
-          Current workload, project progress, and overdue work are live
-          snapshots; trends use dated completions. Earlier finishes without
-          dates are excluded from trends. Comparisons cover equal-length
-          previous periods for ranges up to 183 days. A saved finish retains its
-          original due date and assignee. Missing start dates are not inferred.
-        </p>
-      </details>
     </section>
   );
 }
