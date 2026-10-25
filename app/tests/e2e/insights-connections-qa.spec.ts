@@ -65,6 +65,9 @@ test("MCP setup uses available desktop width and keeps demo credentials safe", a
   expect(new Set(steps.map((s) => Math.round(s.y))).size).toBe(1);
   expect(steps[1].x).toBeGreaterThan(steps[0].x);
   expect(steps[2].x).toBeGreaterThan(steps[1].x);
+  await page
+    .getByText("Manual setup & server details", { exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Copy MCP endpoint" }),
   ).toBeDisabled();

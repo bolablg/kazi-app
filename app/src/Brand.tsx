@@ -5,8 +5,8 @@ export function Brand() {
       className="kazi-logo"
       src="/brand/kazi-logo.svg"
       alt="Kazi"
-      width="1168"
-      height="376"
+      width="985"
+      height="256"
       draggable="false"
     />
   );

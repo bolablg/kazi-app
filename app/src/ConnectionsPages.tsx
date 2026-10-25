@@ -1,20 +1,27 @@
 import { tokenScopes, scopeLabels } from "../shared/capabilities";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   CalendarDays,
   Check,
   Copy,
+  Eye,
+  EyeOff,
   KeyRound,
   Plus,
   Plug,
   Terminal,
+  Cable,
 } from "lucide-react";
 import { useData, type Data } from "./data";
 import { Modal, useUI } from "./components";
 import { InfoTip } from "./InfoTip";
 import { ScrollTable } from "./ScrollTable";
+import {
+  agentSetupInstructions,
+  mcpClientConfiguration,
+} from "../shared/agentSetup";
 const endpoint = () => {
   const configured = import.meta.env.VITE_CONVEX_SITE_URL;
   if (configured) return configured.replace(/\/$/, "") + "/mcp";
@@ -34,20 +41,8 @@ const dateTime = (at?: number) =>
   at ? new Date(at).toLocaleString() : "Never used";
 const credentialStatus = (t: Data["tokens"][number]) =>
   t.revoked ? "Revoked" : t.expiresAt <= Date.now() ? "Expired" : "Active";
-const clientConfiguration = (token = "YOUR_KAZI_TOKEN") =>
-  JSON.stringify(
-    {
-      mcpServers: {
-        kazi: {
-          type: "http",
-          url: endpoint(),
-          headers: { Authorization: "Bearer " + token },
-        },
-      },
-    },
-    null,
-    2,
-  );
+const clientConfiguration = (token?: string) =>
+  mcpClientConfiguration(endpoint(), token);
 export function ConnectionsOverview() {
   const { state, actorId, demo, tokens } = useData();
   const cal = state.calendars.find((c) => c.ownerId === actorId);
@@ -192,20 +187,84 @@ export function McpSettings() {
   const { demo, mintToken, tokens, revokeToken, online } = useData();
   const { run } = useUI();
   const [open, setOpen] = useState(false),
-    [token, setToken] = useState(""),
+    [issued, setIssued] = useState<{
+      token: string;
+      label: string;
+      scopes: string[];
+    }>(),
+    [showToken, setShowToken] = useState(false),
+    [copyStatus, setCopyStatus] = useState<{ text: string; error?: boolean }>(),
     [saving, setSaving] = useState(false);
+  const setupGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      setupGeneration.current++;
+    },
+    [],
+  );
+  const token = issued?.token ?? "";
+  const closeSetup = () => {
+    setupGeneration.current++;
+    setOpen(false);
+    setIssued(undefined);
+    setShowToken(false);
+    setCopyStatus(undefined);
+    setSaving(false);
+  };
+  const copyIssued = async (value: string, message: string) => {
+    const generation = setupGeneration.current;
+    try {
+      await navigator.clipboard.writeText(value);
+      if (generation === setupGeneration.current)
+        setCopyStatus({ text: message });
+    } catch {
+      if (generation === setupGeneration.current)
+        setCopyStatus({
+          text: "Copy failed. Allow clipboard access and try again.",
+          error: true,
+        });
+    }
+  };
+  const copySetup = (withCredential: boolean) =>
+    withCredential
+      ? copyIssued(
+          agentSetupInstructions({
+            endpoint: endpoint(),
+            applicationUrl: location.origin,
+            credential: issued,
+          }),
+          "Agent setup copied, including this connection’s private key",
+        )
+      : run(
+          () =>
+            navigator.clipboard.writeText(
+              agentSetupInstructions({
+                endpoint: endpoint(),
+                applicationUrl: location.origin,
+              }),
+            ),
+          "Setup guide copied; add a Kazi connection key when prompted",
+        );
   return (
-    <div className="settings-form connections-form">
-      <section className="settings-section">
+    <div className="settings-form connections-form mcp-settings">
+      <section className="settings-section mcp-onboarding">
         <div className="section-line">
-          <div>
-            <div className="section-title-group">
-              <h2>Connect an MCP client</h2>
-              <InfoTip label="About MCP setup">
-                MCP lets an agent use Kazi through a compatible client. Use a
-                Streamable HTTP server, with a separate scoped credential for
-                each client. Approval of a proposed plan still happens in Kazi.
-              </InfoTip>
+          <div className="mcp-onboarding-title">
+            <span className="settings-emblem" data-tone="pink">
+              <Cable size={22} />
+            </span>
+            <div>
+              <div className="section-title-group">
+                <h2>Connect your agent</h2>
+                <InfoTip label="About MCP setup">
+                  Paste the setup guide into an agent that supports remote MCP.
+                  It can adapt the instructions to its client’s configuration.
+                  Create a separate Kazi key for each agent and choose its
+                  permissions. Your Clerk and Convex service keys are not
+                  needed.
+                </InfoTip>
+              </div>
+              <p>Create a connection, then let your agent handle setup.</p>
             </div>
           </div>
           <span className="badge neutral">
@@ -218,8 +277,8 @@ export function McpSettings() {
               1
             </span>
             <div>
-              <strong>Create a credential</strong>
-              <p>Choose a client name and the permissions it needs below.</p>
+              <strong>Choose its access</strong>
+              <p>Name the connection and select permissions.</p>
               <button
                 className="button secondary"
                 onClick={() => setOpen(true)}
@@ -234,48 +293,18 @@ export function McpSettings() {
               2
             </span>
             <div>
-              <strong>Add Kazi to your client</strong>
+              <strong>Copy agent setup</strong>
               <p>
-                Use this server URL and{" "}
-                <code>Authorization: Bearer YOUR_KAZI_TOKEN</code>.
+                After creating a key, copy the complete guide and paste it into
+                your agent.
               </p>
-              <div className="endpoint-row">
-                <code>
-                  {demo ? "Configure Convex to get your endpoint" : endpoint()}
-                </code>
-                <button
-                  className="icon-button"
-                  aria-label="Copy MCP endpoint"
-                  disabled={demo}
-                  onClick={() =>
-                    run(
-                      () => navigator.clipboard.writeText(endpoint()),
-                      "Endpoint copied",
-                    )
-                  }
-                >
-                  <Copy size={15} />
-                </button>
-              </div>
               <button
                 className="text-button"
                 disabled={demo}
-                onClick={() =>
-                  run(
-                    () => navigator.clipboard.writeText(clientConfiguration()),
-                    "Setup template copied; replace YOUR_KAZI_TOKEN",
-                  )
-                }
+                onClick={() => copySetup(false)}
               >
-                <Copy size={14} />
-                Copy JSON template
+                <Copy size={14} /> Copy setup guide
               </button>
-              <InfoTip label="Using the MCP setup template">
-                This HTTP JSON template works with clients such as Claude Code.
-                Replace YOUR_KAZI_TOKEN with your token. Other clients may use a
-                different configuration format or a setup form; enter the server
-                URL and authorization header there instead.
-              </InfoTip>
             </div>
           </li>
           <li>
@@ -283,10 +312,9 @@ export function McpSettings() {
               3
             </span>
             <div>
-              <strong>Connect and verify</strong>
+              <strong>Verify the connection</strong>
               <p>
-                Ask your client to list your Kazi tasks. It will appear in
-                Agents & clients after its first request.
+                Your agent checks access. Its first request appears in activity.
               </p>
               <Link className="text-button" to="/connections?tab=activity">
                 View tool activity <ArrowUpRight size={13} />
@@ -294,14 +322,53 @@ export function McpSettings() {
             </div>
           </li>
         </ol>
-        <div className="diagnostic-row">
-          <span>Transport</span>
-          <strong>Streamable HTTP</strong>
-        </div>
-        <div className="diagnostic-row">
-          <span>Authentication</span>
-          <strong>Bearer token · expires after 30 days</strong>
-        </div>
+        <details className="mcp-manual-setup">
+          <summary>Manual setup &amp; server details</summary>
+          <div className="mcp-manual-content">
+            <label>MCP server URL</label>
+            <div className="endpoint-row">
+              <code>
+                {demo ? "Configure Convex to get your endpoint" : endpoint()}
+              </code>
+              <button
+                className="icon-button"
+                aria-label="Copy MCP endpoint"
+                disabled={demo}
+                onClick={() =>
+                  run(
+                    () => navigator.clipboard.writeText(endpoint()),
+                    "Endpoint copied",
+                  )
+                }
+              >
+                <Copy size={15} />
+              </button>
+            </div>
+            <code>Authorization: Bearer YOUR_KAZI_TOKEN</code>
+            <button
+              className="text-button"
+              disabled={demo}
+              onClick={() =>
+                run(
+                  () => navigator.clipboard.writeText(clientConfiguration()),
+                  "Setup template copied; replace YOUR_KAZI_TOKEN",
+                )
+              }
+            >
+              <Copy size={14} />
+              Copy JSON template
+            </button>
+            <InfoTip label="Using the MCP setup template">
+              This HTTP JSON template works with clients such as Claude Code.
+              Replace YOUR_KAZI_TOKEN with your token. Other clients may use a
+              different configuration format or a setup form; enter the server
+              URL and authorization header there instead.
+            </InfoTip>
+            <p className="settings-footnote">
+              Streamable HTTP · Bearer token · 30-day keys
+            </p>
+          </div>
+        </details>
       </section>
       <section className="settings-section">
         <div className="section-line">
@@ -378,10 +445,7 @@ export function McpSettings() {
       </section>
       <Modal
         open={open}
-        onClose={() => {
-          setOpen(false);
-          setToken("");
-        }}
+        onClose={closeSetup}
         title="Add MCP connection"
         description="Create a scoped credential for one client."
       >
@@ -400,56 +464,96 @@ export function McpSettings() {
             </Link>
           </div>
         ) : token ? (
-          <div className="form">
-            <div className="inline-info mcp-token-notice">
-              <Check size={16} />
-              Credential created. Copy it before closing this dialog.
+          <div className="form mcp-issued">
+            <div className="mcp-issued-heading">
+              <span className="settings-emblem" data-tone="teal">
+                <Check size={22} />
+              </span>
+              <div>
+                <h3>Ready for your agent</h3>
+                <p>
+                  {issued?.label} · {issued?.scopes.length}{" "}
+                  {issued?.scopes.length === 1 ? "permission" : "permissions"} ·
+                  30 days
+                </p>
+              </div>
             </div>
-            <label>
-              New MCP token
-              <input aria-label="New MCP token" readOnly value={token} />
-            </label>
             <button
-              className="button secondary"
-              onClick={() =>
-                run(() => navigator.clipboard.writeText(token), "Token copied")
-              }
+              className="button primary copy-agent-setup"
+              onClick={() => copySetup(true)}
             >
-              <Copy size={14} />
-              Copy token
+              <Copy size={16} />
+              Copy agent setup
             </button>
-            <button
-              className="button secondary"
-              onClick={() =>
-                run(
-                  () =>
-                    navigator.clipboard.writeText(clientConfiguration(token)),
-                  "Client configuration copied",
-                )
-              }
-            >
-              <Copy size={14} />
-              Copy client configuration
-            </button>
-            <p className="inline-info">
-              This token is only shown once. Keep it private; the copied
-              configuration includes the token.
+            <p className="mcp-private-note">
+              Includes your private connection key. Share only with the agent
+              you want to connect.
             </p>
-            <p>
-              Use “Copy client configuration” to set up your client, or use the
-              server URL on the MCP setup page with the header{" "}
-              <code>Authorization: Bearer YOUR_TOKEN</code>. The client appears
-              in Agents & clients after use.
+            <details className="mcp-other-options">
+              <summary>Token &amp; client configuration</summary>
+              <div className="mcp-other-content">
+                <label htmlFor="issued-mcp-token">New MCP token</label>
+                <div className="mcp-secret-field">
+                  <input
+                    id="issued-mcp-token"
+                    aria-label="New MCP token"
+                    type={showToken ? "text" : "password"}
+                    readOnly
+                    value={token}
+                    autoComplete="off"
+                  />
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={showToken ? "Hide token" : "Show token"}
+                    aria-pressed={showToken}
+                    onClick={() => setShowToken(!showToken)}
+                  >
+                    {showToken ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+                <div className="integration-actions">
+                  <button
+                    className="button secondary"
+                    onClick={() => copyIssued(token, "Token copied")}
+                  >
+                    <Copy size={14} />
+                    Copy token
+                  </button>
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      copyIssued(
+                        clientConfiguration(token),
+                        "Client configuration copied",
+                      )
+                    }
+                  >
+                    <Copy size={14} />
+                    Copy client configuration
+                  </button>
+                </div>
+              </div>
+            </details>
+            {copyStatus && (
+              <p
+                className={
+                  copyStatus.error ? "mcp-copy-status error" : "mcp-copy-status"
+                }
+                role={copyStatus.error ? "alert" : "status"}
+              >
+                {copyStatus.text}
+              </p>
+            )}
+            <p className="settings-footnote">
+              This key is shown only now. Create a new connection if you lose
+              it.
             </p>
-            <button
-              className="button primary"
-              onClick={() => {
-                setToken("");
-                setOpen(false);
-              }}
-            >
-              Done
-            </button>
+            <div className="modal-footer">
+              <button className="button secondary" onClick={closeSetup}>
+                Done
+              </button>
+            </div>
           </div>
         ) : (
           <form
@@ -457,17 +561,18 @@ export function McpSettings() {
             onSubmit={async (e) => {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
+              const label = String(f.get("label")),
+                scopes = f.getAll("scope").map(String);
+              const generation = setupGeneration.current;
               setSaving(true);
               try {
-                const value = await run(() =>
-                  mintToken(
-                    String(f.get("label")),
-                    f.getAll("scope").map(String),
-                  ),
-                );
-                if (value) setToken(value);
+                const value = await run(() => mintToken(label, scopes));
+                if (value && generation === setupGeneration.current) {
+                  setIssued({ token: value, label, scopes });
+                  setShowToken(false);
+                }
               } finally {
-                setSaving(false);
+                if (generation === setupGeneration.current) setSaving(false);
               }
             }}
           >
@@ -498,7 +603,7 @@ export function McpSettings() {
               <button
                 type="button"
                 className="button secondary"
-                onClick={() => setOpen(false)}
+                onClick={closeSetup}
               >
                 Cancel
               </button>

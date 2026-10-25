@@ -4,6 +4,37 @@ import { expect, it } from "vitest";
 
 const asset = (name: string) => new URL(`../public/${name}`, import.meta.url);
 
+it("matches the visible symbol to the capital K in both logo lockups", async () => {
+  for (const name of ["brand/kazi-logo.svg", "brand/kazi-logo-dark.svg"]) {
+    const source = await readFile(asset(name), "utf8");
+    const wordX = Number(
+      source.match(
+        /data-brand-part="wordmark" transform="translate\((\d+) 0\)"/,
+      )?.[1],
+    );
+    expect(wordX).toBeGreaterThan(0);
+    const { data, info } = await sharp(Buffer.from(source))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const bounds = (from: number, to: number) => {
+      let top = info.height,
+        bottom = -1;
+      for (let y = 0; y < info.height; y++)
+        for (let x = from; x < to; x++)
+          if (data[(y * info.width + x) * 4 + 3] > 200) {
+            top = Math.min(top, y);
+            bottom = Math.max(bottom, y);
+          }
+      return { top, bottom };
+    };
+    const symbol = bounds(0, wordX),
+      capital = bounds(wordX, wordX + 210);
+    expect(Math.abs(symbol.top - capital.top)).toBeLessThanOrEqual(2);
+    expect(Math.abs(symbol.bottom - capital.bottom)).toBeLessThanOrEqual(2);
+  }
+});
+
 it("exports opaque launch icons at their declared sizes", async () => {
   for (const [name, size] of [
     ["momentum-192.png", 192],

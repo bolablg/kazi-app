@@ -79,11 +79,10 @@ function StageBody({
         <div className="section-title-group">
           <h2>Time in each stage</h2>
           <InfoTip label="About stage durations">
-            Repeated visits to a stage are added together for each task before
-            calculating the average and median. Completion is the final stage;
-            time after completion is excluded. Working durations use your
-            configured working calendar and are recalculated from saved
-            timestamps when those settings change.
+            Completion is the final stage; time after completion is excluded.
+            Working durations use your configured working calendar and are
+            recalculated from saved timestamps when those settings change.
+            <p>{report.coverage}</p>
           </InfoTip>
         </div>
         <Link to="/settings?tab=planning" className="text-button">
@@ -159,7 +158,6 @@ function StageBody({
           </tbody>
         </table>
       </ScrollTable>
-      <p className="report-footnote">{report.coverage}</p>
       <section className="report-panel">
         <div className="section-line">
           <h2>Needs a stage review</h2>
