@@ -525,6 +525,22 @@
   font-size: clamp(28px, 3vw, 42px);
   line-height: 1.2;
 }
+.auth-page :is(.cl-formFieldInput, .cl-socialButtonsBlockButton),
+.embedded-account-profile .cl-formFieldInput {
+  border: 1px solid #c8cdd4;
+  border-radius: 7px;
+  background: #fff;
+  min-height: 44px;
+}
+.auth-page :is(.cl-formButtonPrimary, .cl-socialButtonsBlockButton),
+.embedded-account-profile .cl-formButtonPrimary {
+  min-height: 44px;
+}
+.auth-page .cl-cardBox {
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
 
 @media (max-width: 1023px) {
   .button {

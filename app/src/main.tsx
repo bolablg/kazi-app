@@ -94,7 +94,6 @@ function Authenticated() {
           </span>
           <h1>Welcome to Kazi</h1>
           <p>Manage your tasks, projects, and connected tools.</p>
-          <p>Sign in or create your account below.</p>
         </div>
         <SignIn
           routing="hash"

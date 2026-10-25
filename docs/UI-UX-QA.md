@@ -43,4 +43,4 @@ The review caught a mobile Filters button inheriting a 40 px desktop height; it 
 
 Local validation passed: 173 unit/backend tests, three deployment guards, the production build, formatting, the 105-combination interface audit and overlay checks, and all four Insights regression tests. CI runs the complete 59-test browser/PWA suite before each promotion through staging to production. Browser tests use isolated synthetic data and do not alter personal production records.
 
-Viewport checks run in Chromium. They do not replace testing on physical iOS/Android devices or every browser engine. Clerk’s hosted account and sign-in flows require separate live checks; the synthetic demo cannot verify account-provider behavior.
+Viewport checks run in Chromium. They do not replace testing on physical iOS/Android devices or every browser engine. The deployed Clerk sign-in page was separately reviewed; provider inputs and social sign-in buttons now have explicit flat borders and 44 px control heights. The synthetic demo cannot verify account-provider behavior, so hosted authentication and account pages also need live checks.
