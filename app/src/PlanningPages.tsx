@@ -413,12 +413,7 @@ export function PlannerForm({
       .timezone,
     today = dateInZone(Date.now(), zone);
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Plan work sessions"
-      description="Realistic focus sessions, with space around them."
-    >
+    <Modal open={open} onClose={onClose} title="Plan work sessions">
       <form
         className="form"
         onSubmit={async (e) => {
@@ -595,8 +590,9 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
     <div className="page plans-page">
       <div className="page-heading">
         <div>
-          <h1>Plans</h1>
-          <p>Create proposals, review sessions, and track accepted plans.</p>
+          <PageTitle help="Create proposals, compare alternatives, and review sessions before scheduling. History contains accepted snapshots; proposing a plan alone never changes your calendar.">
+            Plans
+          </PageTitle>
         </div>
         <div className="plans-heading-actions">
           <Link
@@ -614,7 +610,7 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
       </div>
       <div className="plans-policy">
         <ShieldCheck size={20} />
-        <div>
+        <div className="section-title-group">
           <strong>
             Review new plans before scheduling ·{" "}
             {state.members.find((m) => m.id === actorId)?.preferences
@@ -622,12 +618,12 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
               ? "ON"
               : "OFF"}
           </strong>
-          <p>
+          <InfoTip label="About the current plan approval policy">
             {state.members.find((m) => m.id === actorId)?.preferences
               .reviewRequired
               ? "You approve every new plan. A proposal alone never changes your calendar."
               : "Kazi can schedule eligible recovery plans automatically within your saved personal constraints."}
-          </p>
+          </InfoTip>
         </div>
         <Link to="/settings" className="text-button">
           Manage
@@ -933,3 +929,4 @@ function PlanComparison({
     </Modal>
   );
 }
+import { PageTitle, InfoTip } from "./InfoTip";

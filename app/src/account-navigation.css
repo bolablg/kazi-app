@@ -95,7 +95,7 @@
 .calendar-sharing-scope {
   padding: 12px 14px;
   background: var(--brand-wash);
-  border-left: 3px solid var(--brand);
+  border: 1px solid var(--brand-line);
   font-size: 13px;
 }
 .sidebar-favorite {

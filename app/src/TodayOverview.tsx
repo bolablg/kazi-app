@@ -165,17 +165,21 @@ export function TodayOverview({
             aria-labelledby="today-focus-heading"
           >
             <div className="today-panel-heading">
-              <h2 id="today-focus-heading">
-                {person === actorId ? "My focus" : "Focus"}{" "}
-                <span>{overview.counts.focus}</span>
-              </h2>
+              <div className="section-title-group">
+                <h2 id="today-focus-heading">
+                  {person === actorId ? "My focus" : "Focus"}{" "}
+                  <span>{overview.counts.focus}</span>
+                </h2>
+                <InfoTip label="About focus tasks">
+                  In progress first, followed by work ready to start. Tasks are
+                  ready when their planned start has arrived and prerequisites
+                  are completed.
+                </InfoTip>
+              </div>
               <Link className="text-button" to={tasksLink(true)}>
                 View tasks <ArrowUpRight size={14} />
               </Link>
             </div>
-            <p className="today-panel-note">
-              In progress first, followed by work ready to start.
-            </p>
             {overview.focus.length ? (
               <div className="today-task-list">
                 {overview.focus.map((task) => (
@@ -307,15 +311,17 @@ export function TodayOverview({
             aria-labelledby="today-activity-heading"
           >
             <div className="today-panel-heading">
-              <h2 id="today-activity-heading">Recent activity</h2>
+              <div className="section-title-group">
+                <h2 id="today-activity-heading">Recent activity</h2>
+                <InfoTip label="About recent activity">
+                  Comments and system updates on your work. Open a task to see
+                  its full Activity history.
+                </InfoTip>
+              </div>
               <Link className="text-button" to="/notifications">
                 Notifications <ArrowUpRight size={14} />
               </Link>
             </div>
-            <p className="today-panel-note">
-              Comments and updates on your work. Open a task to see its full
-              Activity.
-            </p>
             {overview.activity.length ? (
               <ol className="today-activity-list">
                 {overview.activity.map(({ event, task }) => {
@@ -454,3 +460,4 @@ function TodayEmpty({
     </div>
   );
 }
+import { InfoTip } from "./InfoTip";

@@ -51,6 +51,7 @@ export function MentionInput({
   rows = 3,
   placeholder,
   disabled = false,
+  hideHint = false,
 }: {
   label: string;
   name?: string;
@@ -61,6 +62,7 @@ export function MentionInput({
   rows?: number;
   placeholder?: string;
   disabled?: boolean;
+  hideHint?: boolean;
 }) {
   const id = useId(),
     input = useRef<HTMLTextAreaElement>(null),
@@ -200,7 +202,10 @@ export function MentionInput({
           {!matches.length && <p>No matching people with project access.</p>}
         </div>
       )}
-      <small id={id + "-hint"} className="mention-hint">
+      <small
+        id={id + "-hint"}
+        className={hideHint ? "sr-only" : "mention-hint"}
+      >
         Type @ to mention someone. They’ll be notified when you{" "}
         {name === "description" ? "save" : "post"}.
       </small>

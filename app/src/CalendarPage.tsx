@@ -1,4 +1,5 @@
 import { projectStyle } from "./projectColors";
+import { PageTitle } from "./InfoTip";
 import { TaskLabels } from "./TaskLabels";
 import { useState } from "react";
 import {
@@ -187,8 +188,9 @@ export function CalendarPage(props: WorkProps) {
     <div className="page overview-page">
       <div className="page-heading">
         <div>
-          <h1>Calendar</h1>
-          <p>Your deadlines, focus time, and availability.</p>
+          <PageTitle help="See deadlines, planned focus sessions, and availability. Calendar supports month, week, and day; Schedule lists the same agenda by date.">
+            Calendar
+          </PageTitle>
         </div>
         <div className="calendar-heading-actions">
           <Link className="button secondary" to="/calendar/subscriptions">

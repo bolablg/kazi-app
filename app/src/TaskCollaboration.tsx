@@ -16,6 +16,7 @@ import type { Id } from "../convex/_generated/dataModel";
 import type { Activity, Task, TaskArtifact, Mention } from "../shared/model";
 import { taskPeople } from "../shared/people";
 import { MentionInput, MentionText } from "./Mentions";
+import { InfoTip } from "./InfoTip";
 import { statusLabels } from "../shared/model";
 import { stageColors } from "./PrioritySelect";
 import { checkFile, fileSize } from "../shared/artifacts";
@@ -340,6 +341,7 @@ function CommentComposer({ task }: { task: Task }) {
       <div className="comment-compose-body">
         <MentionInput
           label="Add a comment"
+          hideHint
           placeholder="Write a comment… @mention a teammate"
           value={body}
           mentions={mentions}
@@ -591,7 +593,13 @@ export function TaskActivity({ task }: { task: Task }) {
     .sort((a, b) => b.at - a.at);
   return (
     <section className="task-activity" aria-label="Task activity">
-      <h2>Activity</h2>
+      <div className="section-title-group">
+        <h2>Activity</h2>
+        <InfoTip label="About task activity">
+          Comments, attachments, and timestamped changes appear here. Type @ in
+          a comment to mention a teammate; they are notified when you post.
+        </InfoTip>
+      </div>
       <CommentComposer key={task.id} task={task} />
       {demo ? (
         <>

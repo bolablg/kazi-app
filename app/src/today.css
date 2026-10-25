@@ -43,8 +43,7 @@
   text-align: left;
 }
 .today-pulse button[aria-pressed="true"] {
-  outline: 2px solid var(--tone);
-  outline-offset: -2px;
+  border-color: var(--tone);
 }
 .today-pulse button:hover {
   border-color: var(--tone);

@@ -119,17 +119,28 @@ test("all report tabs and panels fit phones, tablets and desktop", async ({
       "Workflow",
       "Goals",
     ]) {
-      await page.getByRole("tab", { name: tab, exact: true }).click();
-      const tabsFit = await page
-        .getByRole("tablist", { name: "Insights views" })
-        .evaluate((element) =>
-          Array.from(element.querySelectorAll("button")).every((button) => {
-            const a = element.getBoundingClientRect(),
-              b = button.getBoundingClientRect();
-            return b.left >= a.left && b.right <= a.right + 1;
-          }),
-        );
-      expect(tabsFit, `${width}px navigation`).toBe(true);
+      const selected = page.getByRole("tab", { name: tab, exact: true });
+      await selected.click();
+      await expect(selected).toHaveAttribute("aria-selected", "true");
+      await expect
+        .poll(
+          () =>
+            page
+              .getByRole("tablist", { name: "Insights views" })
+              .evaluate((element) =>
+                Array.from(
+                  element.querySelectorAll('[aria-selected="true"]'),
+                ).every((button) => {
+                  const a = element.getBoundingClientRect(),
+                    b = button.getBoundingClientRect();
+                  return b.left >= a.left && b.right <= a.right + 1;
+                }),
+              ),
+          {
+            message: `${width}px active tab stays within its scrollable navigation`,
+          },
+        )
+        .toBe(true);
       expect(
         await page.evaluate(
           () =>
@@ -140,6 +151,17 @@ test("all report tabs and panels fit phones, tablets and desktop", async ({
       ).toBe(true);
     }
   }
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.goto("/insights?tab=Goals");
+  const goals = page.getByRole("tab", { name: "Goals", exact: true });
+  await goals.focus();
+  await page.keyboard.press("Home");
+  await expect(
+    page.getByRole("tab", { name: "Summary", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(goals).toBeFocused();
+  await expect(goals).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Summary", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1080 });
   await page.screenshot({

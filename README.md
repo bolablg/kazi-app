@@ -6,7 +6,7 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Overview in Kazi](docs/screenshots/today-1440.png)
+![Overview in Kazi](docs/screenshots/ui-overview-desktop.png)
 
 ## Manage the work
 

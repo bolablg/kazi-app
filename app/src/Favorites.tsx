@@ -7,6 +7,7 @@ import { useData } from "./data";
 import { useUI, cx } from "./components";
 import { projectStyle } from "./projectColors";
 import { useTeamSelection } from "./teamSelection";
+import { PageTitle } from "./InfoTip";
 
 function useFavorites() {
   const { state, captureState, actorId } = useData();
@@ -192,10 +193,9 @@ export function FavoritesPage() {
     <div className="page favorites-page">
       <div className="page-heading">
         <div>
-          <h1>Favorites</h1>
-          <p>
-            Your starred projects and teams, with the most recently added first.
-          </p>
+          <PageTitle help="Your starred projects and teams, with the most recently added first. The sidebar shows five shortcuts; this page contains the complete list. Stars are private to you.">
+            Favorites
+          </PageTitle>
         </div>
       </div>
       {favorites.length ? (

@@ -1,4 +1,5 @@
 import { defaultAgingDays } from "../shared/model";
+import { PageTitle, InfoTip } from "./InfoTip";
 import { AgendaSettings } from "./AgendaSettings";
 import { TeamFavoriteButton } from "./Favorites";
 import { useEffect, useState, type FormEvent } from "react";
@@ -59,9 +60,9 @@ export function NotificationsPage({
     <div className="page notifications-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">NOTIFICATIONS</p>
-          <h1>Notifications</h1>
-          <p>Task reminders and plans that need your review.</p>
+          <PageTitle help="Task reminders, mentions, and plans that need your review. Marking a notification as read does not complete its task.">
+            Notifications
+          </PageTitle>
         </div>
         <Link className="button secondary" to="/settings">
           <Bell size={15} />
@@ -212,10 +213,9 @@ export function TeamPage({ directory = false }: { directory?: boolean }) {
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Teams & people</h1>
-          <p>
-            One account, with separate membership and performance for each team.
-          </p>
+          <PageTitle help="Your account can belong to several teams. Membership, project access, and performance stay separate for each team. Star a team to keep it in Favorites.">
+            Teams & people
+          </PageTitle>
         </div>
         <div className="integration-actions">
           <button
@@ -327,10 +327,11 @@ function TeamMembersPage() {
           <Link className="text-button" to="/teams">
             All teams <ArrowUpRight size={13} />
           </Link>
-          <h1>People & access</h1>
-          <p>
-            {state.workspace.name} · Manage people, roles, and project access.
-          </p>
+          <PageTitle
+            help={`Manage people, roles, and project access for ${state.workspace.name}. Team membership does not automatically grant access to every private project.`}
+          >
+            People & access
+          </PageTitle>
         </div>
         {canManage &&
           (state.workspace.kind === "team" ? (
@@ -686,12 +687,15 @@ export function SettingsPage({
     <div className="page settings-page">
       <div className="page-heading">
         <div>
-          <h1>{connections ? "Connections" : "Settings"}</h1>
-          <p>
-            {connections
-              ? "Calendar, MCP, and access for your agents."
-              : "Your account, planning preferences, and app settings."}
-          </p>
+          <PageTitle
+            help={
+              connections
+                ? "Manage your optional calendar availability sources, MCP credentials, and agent activity."
+                : "Manage your account, planning preferences, and app settings. Changes take effect when you save them."
+            }
+          >
+            {connections ? "Connections" : "Settings"}
+          </PageTitle>
         </div>
         <span className="badge neutral">
           {state.members.find((m) => m.id === actorId)?.name}
@@ -738,9 +742,13 @@ export function SettingsPage({
           }}
         >
           <section className="settings-section">
-            <div>
+            <div className="section-title-group">
               <h2>Plan approval</h2>
-              <p>Choose how new recovery plans reach your calendar.</p>
+              <InfoTip label="About plan approval">
+                Choose how new recovery plans reach your calendar. With review
+                enabled, proposals wait for your approval. Turning it off
+                requires saving your automatic scheduling preferences.
+              </InfoTip>
             </div>
             <div className="review-setting">
               <div>
@@ -779,9 +787,13 @@ export function SettingsPage({
             )}
           </section>
           <section className="settings-section">
-            <div>
+            <div className="section-title-group">
               <h2>Working hours & capacity</h2>
-              <p>Set the hours and capacity available for work sessions.</p>
+              <InfoTip label="About working hours and capacity">
+                Set the hours and capacity available for planned work sessions.
+                Working-time workflow metrics count only these days and hours in
+                your time zone.
+              </InfoTip>
             </div>
             <div className="form form-grid">
               <label>
