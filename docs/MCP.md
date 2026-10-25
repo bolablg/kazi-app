@@ -2,7 +2,11 @@
 
 ## Authentication and connection
 
-Kazi exposes a Streamable HTTP MCP endpoint. Copy your server URL from **Account → Connections → MCP & agents** and use it with a client that supports bearer-token authentication. In the examples below, replace `https://YOUR_DEPLOYMENT.convex.site/mcp` with the endpoint shown in Kazi.
+Kazi exposes a Streamable HTTP MCP endpoint. Open **Account → Connections → MCP & agents → Add connection**, name the agent, and choose its permissions. Once the credential is created, **Copy agent setup** copies instructions with the endpoint, that private key, its granted permissions, and a read-only verification step. Paste the guide only into the agent you want to connect. If its permissions do not include reading, verification stops at initialization and tool discovery.
+
+The key is available only in that creation dialog. Closing it clears the displayed secret; an existing key cannot be recovered later. The separate **Copy setup guide** action uses a placeholder and asks for a Kazi key. Neither guide needs Clerk or Convex administrator keys. The receiving client must support remote MCP with a bearer header and may require you to finish its native setup manually.
+
+For manual configuration, expand **Manual setup & server details** to copy the server URL or JSON template. In the examples below, replace `https://YOUR_DEPLOYMENT.convex.site/mcp` with the endpoint shown in Kazi.
 
 In Kazi Connections → MCP & agents → Add connection, create a labeled credential with explicit scopes. Copy its token once into your client’s secret environment storage. Tokens are random 256-bit values, stored as SHA-256 hashes, expire after 30 days, and can be revoked in Connections. The caller’s subject is derived from that credential; a tool-supplied actor ID is never authoritative. Membership and project/calendar access are rechecked by the same Convex domain functions the UI uses.
 

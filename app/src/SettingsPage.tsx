@@ -1,6 +1,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -13,6 +14,9 @@ import {
   Clock3,
   Download,
   ListChecks,
+  LocateFixed,
+  Plug,
+  Settings2,
   ShieldCheck,
 } from "lucide-react";
 import { defaults, defaultAgingDays, type Preferences } from "../shared/model";
@@ -20,6 +24,7 @@ import { useData } from "./data";
 import { cx, useUI } from "./components";
 import { InfoTip, PageTitle } from "./InfoTip";
 import { AccountSettings } from "./AccountPages";
+import { availableTimeZones, deviceTimeZone } from "../shared/timezones";
 import { AgendaSettings } from "./AgendaSettings";
 import {
   ConnectionsOverview,
@@ -85,6 +90,12 @@ export function SettingsPage({
     [saving, setSaving] = useState(false);
   const requested = params.get("tab");
   const tabStrip = useRef<HTMLElement>(null);
+  const workingHours = useRef<HTMLElement>(null);
+  const [deviceZone] = useState(deviceTimeZone);
+  const zones = useMemo(
+    () => availableTimeZones(prefs.timezone),
+    [prefs.timezone],
+  );
   const tabs = connections
     ? [
         { id: "overview", label: "Overview" },
@@ -107,6 +118,17 @@ export function SettingsPage({
             ? "overview"
             : "planning";
   const savedPreferences = JSON.stringify(preferences);
+  const section = params.get("section");
+  useEffect(() => {
+    if (tab !== "planning" || section !== "working-hours") return;
+    const frame = requestAnimationFrame(() => {
+      workingHours.current?.scrollIntoView({ block: "start" });
+      workingHours.current
+        ?.querySelector<HTMLSelectElement>("#planning-timezone")
+        ?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [tab, section]);
   useLayoutEffect(() => {
     const strip = tabStrip.current;
     if (!strip) return;
@@ -166,18 +188,30 @@ export function SettingsPage({
   };
   return (
     <div
-      className={cx("page settings-page", !connections && "preferences-page")}
+      className={cx(
+        "page settings-page",
+        connections ? "connections-page" : "preferences-page",
+      )}
     >
       <div className="page-heading">
-        <PageTitle
-          help={
-            connections
-              ? "Manage calendar availability sources, MCP credentials, and agent activity."
-              : "Manage your account and personal planning preferences."
-          }
-        >
-          {connections ? "Connections" : "Settings"}
-        </PageTitle>
+        <div className="account-page-heading">
+          <span
+            className="account-page-emblem"
+            data-tone={connections ? "blue" : "orange"}
+            aria-hidden="true"
+          >
+            {connections ? <Plug size={24} /> : <Settings2 size={24} />}
+          </span>
+          <PageTitle
+            help={
+              connections
+                ? "Manage calendar availability sources, MCP credentials, and agent activity."
+                : "Manage your account and personal planning preferences."
+            }
+          >
+            {connections ? "Connections" : "Settings"}
+          </PageTitle>
+        </div>
         {!connections && (
           <div className="settings-export">
             <button className="button secondary" onClick={exportData}>
@@ -230,53 +264,10 @@ export function SettingsPage({
           }}
         >
           <section
-            className="settings-section planning-section"
-            aria-labelledby="plan-approval-heading"
+            className="settings-section planning-section planning-hours"
+            id="working-hours"
+            ref={workingHours}
           >
-            <SectionHeading
-              title="Plan approval"
-              tone="blue"
-              help="Review proposals before they reach your calendar. Turning review off requires saving your automatic scheduling preferences."
-            >
-              <ShieldCheck size={21} />
-            </SectionHeading>
-            <div className="review-setting">
-              <div>
-                <div>
-                  <strong id="plan-approval-heading">
-                    Review new plans before scheduling
-                  </strong>
-                  <span className="planning-rule-state">
-                    {prefs.reviewRequired
-                      ? "Your approval comes first"
-                      : "Automatic scheduling enabled"}
-                  </span>
-                </div>
-              </div>
-              <button
-                className={cx("switch", prefs.reviewRequired && "on")}
-                role="switch"
-                aria-checked={prefs.reviewRequired}
-                aria-label="Review new plans before scheduling"
-                type="button"
-                onClick={() => update("reviewRequired", !prefs.reviewRequired)}
-              >
-                <span />
-              </button>
-            </div>
-            {!prefs.reviewRequired && (
-              <div className="automatic-notice">
-                <AlertTriangle size={19} />
-                <p>
-                  <strong>Automatic recovery · your calendar only.</strong>{" "}
-                  Saving enables eligible recovery scheduling within your
-                  working hours, capacity, and horizon. Teammates keep their own
-                  review settings. Existing plans and events stay unchanged.
-                </p>
-              </div>
-            )}
-          </section>
-          <section className="settings-section planning-section">
             <SectionHeading
               title="Working hours & capacity"
               tone="teal"
@@ -285,31 +276,42 @@ export function SettingsPage({
               <Clock3 size={21} />
             </SectionHeading>
             <div className="form form-grid">
-              <label>
-                Time zone
+              <div className="timezone-field">
+                <div className="timezone-label">
+                  <label htmlFor="planning-timezone">Time zone</label>
+                </div>
                 <select
+                  id="planning-timezone"
+                  aria-label="Time zone"
                   value={prefs.timezone}
                   onChange={(e) => update("timezone", e.target.value)}
                 >
-                  {[
-                    ...new Set([
-                      prefs.timezone,
-                      "America/Chicago",
-                      "America/New_York",
-                      "America/Los_Angeles",
-                      "Europe/London",
-                      "Africa/Lagos",
-                      "Africa/Nairobi",
-                      "Asia/Kolkata",
-                      "Asia/Tokyo",
-                      "Australia/Sydney",
-                      "UTC",
-                    ]),
-                  ].map((z) => (
-                    <option key={z}>{z}</option>
+                  {zones.map((z) => (
+                    <option key={z} value={z}>
+                      {z.replaceAll("_", " ")}
+                    </option>
                   ))}
                 </select>
-              </label>
+                <div className="timezone-actions">
+                  <button
+                    type="button"
+                    className="text-button device-timezone"
+                    disabled={!deviceZone || prefs.timezone === deviceZone}
+                    onClick={() => {
+                      if (deviceZone) update("timezone", deviceZone);
+                    }}
+                  >
+                    <LocateFixed size={14} />
+                    Use device time zone
+                  </button>
+                  <InfoTip label="About your time zone">
+                    This saved time zone controls planning, due dates,
+                    reminders, and Insights. Use your device’s current zone as a
+                    shortcut, then save. Traveling does not change it
+                    automatically.
+                  </InfoTip>
+                </div>
+              </div>
               <label>
                 Daily focus capacity (minutes)
                 <input
@@ -408,7 +410,54 @@ export function SettingsPage({
               </label>
             </div>
           </section>
-          <section className="settings-section planning-section">
+          <section
+            className="settings-section planning-section planning-approval"
+            aria-labelledby="plan-approval-heading"
+          >
+            <SectionHeading
+              title="Plan approval"
+              tone="blue"
+              help="Review proposals before they reach your calendar. Turning review off requires saving your automatic scheduling preferences."
+            >
+              <ShieldCheck size={21} />
+            </SectionHeading>
+            <div className="review-setting">
+              <div>
+                <div>
+                  <strong id="plan-approval-heading">
+                    Review new plans before scheduling
+                  </strong>
+                  <span className="planning-rule-state">
+                    {prefs.reviewRequired
+                      ? "Your approval comes first"
+                      : "Automatic scheduling enabled"}
+                  </span>
+                </div>
+              </div>
+              <button
+                className={cx("switch", prefs.reviewRequired && "on")}
+                role="switch"
+                aria-checked={prefs.reviewRequired}
+                aria-label="Review new plans before scheduling"
+                type="button"
+                onClick={() => update("reviewRequired", !prefs.reviewRequired)}
+              >
+                <span />
+              </button>
+            </div>
+            {!prefs.reviewRequired && (
+              <div className="automatic-notice">
+                <AlertTriangle size={19} />
+                <p>
+                  <strong>Automatic recovery · your calendar only.</strong>{" "}
+                  Saving enables eligible recovery scheduling within your
+                  working hours, capacity, and horizon. Teammates keep their own
+                  review settings. Existing plans and events stay unchanged.
+                </p>
+              </div>
+            )}
+          </section>
+          <section className="settings-section planning-section planning-notifications">
             <SectionHeading
               title="Notifications & planning horizon"
               tone="pink"
@@ -445,7 +494,7 @@ export function SettingsPage({
               </label>
             </div>
           </section>
-          <section className="settings-section planning-section workflow-thresholds">
+          <section className="settings-section planning-section workflow-thresholds planning-thresholds">
             <SectionHeading
               title="Workflow review thresholds"
               tone="violet"

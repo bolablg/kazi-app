@@ -1,4 +1,174 @@
 /* Wide analytics stay inside keyboard-accessible regions, with a visible cue. */
+.reports-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.report-timezone {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  color: #46516a;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.report-timezone:hover {
+  background: #f1f4fc;
+  color: #2747bd;
+}
+.report-timezone > svg {
+  color: #4263eb;
+}
+.mcp-copy-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #edf8f3;
+  color: #17664a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.mcp-copy-status.error {
+  background: #fff0f0;
+  color: #a12838;
+}
+@media (max-width: 700px) {
+  .reports-page .page-heading {
+    flex-wrap: wrap;
+  }
+  .reports-page .page-heading > div:first-child {
+    flex-shrink: 0;
+  }
+  .reports-page .reports-context {
+    flex: 1 0 100%;
+  }
+}
+.workflow-report > .table-scroll-region {
+  margin-bottom: 24px;
+}
+.connections-overview .settings-section:first-child {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.connections-overview .settings-section:first-child > :is(h2, p) {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.connections-overview .settings-section:first-child .connection-item {
+  margin: 0;
+}
+.mcp-onboarding-title,
+.mcp-issued-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.mcp-onboarding-title > div,
+.mcp-issued-heading > div {
+  min-width: 0;
+}
+.mcp-onboarding-title p,
+.mcp-issued-heading p {
+  margin: 6px 0 0;
+  color: #55565c;
+  font-size: 13px;
+}
+.mcp-settings .mcp-setup-steps {
+  margin-top: 24px;
+}
+.mcp-settings .mcp-setup-steps > li {
+  border: 1px solid #e5e8ee;
+  background: #fff;
+}
+.mcp-settings .mcp-setup-steps > li:nth-child(2) {
+  background: #f6f8ff;
+  border-color: #e0e6fa;
+}
+.mcp-settings .mcp-setup-steps > li p {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.mcp-manual-setup {
+  margin-top: 24px;
+  border-top: 1px solid #edf0f5;
+  padding-top: 12px;
+}
+.mcp-manual-setup > summary,
+.mcp-other-options > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #46516a;
+}
+.mcp-manual-content,
+.mcp-other-content {
+  padding: 12px 0 0;
+}
+.mcp-manual-content > label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.mcp-manual-content .endpoint-row {
+  margin: 8px 0 12px;
+  border: 1px solid #e0e5ee;
+  border-radius: 8px;
+}
+.mcp-issued-heading {
+  margin: 4px 0 12px;
+}
+.mcp-issued-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.copy-agent-setup {
+  min-height: 48px;
+  justify-content: center;
+}
+.mcp-issued .mcp-private-note {
+  margin: 0;
+  color: #5a6373;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.mcp-other-options {
+  border-top: 1px solid #e5e8ee;
+  padding-top: 8px;
+  margin-top: 12px;
+}
+.mcp-other-content {
+  display: grid;
+  gap: 12px;
+}
+.mcp-manual-content > code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-block: 12px;
+}
+.mcp-secret-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mcp-secret-field input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+}
+.mcp-secret-field .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.mcp-issued .modal-footer {
+  margin-top: 8px;
+}
 .table-scroll-region {
   min-width: 0;
   max-width: 100%;
@@ -288,6 +458,21 @@
   }
 }
 @media (max-width: 700px) {
+  .connections-overview .settings-section:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mcp-onboarding > .section-line {
+    align-items: flex-start;
+  }
+  .mcp-onboarding > .section-line > .badge {
+    margin-left: 52px;
+  }
+  .reports-context {
+    gap: 8px;
+  }
+  .report-timezone {
+    padding-left: 0;
+  }
   .workflow-report > .section-line {
     align-items: flex-start;
   }

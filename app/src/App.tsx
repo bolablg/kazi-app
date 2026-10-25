@@ -391,6 +391,7 @@ function Shell() {
             </button>
             <button
               className="button primary topbar-add"
+              aria-label="New task"
               onClick={() => addTask()}
             >
               <Plus size={15} />

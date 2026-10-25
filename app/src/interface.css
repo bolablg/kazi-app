@@ -118,6 +118,10 @@
   min-height: 64px;
   height: 64px;
 }
+.modal-heading > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .button {
   min-height: 40px;
   border-radius: 7px;
