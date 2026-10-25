@@ -44,8 +44,12 @@ describe("branded MCP proxy", () => {
       expect(init?.redirect).toBe("manual");
       expect(init?.cache).toBe("no-store");
       const forwarded = new Headers(init?.headers);
-      expect(forwarded.get("Authorization")).toBe("Bearer SYNTHETIC_KAZI_TOKEN");
-      expect(forwarded.get("Accept")).toBe("application/json, text/event-stream");
+      expect(forwarded.get("Authorization")).toBe(
+        "Bearer SYNTHETIC_KAZI_TOKEN",
+      );
+      expect(forwarded.get("Accept")).toBe(
+        "application/json, text/event-stream",
+      );
       expect(forwarded.get("MCP-Protocol-Version")).toBe("2025-11-25");
       expect(forwarded.get("MCP-Session-Id")).toBe("session-fixture");
       expect(forwarded.get("Last-Event-ID")).toBe("event-fixture");
@@ -77,7 +81,9 @@ describe("branded MCP proxy", () => {
       const response = await createMcpProxy(target, fetchUpstream)(request());
       expect(response.status).toBe(status);
       expect(await response.text()).toBe(body ?? "");
-      expect(response.headers.get("WWW-Authenticate")).toBe('Bearer realm="kazi"');
+      expect(response.headers.get("WWW-Authenticate")).toBe(
+        'Bearer realm="kazi"',
+      );
       expect(response.headers.get("Retry-After")).toBe("30");
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
@@ -114,7 +120,10 @@ describe("branded MCP proxy", () => {
         headers: { "Content-Type": "text/event-stream" },
       }),
     );
-    const response = await createMcpProxy(target, fetchUpstream)(request("GET"));
+    const response = await createMcpProxy(
+      target,
+      fetchUpstream,
+    )(request("GET"));
     expect(response.headers.get("Content-Type")).toBe("text/event-stream");
     const reader = response.body!.getReader();
     writer.enqueue(new TextEncoder().encode("event: message\ndata: first\n\n"));
@@ -178,7 +187,10 @@ describe("branded MCP proxy", () => {
       "https://branch-fixture.convex.site/other",
     ])
       expect(() => createMcpProxy(invalid, fetchUpstream)).toThrow();
-    const unsupported = await createMcpProxy(target, fetchUpstream)(request("PUT"));
+    const unsupported = await createMcpProxy(
+      target,
+      fetchUpstream,
+    )(request("PUT"));
     expect(unsupported.status).toBe(405);
     expect(unsupported.headers.get("Allow")).toBe("POST, GET, DELETE");
     expect(fetchUpstream).toHaveBeenCalledOnce();
