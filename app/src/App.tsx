@@ -130,6 +130,13 @@ function Shell() {
     pending = state.proposals.filter(
       (p) => p.status === "awaiting_review",
     ).length;
+  const query = search.trim().toLowerCase();
+  const matchingTasks = state.tasks
+    .filter((task) => task.title.toLowerCase().includes(query))
+    .slice(0, 7);
+  const matchingProjects = state.projects
+    .filter((project) => project.title.toLowerCase().includes(query))
+    .slice(0, 5);
   const {
     needRefresh: [needsUpdate],
     updateServiceWorker,
@@ -626,51 +633,54 @@ function Shell() {
           <input
             aria-label="Search Kazi"
             placeholder="Search tasks and projects"
+            autoComplete="off"
             autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="global-search-results">
-          <span className="eyebrow">TASKS</span>
-          {state.tasks
-            .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-            .slice(0, 7)
-            .map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setSearchOpen(false);
-                  openTask(t.id);
-                }}
-              >
-                <span className="search-task-circle" />
-                <span>
-                  {t.title}
-                  <ProjectTag
-                    project={state.projects.find((p) => p.id === t.projectId)}
-                  />
-                </span>
-                <ArrowUpRight size={14} />
-              </button>
-            ))}
-          <span className="eyebrow">PROJECTS</span>
-          {state.projects
-            .filter((p) => p.title.toLowerCase().includes(search.toLowerCase()))
-            .slice(0, 5)
-            .map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setSearchOpen(false);
-                  navigate(projectPath(p.id));
-                }}
-              >
-                <Folder size={17} />
-                <span>{p.title}</span>
-                <ArrowUpRight size={14} />
-              </button>
-            ))}
+          {matchingTasks.length > 0 && <span className="eyebrow">TASKS</span>}
+          {matchingTasks.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setSearchOpen(false);
+                openTask(t.id);
+              }}
+            >
+              <span className="search-task-circle" />
+              <span>
+                {t.title}
+                <ProjectTag
+                  project={state.projects.find((p) => p.id === t.projectId)}
+                />
+              </span>
+              <ArrowUpRight size={14} />
+            </button>
+          ))}
+          {matchingProjects.length > 0 && (
+            <span className="eyebrow">PROJECTS</span>
+          )}
+          {matchingProjects.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                setSearchOpen(false);
+                navigate(projectPath(p.id));
+              }}
+            >
+              <Folder size={17} />
+              <span>{p.title}</span>
+              <ArrowUpRight size={14} />
+            </button>
+          ))}
+          {!matchingTasks.length && !matchingProjects.length && (
+            <div className="search-empty" role="status">
+              <Search size={24} aria-hidden="true" />
+              <p>No matching tasks or projects</p>
+            </div>
+          )}
         </div>
       </Modal>
       <Modal

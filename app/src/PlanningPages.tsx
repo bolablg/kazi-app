@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import {
   CalendarDays,
   ArrowUpRight,
@@ -28,6 +33,7 @@ import {
 } from "./components";
 import { type Proposal, type Version } from "../shared/model";
 import { addDays, dateInZone, MINUTE } from "../shared/scheduler";
+import { planPath } from "../shared/ids";
 const time = (at: number, zone: string) =>
   new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
@@ -58,7 +64,9 @@ export function PlanReview({
   onClose: () => void;
 }) {
   const { state, actorId, dispatch, demo, online } = useData(),
-    { run } = useUI();
+    { run } = useUI(),
+    location = useLocation(),
+    navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const p = state.proposals.find((p) => p.id === id);
   if (!p) return null;
@@ -154,18 +162,29 @@ export function PlanReview({
               <button
                 key={index}
                 className={p.selected === index ? "selected" : ""}
-                onClick={() =>
-                  run(
-                    () =>
-                      dispatch({
+                aria-pressed={p.selected === index}
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    const updated = await run(async () => {
+                      await dispatch({
                         type: "select_alternative",
                         id: p.id,
                         revision: p.revision,
                         selected: index,
-                      }),
-                    "Alternative selected. Previous approvals cleared.",
-                  )
-                }
+                      });
+                      return true;
+                    }, "Alternative selected. Previous approvals cleared.");
+                    if (updated)
+                      navigate(planPath(p.id, p.revision + 1), {
+                        replace: true,
+                        state: location.state,
+                      });
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
               >
                 <span>
                   OPTION {index + 1}
@@ -612,7 +631,7 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
         <ShieldCheck size={20} />
         <div className="section-title-group">
           <strong>
-            Review new plans before scheduling ·{" "}
+            Plan approval ·{" "}
             {state.members.find((m) => m.id === actorId)?.preferences
               .reviewRequired
               ? "ON"
@@ -634,6 +653,29 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
         className="overview-tabs section-tabs"
         role="tablist"
         aria-label="Plan views"
+        onKeyDown={(event) => {
+          const views = ["proposals", "history"];
+          const target = (event.target as Element).closest<HTMLButtonElement>(
+            'button[role="tab"]',
+          );
+          const index = views.indexOf(
+            target?.id.replace("plans-tab-", "") ?? tab,
+          );
+          const next =
+            event.key === "ArrowRight" || event.key === "ArrowLeft"
+              ? (index + 1) % views.length
+              : event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? views.length - 1
+                  : undefined;
+          if (next === undefined) return;
+          event.preventDefault();
+          changeQuery("tab", views[next]);
+          event.currentTarget
+            .querySelector<HTMLButtonElement>("#plans-tab-" + views[next])
+            ?.focus();
+        }}
       >
         {[
           { id: "proposals", label: "Proposals" },
@@ -644,6 +686,7 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
             role="tab"
             id={"plans-tab-" + view.id}
             aria-selected={tab === view.id}
+            tabIndex={tab === view.id ? 0 : -1}
             aria-controls={"plans-" + view.id}
             onClick={() => changeQuery("tab", view.id)}
           >
@@ -864,9 +907,9 @@ function PlanComparison({
         >
           {versions.map((v) => (
             <option key={v.id} value={v.id}>
+              Plan {v.number} ·{" "}
               {state.projects.find((p) => p.id === v.projectId)?.title ??
-                "Personal plan"}{" "}
-              · Plan {v.number}
+                "Personal plan"}
             </option>
           ))}
         </select>

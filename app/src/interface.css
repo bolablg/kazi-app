@@ -1,4 +1,59 @@
 /* Shared interface rules refined from Kazi's Stitch references. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.global-search-input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid #bfc8d8;
+  border-radius: 8px;
+  background: #fff;
+}
+.global-search-input:focus-within {
+  border-color: transparent;
+  outline: 2px solid var(--brand-ink);
+  outline-offset: -2px;
+}
+.global-search-input > svg {
+  flex-shrink: 0;
+  color: #586170;
+}
+.global-search-input input {
+  min-height: 46px;
+  padding: 10px 0;
+  font-size: 16px;
+  line-height: 24px;
+  outline: 0;
+}
+.global-search-input input:focus-visible {
+  outline: 0;
+}
+.global-search-results > button {
+  min-height: 48px;
+  border-radius: 6px;
+}
+.global-search-results > button:hover {
+  background: #f5f7fb;
+}
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 12px;
+  color: #586170;
+}
+.search-empty p {
+  margin: 0;
+}
 :root {
   --ui-line: #e5e7eb;
   --ui-structural: #c8cdd4;

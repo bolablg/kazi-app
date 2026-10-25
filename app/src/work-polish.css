@@ -1,0 +1,223 @@
+/* Work views share the same light structure as Overview and Settings. */
+.project-icon {
+  color: var(--project-accent, #4263eb);
+  background: var(--project-fill, #eaf0ff);
+}
+.project-detail-page > .breadcrumb-back {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.project-detail-page > .breadcrumb-back > svg {
+  flex-shrink: 0;
+}
+.project-detail-page > .breadcrumb-back > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-heading-group {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+}
+.project-heading-group > div {
+  min-width: 0;
+  flex: 1;
+}
+.project-heading-group .project-icon,
+.project-heading-group .project-favorite {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.project-heading-group h1,
+.project-heading-group p {
+  overflow-wrap: anywhere;
+}
+.task-rows .task-main .task-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.project-meta-bar {
+  gap: 12px 20px;
+  padding: 14px 0 20px;
+  border-bottom: 0;
+}
+.project-meta-bar > span {
+  min-width: 0;
+}
+.project-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.project-heading-actions .icon-button {
+  min-height: 40px;
+  min-width: 40px;
+}
+.project-meta-bar .project-lifecycle {
+  gap: 10px;
+  font-size: 12px;
+}
+.project-lifecycle select,
+.timeline-heading select {
+  min-height: 36px;
+  border: 1px solid var(--ui-line, #e5e8ee);
+  border-radius: 7px;
+  padding: 6px 10px;
+}
+.project-view-toolbar {
+  gap: 12px;
+  margin-top: 0;
+  border-color: var(--ui-line, #e5e8ee);
+}
+.project-view-toolbar .tabs {
+  min-width: 0;
+  gap: 8px;
+  scroll-padding-inline: 8px;
+}
+.project-view-toolbar > .text-button {
+  flex-shrink: 0;
+}
+.project-detail-page .tasks-panel {
+  border: 0;
+  padding-inline: 0;
+}
+.task-archive {
+  border-top: 1px solid var(--ui-line, #e5e8ee);
+}
+.project-access-form .member-choice {
+  flex-direction: row;
+  text-align: left;
+  min-height: 64px;
+  padding: 10px 0;
+  gap: 12px;
+}
+.project-access-form .member-choice > .avatar {
+  flex-shrink: 0;
+}
+.project-access-form .member-choice > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  font-size: 14px;
+}
+.project-access-form .member-choice input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 18px !important;
+  height: 18px;
+  min-height: 18px;
+}
+.project-timeline {
+  --gantt-label-width: 220px;
+  border-color: var(--ui-line, #e5e8ee);
+  border-radius: 10px;
+}
+.project-timeline .gantt-head,
+.project-timeline .gantt-row {
+  grid-template-columns: var(--gantt-label-width) minmax(0, 1fr);
+  border-top-color: var(--ui-line, #e5e8ee);
+}
+.project-timeline .gantt-name,
+.project-timeline .gantt-head > strong {
+  border-right-color: var(--ui-line, #e5e8ee);
+}
+.project-timeline .gantt-head,
+.project-timeline .gantt-head > strong {
+  background: #f7f8fc;
+}
+.project-timeline .gantt-today {
+  border-left-color: #4263eb;
+}
+.project-timeline .timeline-heading p {
+  line-height: 1.5;
+}
+.task-activity .comment-compose-body {
+  border-color: #d5dae3;
+  border-radius: 9px;
+  overflow: visible;
+}
+.task-activity .comment-compose-body .mention-writing textarea,
+.task-activity .comment-compose-body .mention-writing textarea:focus,
+.task-activity .comment-compose-body .mention-writing textarea:focus-visible {
+  border-color: transparent;
+  border-radius: 0;
+  outline: none;
+}
+.task-activity .comment-compose-body:focus-within {
+  outline: 2px solid #4263eb;
+  outline-offset: 2px;
+}
+.dependency-current {
+  border-color: var(--ui-line, #e5e8ee);
+  background: #f7f8fc;
+  border-radius: 7px;
+}
+@media (min-width: 1360px) {
+  .task-board-scroll .board {
+    min-width: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .project-heading-actions {
+    margin-top: 12px;
+  }
+  .project-meta-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+    padding: 14px 0 18px;
+  }
+  .project-meta-bar > span:first-child {
+    width: auto;
+  }
+  .project-meta-bar .project-lifecycle {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .project-status-label {
+    display: none;
+  }
+  .project-meta-bar > button:last-child {
+    margin-left: 0;
+    justify-self: start;
+  }
+  .project-view-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .project-view-toolbar .tabs {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0;
+  }
+  .project-view-toolbar .tabs > button,
+  .project-view-toolbar .tabs > a {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .project-view-toolbar > .text-button {
+    align-self: flex-end;
+    min-height: 36px;
+  }
+  .project-timeline {
+    --gantt-label-width: 160px;
+  }
+  .timeline-heading {
+    padding: 16px;
+  }
+}
+@media (max-width: 420px) {
+  .project-meta-bar .project-lifecycle select {
+    min-height: 40px;
+  }
+}

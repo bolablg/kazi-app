@@ -121,13 +121,47 @@
   font-size: 13px;
 }
 .settings-planning .switch {
+  position: relative;
+  width: 48px;
+  height: 44px;
+  padding: 0;
   flex-shrink: 0;
-  border-color: #cdd3df;
-  background: #e6eaf0;
+  border: 0;
+  background: transparent;
+}
+.settings-planning .switch::before {
+  content: "";
+  position: absolute;
+  inset: 10px 0;
+  border-radius: 999px;
+  background: #cdd3df;
 }
 .settings-planning .switch.on {
+  background: transparent;
+}
+.settings-planning .switch.on::before {
   background: #ff8a32;
-  border-color: #ff8a32;
+}
+.settings-planning .switch > span {
+  position: absolute;
+  left: 3px;
+  top: 13px;
+  width: 18px;
+  height: 18px;
+  transform: none;
+}
+.settings-planning .switch.on > span {
+  transform: translateX(24px);
+}
+.join-card .join-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eef1ff;
+  color: #3653ce;
 }
 .settings-planning .automatic-notice {
   margin-top: 20px;
@@ -450,6 +484,10 @@
   color: #586170;
   font-size: 13px;
 }
+.invite-project-access .check-label {
+  min-height: 44px;
+  align-items: center;
+}
 .preferences-page .embedded-account-profile {
   border: 1px solid #e5e8ee;
   border-radius: 12px;
@@ -526,9 +564,13 @@
     font-size: 12px;
   }
   .teams-page .page-heading {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 18px;
+  }
+  .team-people-page .page-heading > .button {
+    align-self: flex-start;
   }
   .person-row {
     grid-template-columns: 36px minmax(0, 1fr) 64px;

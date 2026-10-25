@@ -1,0 +1,336 @@
+/* Wide analytics stay inside keyboard-accessible regions, with a visible cue. */
+.table-scroll-region {
+  min-width: 0;
+  max-width: 100%;
+}
+.table-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 10px;
+  color: #535d71;
+  font-size: 12px;
+}
+.report-table-wrap:focus-visible,
+.connection-table-wrap:focus-visible {
+  outline: 2px solid #4263eb;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.reports-page .report-table td:has(.report-task-link) {
+  min-width: 220px;
+  max-width: 340px;
+}
+.reports-page .report-table td .report-task-link {
+  min-width: 200px;
+}
+.reports-page .report-toolbar select,
+.reports-page .report-toolbar input {
+  border-color: #c8ced9;
+  min-height: 44px;
+}
+.reports-page .report-insights {
+  border-color: #e5e8ee;
+  border-radius: 12px;
+}
+.reports-page .report-insights > div {
+  border-color: #e5e8ee;
+}
+.reports-page .report-insights h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.reports-page .report-insights h3::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #4263eb;
+}
+.reports-page .report-insights > div:nth-child(2) h3::before {
+  background: #087d6a;
+}
+.reports-page .report-insights > div:nth-child(3) h3::before {
+  background: #e9488b;
+}
+.reports-page .report-insights > div:nth-child(4) h3::before {
+  background: #ff8a32;
+}
+.reports-page .report-trend {
+  background: none;
+}
+.trend-grid-lines {
+  position: absolute;
+  inset: 28px 0 0;
+  width: 100%;
+  height: calc(100% - 28px);
+  pointer-events: none;
+}
+.trend-grid-lines line {
+  stroke: #edf0f5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.trend-bars {
+  position: relative;
+}
+.workflow-report {
+  padding-top: 22px;
+}
+.workflow-report > .section-line {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.workflow-report > .section-line .section-title-group {
+  min-width: 0;
+  flex-shrink: 0;
+}
+.workflow-report h2 {
+  font-size: 17px;
+}
+.workflow-report > .table-scroll-region {
+  padding: 16px;
+  border: 1px solid #e5e8ee;
+  border-radius: 12px;
+}
+.workflow-report .report-table th {
+  padding: 12px;
+}
+.workflow-report .report-table td {
+  padding: 14px 12px;
+}
+.workflow-report .report-table td:first-child {
+  font-weight: 600;
+}
+.workflow-report
+  > .table-scroll-region
+  .report-table
+  tbody
+  tr:first-child
+  td:first-child {
+  color: #6944a8;
+}
+.workflow-report
+  > .table-scroll-region
+  .report-table
+  tbody
+  tr:nth-child(2)
+  td:first-child {
+  color: #3156c4;
+}
+.workflow-report
+  > .table-scroll-region
+  .report-table
+  tbody
+  tr:nth-child(3)
+  td:first-child {
+  color: #087d6a;
+}
+.workflow-report
+  > .table-scroll-region
+  .report-table
+  tbody
+  tr:nth-child(4)
+  td:first-child {
+  color: #8a5b00;
+}
+.workflow-report
+  > .table-scroll-region
+  .report-table
+  tbody
+  tr:nth-child(5)
+  td:first-child {
+  color: #197347;
+}
+.workflow-report .report-footnote {
+  margin-bottom: 24px;
+}
+.connections-form .section-line {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.connections-form .section-title-group {
+  min-width: 0;
+}
+.connections-form .section-title-group h2 {
+  font-size: 17px;
+}
+.connections-form .settings-section > h2 {
+  font-size: 17px;
+}
+.connections-form .service-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 11px;
+  background: #fff0f7;
+  color: #b92a66;
+}
+.connections-form .service-icon.calendar {
+  background: #edf1ff;
+  color: #3653ce;
+}
+.connections-form .connection-item {
+  border: 1px solid #e5e8ee;
+  padding: 18px;
+  margin-top: 14px;
+  border-radius: 10px;
+}
+.connections-form .connection-item:hover {
+  background: #f8f9fc;
+}
+.connections-form .connection-item > span:nth-child(2) {
+  min-width: 0;
+}
+.connections-form .connection-item strong {
+  font-weight: 600;
+}
+.connections-form .connection-item small {
+  font-size: 13px;
+}
+.connections-form .connection-empty {
+  align-items: center;
+  padding: 24px 0 12px;
+}
+.connections-form .connection-empty > svg,
+.connections-form .setup-notice > svg {
+  box-sizing: content-box;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #edf1ff;
+  color: #3653ce;
+}
+.connections-form .connection-empty strong {
+  font-weight: 600;
+}
+.connections-form .connection-empty p {
+  font-size: 13px;
+  margin-bottom: 0;
+}
+.connections-form .settings-footnote {
+  color: #535d71;
+}
+.connections-form .setup-notice {
+  align-items: flex-start;
+  background: #f7f8fc;
+  border-color: #e5e8ee;
+}
+.connections-form .diagnostic-row {
+  border-color: #e5e8ee;
+  font-size: 13px;
+}
+.credential-table td:first-child {
+  min-width: 240px;
+  max-width: 360px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.client-table td:first-child,
+.client-table td:nth-child(2),
+.activity-table td:nth-child(2) {
+  min-width: 200px;
+  max-width: 280px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.mcp-token-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mcp-token-notice > svg {
+  flex-shrink: 0;
+}
+.mcp-permissions .check-label {
+  min-height: 44px;
+  align-items: center;
+  padding-block: 4px;
+}
+.connections-form .mcp-setup-steps > li {
+  padding: 18px;
+  background: #f7f8fc;
+  border-radius: 10px;
+}
+.connections-form .mcp-step-number {
+  background: #ffe8d6;
+  color: #8a3c0c;
+}
+.connections-form .mcp-setup-steps > li:nth-child(2) .mcp-step-number {
+  background: #e8edff;
+  color: #3653ce;
+}
+.connections-form .mcp-setup-steps > li:nth-child(3) .mcp-step-number {
+  background: #fce7f1;
+  color: #a6245a;
+}
+.connections-form .endpoint-row {
+  background: #fff;
+  gap: 8px;
+  padding: 10px;
+}
+@media (min-width: 1200px) {
+  .connections-form .mcp-setup-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+  .connections-form .mcp-setup-steps > li {
+    flex-direction: column;
+  }
+}
+@media (max-width: 700px) {
+  .workflow-report > .section-line {
+    align-items: flex-start;
+  }
+  .workflow-report > .section-line > .text-button {
+    min-height: 44px;
+  }
+  .workflow-report > .table-scroll-region {
+    padding: 12px;
+  }
+  .connections-form .connection-item {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 14px;
+  }
+  .connections-form .connection-item > .service-icon {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .connections-form .connection-item > span:nth-child(2) {
+    grid-column: 2 / 4;
+  }
+  .connections-form .connection-item > .connection-status {
+    grid-column: 2;
+    margin-left: 0;
+    font-size: 12px;
+  }
+  .connections-form .connection-item > svg {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .connections-form .connection-empty {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .connections-form .connection-empty > svg {
+    padding: 9px;
+  }
+  .connections-form .mcp-setup-steps {
+    gap: 12px;
+  }
+  .connections-form .mcp-setup-steps > li {
+    padding: 14px;
+    gap: 10px;
+  }
+}

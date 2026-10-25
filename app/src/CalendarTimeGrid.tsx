@@ -8,6 +8,7 @@ import {
 } from "../shared/calendar";
 import type { OverviewEvent } from "../shared/overview";
 import { cx } from "./components";
+import { MoveHorizontal } from "lucide-react";
 const hourPixels = 64;
 const clock = (at: number, zone: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -69,158 +70,171 @@ export function CalendarTimeGrid({
       14,
   );
   return (
-    <div
-      className={cx("overview-time-calendar", days.length === 1 && "daily")}
-      style={
-        {
-          "--day-count": days.length,
-          "--due-height": dueHeight + "px",
-        } as CSSProperties
-      }
-    >
+    <>
+      {days.length > 1 && (
+        <p className="calendar-scroll-hint">
+          <MoveHorizontal size={14} /> Swipe or scroll to see the full week
+        </p>
+      )}
       <div
-        className="time-calendar-columns"
-        role="region"
-        aria-label={
-          days.length === 1 ? "Daily work calendar" : "Weekly work calendar"
+        className={cx("overview-time-calendar", days.length === 1 && "daily")}
+        tabIndex={0}
+        aria-label="Scrollable work calendar"
+        style={
+          {
+            "--day-count": days.length,
+            "--due-height": dueHeight + "px",
+          } as CSSProperties
         }
       >
-        <div className="time-calendar-labels" aria-hidden="true">
-          <div className="time-calendar-date-header" title={zone}>
-            Time
-          </div>
-          <div className="time-calendar-due-label">Due</div>
-          <div
-            className="time-calendar-axis"
-            style={{ height: maxHours * hourPixels }}
-          >
-            {reference.ticks.map((at, i) => (
-              <span key={at} style={{ top: i * hourPixels }}>
-                {new Intl.DateTimeFormat("en-US", {
-                  hour: "numeric",
-                  timeZone: zone,
-                  ...(reference.hours !== endHour - startHour
-                    ? { timeZoneName: "short" as const }
-                    : {}),
-                }).format(at)}
-              </span>
-            ))}
-          </div>
-        </div>
-        {days.map((day, index) => {
-          const rows = events.filter((e) => e.date === day),
-            due = rows.filter((e) => e.kind === "deadline");
-          const timing = dayHours[index],
-            adjusted = timing.hours !== reference.hours;
-          return (
+        <div
+          className="time-calendar-columns"
+          role="region"
+          aria-label={
+            days.length === 1 ? "Daily work calendar" : "Weekly work calendar"
+          }
+        >
+          <div className="time-calendar-labels" aria-hidden="true">
+            <div className="time-calendar-date-header" title={zone}>
+              Time
+            </div>
+            <div className="time-calendar-due-label">Due</div>
             <div
-              className={cx(
-                "time-calendar-day",
-                selected === day && "selected",
-              )}
-              key={day}
+              className="time-calendar-axis"
+              style={{ height: maxHours * hourPixels }}
             >
-              <button
-                className="time-calendar-date-header"
-                aria-label={"View " + dateLabel(day)}
-                aria-pressed={selected === day}
-                aria-controls="selected-day-agenda"
-                onClick={() => onSelectDay(day)}
-              >
-                <span>
-                  {new Date(day + "T12:00:00").toLocaleDateString("en-US", {
-                    weekday: "short",
-                  })}
+              {reference.ticks.map((at, i) => (
+                <span key={at} style={{ top: i * hourPixels }}>
+                  {new Intl.DateTimeFormat("en-US", {
+                    hour: "numeric",
+                    timeZone: zone,
+                    ...(reference.hours !== endHour - startHour
+                      ? { timeZoneName: "short" as const }
+                      : {}),
+                  }).format(at)}
                 </span>
-                <strong>{Number(day.slice(-2))}</strong>
-              </button>
-              <div className="time-calendar-due">
-                {due.length ? (
-                  <>
-                    <button
-                      className="day-due-summary"
-                      onClick={() => onSelectDay(day)}
-                    >
-                      {due.length} due
-                    </button>
-                    <div className="day-due-items">
-                      {due.map((e) => (
-                        <button
-                          key={e.id}
-                          onClick={() => e.taskId && onOpenTask(e.taskId)}
-                          title={e.title}
-                          style={color(e.projectId)}
-                        >
-                          {e.title}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <span className="no-day-deadline">—</span>
-                )}
-              </div>
+              ))}
+            </div>
+          </div>
+          {days.map((day, index) => {
+            const rows = events.filter((e) => e.date === day),
+              due = rows.filter((e) => e.kind === "deadline");
+            const timing = dayHours[index],
+              adjusted = timing.hours !== reference.hours;
+            return (
               <div
-                className="time-calendar-body"
-                style={{ height: maxHours * hourPixels }}
+                className={cx(
+                  "time-calendar-day",
+                  selected === day && "selected",
+                )}
+                key={day}
               >
                 <button
-                  className="time-calendar-select"
-                  aria-label={"Show details for " + dateLabel(day)}
+                  className="time-calendar-date-header"
+                  aria-label={"View " + dateLabel(day)}
+                  aria-pressed={selected === day}
                   aria-controls="selected-day-agenda"
-                  tabIndex={-1}
                   onClick={() => onSelectDay(day)}
-                />
-                {timing.ticks.map((at, i) => (
-                  <div
-                    className="time-calendar-hour"
-                    key={at}
-                    style={{ top: i * hourPixels }}
-                  >
-                    {adjusted && <small>{clock(at, zone)}</small>}
-                  </div>
-                ))}
-                {layoutCalendarEvents(
-                  events,
-                  day,
-                  zone,
-                  startHour,
-                  endHour,
-                ).map(({ event: e, top, height, lane, lanes }) => {
-                  const pixels = Math.max(20, height * hourPixels - 3);
-                  const density =
-                    pixels < 48 ? "compact" : pixels < 78 ? "standard" : "full";
-                  return (
-                    <button
-                      key={e.id}
-                      className={cx("time-calendar-event", e.kind)}
-                      data-density={density}
-                      title={`${labels[e.kind]}: ${e.title}\n${clock(e.start!, zone)} – ${clock(e.end!, zone)}`}
-                      aria-label={`${labels[e.kind]}: ${e.title}, ${clock(e.start!, zone)} to ${clock(e.end!, zone)}`}
-                      style={{
-                        ...color(e.projectId),
-                        top: top * hourPixels,
-                        height: pixels,
-                        left: `calc(${(lane / lanes) * 100}% + 3px)`,
-                        width: `calc(${100 / lanes}% - 6px)`,
-                      }}
-                      onClick={() =>
-                        e.taskId ? onOpenTask(e.taskId) : onSelectDay(day)
-                      }
+                >
+                  <span>
+                    {new Date(day + "T12:00:00").toLocaleDateString("en-US", {
+                      weekday: "short",
+                    })}
+                  </span>
+                  <strong>{Number(day.slice(-2))}</strong>
+                </button>
+                <div className="time-calendar-due">
+                  {due.length ? (
+                    <>
+                      <button
+                        className="day-due-summary"
+                        onClick={() => onSelectDay(day)}
+                      >
+                        {due.length} due
+                      </button>
+                      <div className="day-due-items">
+                        {due.map((e) => (
+                          <button
+                            key={e.id}
+                            onClick={() => e.taskId && onOpenTask(e.taskId)}
+                            title={e.title}
+                            style={color(e.projectId)}
+                          >
+                            {e.title}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <span className="no-day-deadline">—</span>
+                  )}
+                </div>
+                <div
+                  className="time-calendar-body"
+                  style={{ height: maxHours * hourPixels }}
+                >
+                  <button
+                    className="time-calendar-select"
+                    aria-label={"Show details for " + dateLabel(day)}
+                    aria-controls="selected-day-agenda"
+                    tabIndex={-1}
+                    onClick={() => onSelectDay(day)}
+                  />
+                  {timing.ticks.map((at, i) => (
+                    <div
+                      className="time-calendar-hour"
+                      key={at}
+                      style={{ top: i * hourPixels }}
                     >
-                      <strong>{e.title}</strong>
-                      <span className="time-event-clock">
-                        {clock(e.start!, zone)}
-                      </span>
-                      <small>{labels[e.kind]}</small>
-                    </button>
-                  );
-                })}
+                      {adjusted && <small>{clock(at, zone)}</small>}
+                    </div>
+                  ))}
+                  {layoutCalendarEvents(
+                    events,
+                    day,
+                    zone,
+                    startHour,
+                    endHour,
+                  ).map(({ event: e, top, height, lane, lanes }) => {
+                    const pixels = Math.max(20, height * hourPixels - 3);
+                    const density =
+                      pixels < 48
+                        ? "compact"
+                        : pixels < 78
+                          ? "standard"
+                          : "full";
+                    return (
+                      <button
+                        key={e.id}
+                        className={cx("time-calendar-event", e.kind)}
+                        data-density={density}
+                        title={`${labels[e.kind]}: ${e.title}\n${clock(e.start!, zone)} – ${clock(e.end!, zone)}`}
+                        aria-label={`${labels[e.kind]}: ${e.title}, ${clock(e.start!, zone)} to ${clock(e.end!, zone)}`}
+                        style={{
+                          ...color(e.projectId),
+                          top: top * hourPixels,
+                          height: pixels,
+                          left: `calc(${(lane / lanes) * 100}% + 3px)`,
+                          width: `calc(${100 / lanes}% - 6px)`,
+                        }}
+                        onClick={() =>
+                          e.taskId ? onOpenTask(e.taskId) : onSelectDay(day)
+                        }
+                      >
+                        <strong>{e.title}</strong>
+                        <span className="time-event-clock">
+                          {clock(e.start!, zone)}
+                        </span>
+                        <small>{labels[e.kind]}</small>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
