@@ -20,3 +20,6 @@ playwright-report/
 
 # Local Convex state and development-only signing keys
 .convex/
+
+# Bound to the exact backend selected by convex deploy --cmd at hosted build time.
+/app/server/mcp-deployment.js

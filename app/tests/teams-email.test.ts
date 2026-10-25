@@ -108,7 +108,7 @@ it("checks native reservations across teams before planning and rejects a racing
     await a.mutation(api.commands.execute, {
       workspaceId,
       requestId: "capture",
-      command: JSON.stringify(capture),
+      command: JSON.stringify({ ...capture, status: "todo" }),
     });
   const proposals = await Promise.all(
     [one, two].map((workspaceId) =>

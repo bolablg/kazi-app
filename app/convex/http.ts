@@ -14,6 +14,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { sha256, encrypt } from "./crypto";
 import { createKaziServer } from "../mcp/server";
+import { prefersMcpEventStream } from "../shared/mcpTransport";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { visibleState, taskFor, projectFor, sprintFor } from "../shared/domain";
 import {
@@ -947,7 +948,7 @@ const mcp = httpAction(async (ctx, request) => {
   );
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
-    enableJsonResponse: true,
+    enableJsonResponse: !prefersMcpEventStream(request.headers.get("Accept")),
     maxRequestBodySize: 65536,
   });
   await server.connect(transport);

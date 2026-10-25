@@ -22,21 +22,9 @@ import {
   agentSetupInstructions,
   mcpClientConfiguration,
 } from "../shared/agentSetup";
-const endpoint = () => {
-  const configured = import.meta.env.VITE_CONVEX_SITE_URL;
-  if (configured) return configured.replace(/\/$/, "") + "/mcp";
-  const backend = new URL(
-    import.meta.env.VITE_CONVEX_URL ?? "http://127.0.0.1:3210",
-  );
-  if (["localhost", "127.0.0.1", "[::1]"].includes(backend.hostname))
-    backend.port = "3211";
-  else
-    backend.hostname = backend.hostname.replace(
-      /\.convex\.cloud$/,
-      ".convex.site",
-    );
-  return backend.origin + "/mcp";
-};
+import { mcpEndpoint } from "../shared/mcpEndpoint";
+const endpoint = () =>
+  mcpEndpoint(window.location.origin, import.meta.env.VITE_KAZI_MCP_URL);
 const dateTime = (at?: number) =>
   at ? new Date(at).toLocaleString() : "Never used";
 const credentialStatus = (t: Data["tokens"][number]) =>

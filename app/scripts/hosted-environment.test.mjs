@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateHostedEnvironment } from "./hosted-environment.mjs";
+import {
+  hostedMcpConfiguration,
+  validateHostedEnvironment,
+} from "./hosted-environment.mjs";
 
 const preview = {
   VERCEL_ENV: "preview",
@@ -62,4 +65,65 @@ test("cross-environment credentials and missing credentials fail closed", () => 
   assert.throws(() =>
     validateHostedEnvironment({ ...preview, VERCEL_GIT_COMMIT_REF: "main" }),
   );
+});
+
+test("MCP uses the exact Convex deployment selected for each hosted build", () => {
+  assert.deepEqual(
+    hostedMcpConfiguration({
+      ...production,
+      VITE_CONVEX_URL: "https://production-fixture.convex.cloud",
+      VITE_KAZI_MCP_URL: "https://stale.example/mcp",
+    }),
+    {
+      environment: "production",
+      upstream: "https://production-fixture.convex.site/mcp",
+      applicationUrl: "https://kazi.iyanju.com",
+      publicEndpoint: "https://kazi.iyanju.com/mcp",
+    },
+  );
+  const configuration = hostedMcpConfiguration({
+    ...preview,
+    VITE_CONVEX_URL: "https://branch-fixture.convex.cloud",
+    VERCEL_BRANCH_URL: "kazi-git-dev-bola-fixture.vercel.app",
+  });
+  assert.equal(
+    configuration.upstream,
+    "https://branch-fixture.convex.site/mcp",
+  );
+  assert.equal(
+    configuration.publicEndpoint,
+    "https://kazi-git-dev-bola-fixture.vercel.app/mcp",
+  );
+});
+
+test("MCP hosted builds reject missing, malformed, and cross-environment routing", () => {
+  for (const VERCEL_ENV of [undefined, "development", "other"])
+    assert.throws(() => validateHostedEnvironment({ ...preview, VERCEL_ENV }));
+  for (const VITE_CONVEX_URL of [
+    undefined,
+    "http://127.0.0.1:3210",
+    "https://attacker.example/",
+    "https://user@branch-fixture.convex.cloud",
+    "https://branch-fixture.convex.cloud/other",
+    "https://branch-fixture.convex.cloud?target=production",
+  ])
+    assert.throws(() =>
+      hostedMcpConfiguration({
+        ...preview,
+        VITE_CONVEX_URL,
+        VERCEL_BRANCH_URL: "kazi-git-fixture.vercel.app",
+      }),
+    );
+  for (const VERCEL_BRANCH_URL of [
+    undefined,
+    "kazi.iyanju.com",
+    "x.vercel.app/other",
+  ])
+    assert.throws(() =>
+      hostedMcpConfiguration({
+        ...preview,
+        VITE_CONVEX_URL: "https://branch-fixture.convex.cloud",
+        VERCEL_BRANCH_URL,
+      }),
+    );
 });

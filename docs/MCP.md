@@ -2,11 +2,11 @@
 
 ## Authentication and connection
 
-Kazi exposes a Streamable HTTP MCP endpoint. Open **Account → Connections → MCP & agents → Add connection**, name the agent, and choose its permissions. Once the credential is created, **Copy agent setup** copies instructions with the endpoint, that private key, its granted permissions, and a read-only verification step. Paste the guide only into the agent you want to connect. If its permissions do not include reading, verification stops at initialization and tool discovery.
+Kazi exposes its production Streamable HTTP MCP endpoint at **`https://kazi.iyanju.com/mcp`**. Open **Account → Connections → MCP & agents → Add connection**, name the agent, and choose its permissions. Once the credential is created, **Copy agent setup** copies instructions with the endpoint, that private key, its granted permissions, and a read-only verification step. Paste the guide only into the agent you want to connect. If its permissions do not include reading, verification stops at initialization and tool discovery.
 
 The key is available only in that creation dialog. Closing it clears the displayed secret; an existing key cannot be recovered later. The separate **Copy setup guide** action uses a placeholder and asks for a Kazi key. Neither guide needs Clerk or Convex administrator keys. The receiving client must support remote MCP with a bearer header and may require you to finish its native setup manually.
 
-For manual configuration, expand **Manual setup & server details** to copy the server URL or JSON template. In the examples below, replace `https://YOUR_DEPLOYMENT.convex.site/mcp` with the endpoint shown in Kazi.
+For manual configuration, expand **Manual setup & server details** to copy the server URL or JSON template. The examples below connect to production. Development and preview environments display their own `/mcp` URL; use that environment's URL and credential together.
 
 In Kazi Connections → MCP & agents → Add connection, create a labeled credential with explicit scopes. Copy its token once into your client’s secret environment storage. Tokens are random 256-bit values, stored as SHA-256 hashes, expire after 30 days, and can be revoked in Connections. The caller’s subject is derived from that credential; a tool-supplied actor ID is never authoritative. Membership and project/calendar access are rechecked by the same Convex domain functions the UI uses.
 
@@ -29,7 +29,7 @@ Configure the client’s bearer environment variable as `KAZI_MCP_TOKEN`. For Co
 
 ```sh
 codex mcp add kazi \
-  --url https://YOUR_DEPLOYMENT.convex.site/mcp \
+  --url https://kazi.iyanju.com/mcp \
   --bearer-token-env-var KAZI_MCP_TOKEN
 ```
 
@@ -37,11 +37,27 @@ For Claude Code, use the HTTP transport with an Authorization header. Store the 
 
 ```sh
 claude mcp add --transport http kazi \
-  https://YOUR_DEPLOYMENT.convex.site/mcp \
+  https://kazi.iyanju.com/mcp \
   --header 'Authorization: Bearer YOUR_SCOPED_TOKEN'
 ```
 
 For a client that only supports stdio, use `app/mcp/stdio.ts`, a thin SDK bridge to the same authenticated remote service. Set `KAZI_MCP_URL` and `KAZI_MCP_TOKEN` in that subprocess’s protected environment and launch `npm run mcp:stdio` with `app/` as its working directory. The bridge does not introduce another database or bypass permissions. OAuth discovery and dynamic client registration are not currently supported; clients must support configured bearer headers or the stdio bridge.
+
+## Hosting and environment routing
+
+Vercel's project root is `app/` and its build command is `npm run build:vercel`. That command runs `convex deploy --cmd`, which injects the backend selected for this deployment. The hosted client build derives both the server's fixed MCP target and the app's public MCP URL from that same deployment. It generates the ignored `app/server/mcp-deployment.js` module for the function bundle; do not reuse this artifact between deployments or replace the build command with a plain static Vite build.
+
+Production requires the existing production-scoped Convex deploy key and live Clerk key. Its public MCP URL is always `https://kazi.iyanju.com/mcp`. Preview builds require a preview-scoped Convex deploy key and test Clerk key, and use the stable `VERCEL_BRANCH_URL` with that branch's isolated Convex preview backend. No separately configured MCP upstream environment variable is needed. The function also checks that the generated environment matches its Vercel runtime environment.
+
+For development, set `VITE_CONVEX_URL` to the real development backend in `.env.development.local` and `CONVEX_DEPLOYMENT=dev:<matching-deployment>` in `.env.local`. Vite serves `/mcp` through that backend; a mismatched or production deployment selector fails closed. Local Convex at `http://127.0.0.1:3210` uses its HTTP actions port `3211`. Demo and e2e modes do not connect to a backend. The app does not use `VITE_CONVEX_SITE_URL` to select its MCP endpoint.
+
+The `/mcp` route precedes the SPA fallback, and the service worker excludes it from navigation fallback. The proxy forwards POST, GET, and DELETE with the bearer header, browser origin, MCP protocol/session headers, and event resumption header. Backend authentication and protocol errors keep their status and body. Responses stream without buffering and carry private `no-store` headers. The Vercel function enables `supportsCancellation`, and the request abort signal reaches the upstream fetch. The target is fixed by the build, and redirects are rejected with 502 so credentials cannot be redirected to another service. Browser cookies and platform forwarding headers are not sent upstream.
+
+JSON remains the response format for the usual `Accept: application/json, text/event-stream` header. To request SSE, send `Accept: text/event-stream, application/json`, or give `text/event-stream` a higher valid `q` weight. Both media types must still be accepted under the MCP SDK validation. Equal weights use the earlier preference; invalid or zero SSE weights do not enable SSE.
+
+After deploying, check the public `/mcp` URL with no credential (401), a revoked credential (401), and a scoped test credential (initialize, tool discovery, and an authorized read). Confirm that GET and DELETE preserve the backend's protocol response, then repeat on a preview and development URL with credentials issued by those environments. Verify an SSE response delivers its first event before completion and stops when the client disconnects. These checks require the deployed function and should use disposable scoped credentials.
+
+Platform references: [Vercel Node.js Web handlers](https://vercel.com/docs/functions/runtimes/node-js), [Vercel streaming](https://vercel.com/docs/functions/streaming-functions), [Vercel request cancellation](https://vercel.com/docs/functions/functions-api-reference#cancel-requests), [Convex Vercel deployment isolation](https://docs.convex.dev/production/hosting/vercel), and [MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 
 ## Tool contracts
 
@@ -107,9 +123,9 @@ SDK results include structured content and readable JSON, with tool validation/a
 }
 ```
 
-Omitting `projectId` captures into that selected workspace’s default Personal planning project. An estimate is not completion credit.
+Omitting `projectId` captures into that selected workspace’s default Personal planning project. New tasks start in Backlog. An estimate is not completion credit.
 
-3. `propose_plan` with `startDate` and `days` returns the proposal ID, then `get_proposal` supplies alternatives and current revision.
+3. When ready to commit the task, `update_task` with `patch: {"status":"todo"}` promotes it to To do. `propose_plan` with `startDate` and `days` returns the proposal ID, then `get_proposal` supplies alternatives and current revision.
 4. With explicit user approval and a credential granted `plans:approve`, invoke `approve_plan` with the exact `id`, `revision`, and stable `requestId`. Alternatively use `get_plan_review_link` to review in the browser. Native sessions become scheduled in Kazi without Google writes.
 5. After a missed deadline, `propose_recovery_plan` preserves Plan 1. `get_plan_history` exposes predecessor/root links for comparison.
 6. Use `create_calendar_link` to get a private ICS subscription URL, or `export_agenda` for a snapshot. Remote providers need a reachable HTTPS backend; refresh is provider-controlled.
