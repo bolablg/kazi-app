@@ -46,10 +46,8 @@ export function ConnectionsOverview() {
             <CalendarDays size={21} />
           </span>
           <span>
-            <strong>Kazi agenda</strong>
-            <small>
-              Calendar subscriptions and optional external availability
-            </small>
+            <strong>Calendar availability</strong>
+            <small>Optional Google free/busy connection</small>
           </span>
           <span className="connection-status">
             <i

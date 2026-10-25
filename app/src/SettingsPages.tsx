@@ -1,7 +1,7 @@
 import { defaultAgingDays } from "../shared/model";
 import { AgendaSettings } from "./AgendaSettings";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -201,11 +201,12 @@ export function NotificationsPage({
     </div>
   );
 }
-export function TeamPage() {
+export function TeamPage({ directory = false }: { directory?: boolean }) {
   const { teamId, teams, setTeam, createTeam, demo } = useData(),
     { run } = useUI();
   const [creating, setCreating] = useState(false);
-  if (teamId !== "all") return <TeamMembersPage />;
+  const navigate = useNavigate();
+  if (!directory && teamId !== "all") return <TeamMembersPage />;
   return (
     <div className="page">
       <div className="page-heading">
@@ -229,12 +230,26 @@ export function TeamPage() {
                 ? "You manage this team"
                 : "Your role: " + team.role}
             </p>
-            <button
-              className="button secondary"
-              onClick={() => setTeam(team.id)}
-            >
-              People & access
-            </button>
+            <div className="integration-actions">
+              <button
+                className="button primary"
+                onClick={() => {
+                  setTeam(team.id);
+                  navigate("/");
+                }}
+              >
+                Open work
+              </button>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setTeam(team.id);
+                  navigate("/team");
+                }}
+              >
+                People & access
+              </button>
+            </div>
           </article>
         ))}
       </div>
@@ -294,7 +309,9 @@ function TeamMembersPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">WORKSPACE</p>
+          <Link className="text-button" to="/teams">
+            All teams <ArrowUpRight size={13} />
+          </Link>
           <h1>People & access</h1>
           <p>
             {state.workspace.name} · Manage people, roles, and project access.
@@ -669,7 +686,7 @@ export function SettingsPage({
         {(connections
           ? [
               { id: "overview", label: "Overview" },
-              { id: "calendar", label: "Calendar" },
+              { id: "calendar", label: "Calendar availability" },
               { id: "mcp", label: "MCP & agents" },
               { id: "activity", label: "Activity" },
             ]
@@ -979,7 +996,7 @@ export function SettingsPage({
           </div>
         </form>
       )}
-      {tab === "calendar" && <AgendaSettings />}
+      {tab === "calendar" && <AgendaSettings view="availability" />}
       {tab === "data" && (
         <div className="settings-form">
           <section className="settings-section">

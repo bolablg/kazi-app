@@ -1,4 +1,5 @@
 import { chooseStatus } from "./task-fields";
+import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
@@ -147,7 +148,20 @@ test("Personal planning replaces Inbox tabs, and Kazi agenda supports a truthful
   await expect(
     page.getByRole("region", { name: "Backlog tasks", exact: true }),
   ).toContainText("Prepare next month");
-  await page.goto("/connections?tab=calendar");
+  await page.goto("/calendar");
+  await page
+    .getByRole("link", { name: "Subscribe & export", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/calendar\/subscriptions$/);
+  await expect(
+    page.getByRole("heading", { name: "Calendar subscriptions", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Connect Google availability",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Kazi agenda", exact: true }),
   ).toBeVisible();
@@ -158,7 +172,12 @@ test("Personal planning replaces Inbox tabs, and Kazi agenda supports a truthful
   await page.getByLabel("Include task deadlines").check();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download ICS", exact: true }).click();
-  expect((await download).suggestedFilename()).toBe("kazi-agenda.ics");
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("kazi-agenda.ics");
+  const body = await readFile((await file.path())!, "utf8");
+  expect(body).toContain("BEGIN:VCALENDAR");
+  expect(body).toContain("Due: Refine the homepage direction");
+  expect(body).not.toContain("Private calendar event");
   await expect(
     page.getByRole("button", { name: "Create calendar link", exact: true }),
   ).toBeDisabled();
@@ -174,4 +193,23 @@ test("Personal planning replaces Inbox tabs, and Kazi agenda supports a truthful
     path: "../docs/screenshots/kazi-agenda-settings.png",
     animations: "disabled",
   });
+  await page.goto("/connections?tab=calendar");
+  await expect(
+    page.getByRole("heading", {
+      name: "External availability · optional",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create calendar link", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("link", {
+      name: "Manage Kazi calendar subscriptions and ICS export",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Calendar subscriptions", exact: true }),
+  ).toBeVisible();
 });
