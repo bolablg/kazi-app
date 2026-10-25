@@ -36,26 +36,31 @@ export default defineConfig(({ mode }) => ({
     ),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["icon.svg", "apple-touch-icon.png"],
+      includeAssets: [
+        "brand/*.svg",
+        "momentum-*.svg",
+        "momentum-*.png",
+        "favicon.ico",
+      ],
       manifest: {
         name: "Kazi — Tasks & projects",
         short_name: "Kazi",
         description: "Tasks, projects, and work schedules.",
-        theme_color: "#f36f58",
+        theme_color: "#ff8a32",
         background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
         scope: "/",
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/momentum-192.png", sizes: "192x192", type: "image/png" },
           {
-            src: "/icon-512.png",
+            src: "/momentum-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icon-maskable.png",
+            src: "/momentum-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

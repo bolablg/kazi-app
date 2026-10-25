@@ -1,3 +1,5 @@
+import { Brand } from "./Brand";
+
 /** Identity-free placeholders: private data is never cached for the loading UI. */
 export function PageLoading() {
   return (
@@ -40,8 +42,7 @@ export function LoadingScreen({
       aria-busy="true"
     >
       <div className="loading-brand">
-        <span className="loading-mark">k</span>
-        <strong>Kazi</strong>
+        <Brand />
       </div>
       <div className="loading-sidebar" aria-hidden="true">
         {[0, 1, 2, 3, 4].map((n) => (

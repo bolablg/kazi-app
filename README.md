@@ -1,4 +1,7 @@
-# Kazi
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="app/public/brand/kazi-logo-dark.svg">
+  <img src="app/public/brand/kazi-logo.svg" alt="Kazi" width="186" height="60">
+</picture>
 
 Work management for people, teams, and agents.
 
@@ -6,7 +9,7 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Overview in Kazi](docs/screenshots/ui-overview-desktop.png)
+![Overview in Kazi](docs/screenshots/momentum-1440.png)
 
 ## Manage the work
 

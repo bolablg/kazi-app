@@ -1,11 +1,11 @@
-/* Kazi Coral identifies actions and navigation; data colors keep their meaning. */
+/* Momentum orange identifies actions; workflow data keeps its semantic colors. */
 :root {
-  --brand: #f36f58;
-  --brand-hover: #e85d47;
-  --brand-ink: #a63224;
-  --brand-wash: #fff0ec;
-  --brand-line: #e9b6aa;
-  --shell: #fff8f5;
+  --brand: #ff8a32;
+  --brand-hover: #f57b24;
+  --brand-ink: #8a3c0c;
+  --brand-wash: #fff2e8;
+  --brand-line: #f3c5a3;
+  --shell: #fff9f5;
   --status-backlog: #7552a3;
   --status-todo: #1764c0;
   --status-progress: #006f6b;
@@ -15,7 +15,7 @@
   --focus: var(--brand-ink);
 }
 ::selection {
-  background: #ffd8d0;
+  background: #ffd8ba;
   color: #111;
 }
 :is(button, a, input, select, textarea, summary):focus-visible {
@@ -48,10 +48,8 @@
 .sidebar {
   background: var(--shell);
 }
-.wordmark .kazi-mark {
-  background: var(--brand);
-  border-color: var(--brand-ink);
-  color: #111;
+.wordmark {
+  min-height: 44px;
 }
 .sidebar-search {
   border-color: #c9bbb7;
@@ -69,7 +67,7 @@
 }
 .nav-item.active,
 .nav-item.active:hover {
-  background: #ffe0d8;
+  background: #ffe8d6;
   border-color: var(--brand-line);
   color: #111;
 }
