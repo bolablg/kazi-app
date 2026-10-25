@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useClerk, useUser } from "@clerk/react";
+import { UserProfile, useClerk, useUser } from "@clerk/react";
 import {
   ChevronDown,
   Users,
@@ -8,8 +8,6 @@ import {
   Plug,
   LogOut,
   UserRound,
-  ShieldCheck,
-  ExternalLink,
 } from "lucide-react";
 import { useData } from "./data";
 import { Avatar, useUI } from "./components";
@@ -106,7 +104,7 @@ export function AccountMenu() {
           Connections
         </Link>
         <Link
-          to="/team"
+          to="/teams"
           onClick={(e) =>
             e.currentTarget.closest("details")?.removeAttribute("open")
           }
@@ -124,42 +122,57 @@ export function AccountMenu() {
     </details>
   );
 }
-function ManageAccount() {
-  const { openUserProfile } = useClerk();
-  const { user } = useUser();
-  return (
-    <>
-      <div className="diagnostic-row">
-        <span>Username</span>
-        <strong>{user?.username ?? "Not set"}</strong>
-      </div>
-      <button className="button secondary" onClick={() => openUserProfile()}>
-        <UserRound size={15} />
-        Manage profile & password
-        <ExternalLink size={13} />
-      </button>
-    </>
-  );
-}
 export function AccountSettings() {
   const { state, actorId, demo, local } = useData();
-  const me = state.members.find((m) => m.id === actorId)!;
+  const me = state.members.find((member) => member.id === actorId)!;
+  if (!demo && !local)
+    return (
+      <section
+        className="embedded-account-profile"
+        aria-label="Account profile and security"
+      >
+        <UserProfile
+          routing="hash"
+          fallback={<p role="status">Loading your account…</p>}
+          appearance={{
+            elements: {
+              rootBox: { width: "100%", maxWidth: "none" },
+              cardBox: {
+                width: "100%",
+                maxWidth: "none",
+                boxShadow: "none",
+                border: "0",
+                borderRadius: "0",
+              },
+              card: {
+                boxShadow: "none",
+                borderRadius: "0",
+                backgroundColor: "#fff",
+              },
+              navbar: {
+                backgroundColor: "#fff8f5",
+                borderRight: "1px solid #111",
+                boxShadow: "none",
+              },
+              scrollBox: { borderRadius: "0", boxShadow: "none" },
+              pageScrollBox: { backgroundColor: "#fff" },
+            },
+          }}
+        />
+      </section>
+    );
   return (
     <div className="settings-form account-settings">
       <section className="settings-section">
         <h2>My account</h2>
         <div className="account-profile">
-          {demo || local ? (
-            <Avatar name={me.name} color="blue" />
-          ) : (
-            <ProfilePhoto />
-          )}
+          <Avatar name={me.name} color="blue" />
           <div>
             <strong>{me.name}</strong>
             <p>{me.email}</p>
           </div>
           <span className="badge neutral">
-            {local ? "Local development" : demo ? "Demo account" : "Signed in"}
+            {local ? "Local development" : "Demo account"}
           </span>
         </div>
         <div className="diagnostic-row">
@@ -168,68 +181,11 @@ export function AccountSettings() {
             {me.role === "owner" ? "Owner · administrator access" : me.role}
           </strong>
         </div>
-        <div className="diagnostic-row">
-          <span>Authentication</span>
-          <strong>
-            {local
-              ? "Local development session"
-              : demo
-                ? "Not configured"
-                : "Clerk"}
-          </strong>
-        </div>
-        {!demo && !local && <ManageAccount />}
-      </section>
-      {demo && (
-        <section className="settings-section">
-          <h2>Set up sign-in</h2>
-          <p>
-            This preview uses a sample account. To sign in with your own
-            username and password, connect Clerk and Convex. The account owner
-            has administrator access.
-          </p>
-          <ol className="setup-steps">
-            <li>
-              In Clerk’s User & authentication settings, enable{" "}
-              <strong>Username</strong> and <strong>Password</strong>.
-            </li>
-            <li>Configure the Clerk JWT integration for Convex.</li>
-            <li>
-              Add <code>VITE_CLERK_PUBLISHABLE_KEY</code> and{" "}
-              <code>VITE_CONVEX_URL</code> to the application environment, then
-              restart Kazi.
-            </li>
-          </ol>
-          <p className="muted">
-            Your own account supplies the credentials. The demo has no shared
-            administrator password.{" "}
-            <a
-              className="text-button"
-              href="https://clerk.com/docs/guides/configure/auth-strategies/sign-up-sign-in-options"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Clerk sign-in setup <ExternalLink size={12} />
-            </a>
-          </p>
-        </section>
-      )}
-      <section className="settings-section">
-        <h2>Administration</h2>
-        <p>
-          Owners and admins manage people and invitations. Every member manages
-          their own connected tools and calendar.
+        <p className="inline-info">
+          {local ? "This local development session" : "This demo"} uses a sample
+          account. Profile and security settings are available when you sign in
+          to Kazi.
         </p>
-        <div className="integration-actions">
-          <Link to="/team" className="button secondary">
-            <ShieldCheck size={15} />
-            People & access
-          </Link>
-          <Link to="/connections" className="button secondary">
-            <Plug size={15} />
-            Manage connections
-          </Link>
-        </div>
       </section>
     </div>
   );
@@ -253,7 +209,7 @@ export function WorkspaceSettings() {
           <span>Members</span>
           <strong>{state.members.length}</strong>
         </div>
-        <Link className="button secondary" to="/team">
+        <Link className="button secondary" to="/teams">
           Manage people & access
         </Link>
       </section>

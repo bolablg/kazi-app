@@ -295,7 +295,7 @@ test("keyboard search opens authorized tasks and Escape closes dialogs", async (
   await expect(page).toHaveURL(/\/tasks/);
 });
 
-test("profile menu exposes account, administrator role, and sign-in setup", async ({
+test("profile menu opens inline account settings without a profile-launch button", async ({
   page,
 }) => {
   await page.getByLabel("User menu").click();
@@ -310,8 +310,16 @@ test("profile menu exposes account, administrator role, and sign-in setup", asyn
     page.getByText("Owner · administrator access", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Set up sign-in" }),
+    page.getByText("Profile and security settings are available", {
+      exact: false,
+    }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Manage profile & password",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await page.screenshot({
     animations: "disabled",
     path: "../docs/screenshots/12-account.png",
@@ -542,6 +550,9 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
       "/my-tasks",
       "/tasks?tab=inbox",
       "/settings",
+      "/settings?tab=account",
+      "/calendar/subscriptions",
+      "/teams",
       "/connections",
       "/plans",
       "/plans?tab=history",

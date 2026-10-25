@@ -156,3 +156,101 @@ test("project favorites persist, show only starred projects, collapse, and can b
     path: "../docs/screenshots/project-favorites-phone.png",
   });
 });
+
+test("favorites stop at five shortcuts and More projects opens the complete project list", async ({
+  page,
+}) => {
+  for (const title of ["Community launch", "Operations review"]) {
+    await page
+      .getByRole("button", { name: "New project", exact: true })
+      .click();
+    const form = page.getByRole("dialog");
+    await form.getByLabel("Project name").fill(title);
+    await form.getByRole("button", { name: /Create project/ }).click();
+    await expect(form).toBeHidden();
+  }
+  for (const title of [
+    "Personal planning",
+    "Website launch",
+    "Brand handbook",
+    "Cloud certification",
+    "Community launch",
+    "Operations review",
+  ])
+    await page
+      .getByRole("button", { name: `Favorite ${title}`, exact: true })
+      .click();
+  const favorites = page.locator("#favorite-projects");
+  await expect(favorites.locator("a.sidebar-project")).toHaveCount(5);
+  await favorites
+    .getByRole("link", { name: "More projects", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page.getByRole("button", { name: /^Unfavorite / })).toHaveCount(
+    6,
+  );
+  await page
+    .getByRole("button", { name: "Unfavorite Operations review", exact: true })
+    .click();
+  await expect(favorites.locator("a.sidebar-project")).toHaveCount(5);
+  await expect(
+    favorites.getByRole("link", { name: "More projects", exact: true }),
+  ).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await expect(page.getByLabel("User menu")).toBeInViewport();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("the sidebar is the sole team filter and the full team directory remains available while scoped", async ({
+  page,
+}) => {
+  await expect(page.getByLabel("Filter by team", { exact: true })).toHaveCount(
+    0,
+  );
+  const filters = page.getByRole("navigation", { name: "Team filters" });
+  await expect(
+    filters.getByRole("button", { name: "All teams", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/teams");
+  await expect(
+    page.getByRole("heading", { name: "Teams & people", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open work", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
+  await expect(
+    filters.getByRole("button", { name: "Kazi", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/teams");
+  await expect(
+    page.getByRole("heading", { name: "Teams & people", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "People & access", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "People & access", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "All teams", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Teams & people", exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await filters.getByRole("button", { name: "All teams", exact: true }).click();
+  await expect(page.locator(".sidebar")).not.toHaveClass(/mobile-open/);
+  await expect(page.locator(".team-scope-label")).toHaveText("All teams");
+});

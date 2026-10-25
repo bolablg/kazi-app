@@ -26,7 +26,7 @@ Create teams, invite people, and control access to projects. If you belong to se
 
 The agenda combines deadlines and scheduled focus sessions in daily, weekly, and monthly views. Review proposed plans before accepting them, adjust your working hours and capacity, and keep previous plan versions when priorities change.
 
-Publish a private calendar subscription to view your Kazi agenda in Google Calendar, Outlook, Apple Calendar, or another compatible calendar app.
+Open **Calendar → Subscribe & export** to publish a private calendar subscription to view your Kazi agenda in Google Calendar, Outlook, Apple Calendar, or another compatible calendar app.
 
 ## Understand how work moves
 

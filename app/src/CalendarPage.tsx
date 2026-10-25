@@ -14,6 +14,7 @@ import {
   Rows3,
   Clock3,
   ArrowUpRight,
+  Link2,
 } from "lucide-react";
 import { useData } from "./data";
 import { duration, cx } from "./components";
@@ -189,10 +190,16 @@ export function CalendarPage(props: WorkProps) {
           <h1>Calendar</h1>
           <p>Your deadlines, focus time, and availability.</p>
         </div>
-        <Link className="button secondary" to="/plans?create=true">
-          <Clock3 size={16} />
-          Create a plan
-        </Link>
+        <div className="calendar-heading-actions">
+          <Link className="button secondary" to="/calendar/subscriptions">
+            <Link2 size={16} />
+            Subscribe & export
+          </Link>
+          <Link className="button secondary" to="/plans?create=true">
+            <Clock3 size={16} />
+            Create a plan
+          </Link>
+        </div>
       </div>
       <div className="overview-view-bar">
         <div
