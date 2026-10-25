@@ -16,6 +16,7 @@ import "./typography.css";
 import "./theme.css";
 import "./today.css";
 import "./account-navigation.css";
+import "./interface.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker
@@ -93,7 +94,6 @@ function Authenticated() {
           </span>
           <h1>Welcome to Kazi</h1>
           <p>Manage your tasks, projects, and connected tools.</p>
-          <p>Sign in or create your account below.</p>
         </div>
         <SignIn
           routing="hash"
@@ -194,7 +194,7 @@ createRoot(document.getElementById("root")!).render(
                     },
                     "&:focus-visible": {
                       outline: "2px solid #a63224",
-                      outlineOffset: "3px",
+                      outlineOffset: "-3px",
                     },
                   },
                   "&:hover": { backgroundColor: "#e85d47" },

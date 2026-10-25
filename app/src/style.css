@@ -179,18 +179,17 @@ strong {
   white-space: nowrap;
   transition:
     background 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    border-color 0.15s;
 }
 .button.primary {
   background: var(--olive);
   color: #fff;
   border: 1px solid var(--olive);
-  box-shadow: 0 2px 3px #272b3310;
+  box-shadow: none;
 }
 .button.primary:hover {
   background: #272b33;
-  transform: translateY(-1px);
+  transform: none;
 }
 .button.secondary {
   background: #ffffff;
@@ -957,15 +956,13 @@ strong {
   border-radius: 9px;
   background: white;
   padding: 17px 15px;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+  transition: border-color 0.2s;
   min-width: 0;
   display: block;
 }
 .project-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 7px 18px #555b6508;
+  transform: none;
+  box-shadow: none;
 }
 .project-card-top {
   display: flex;
@@ -1113,8 +1110,8 @@ strong {
 }
 .session-block {
   background: #f1f2f4;
-  border-left: 2px solid #adb2ba;
-  border-radius: 0 5px 5px 0;
+  border: 1px solid #adb2ba;
+  border-radius: 5px;
   padding: 9px 9px 8px;
   flex: 1;
   min-width: 0;
@@ -1638,7 +1635,7 @@ strong {
   position: fixed;
   inset: 0;
   background: #272b334d;
-  backdrop-filter: blur(4px);
+  backdrop-filter: none;
   z-index: 50;
   animation: fade-in 0.15s;
 }
@@ -1650,7 +1647,7 @@ strong {
   background: #ffffff;
   border: 1px solid #f1f2f4;
   border-radius: 15px;
-  box-shadow: 0 25px 100px #272b3330;
+  box-shadow: none;
   z-index: 51;
   width: min(520px, calc(100vw - 30px));
   max-height: 90dvh;
@@ -1900,7 +1897,7 @@ strong {
   z-index: 100;
   padding: 13px 14px 13px 18px;
   border-radius: 9px;
-  box-shadow: 0 5px 30px #272b3328;
+  box-shadow: none;
   max-width: min(620px, 90vw);
   font-size: 12px;
   line-height: 1.6;
@@ -2066,7 +2063,7 @@ strong {
   left: 5px;
   right: 5px;
   background: #f1f2f4;
-  border-left: 2px solid #adb2ba;
+  border: 1px solid #adb2ba;
   color: #111111;
   border-radius: 4px;
   padding: 6px 5px;
@@ -2107,7 +2104,7 @@ strong {
 }
 .calendar-session:hover {
   filter: brightness(0.98);
-  box-shadow: 0 1px 8px #555b6512;
+  box-shadow: none;
   z-index: 1;
 }
 .calendar-busy {
@@ -2927,7 +2924,7 @@ strong {
   height: 16px;
   border-radius: 50%;
   background: white;
-  box-shadow: 0 1px 2px #7379842b;
+  box-shadow: none;
   transition: transform 0.2s;
 }
 .switch.on {
@@ -3882,7 +3879,7 @@ strong {
     transition: transform 0.22s;
     z-index: 40;
     width: 234px;
-    box-shadow: 5px 0 40px #272b3322;
+    box-shadow: none;
     padding-top: 24px;
   }
   .sidebar.mobile-open {
@@ -3894,7 +3891,7 @@ strong {
     inset: 0;
     z-index: 39;
     background: #272b3344;
-    backdrop-filter: blur(2px);
+    backdrop-filter: none;
   }
   .sidebar .workspace-picker select {
     width: 135px;

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageTitle } from "./InfoTip";
 import { Clock3 } from "lucide-react";
 import { TodayOverview } from "./TodayOverview";
 import { type WorkProps } from "./WorkPages";
@@ -15,8 +16,9 @@ export function OverviewPage(props: WorkProps) {
     <div className="page overview-page">
       <div className="page-heading">
         <div>
-          <h1>Overview</h1>
-          <p>Your priorities, projects, and recent updates.</p>
+          <PageTitle help="Your daily priorities, work ready to start, projects, and recent task activity. Use the person and project filters to focus this dashboard.">
+            Overview
+          </PageTitle>
         </div>
         <Link className="button secondary" to="/plans?create=true">
           <Clock3 size={16} />
