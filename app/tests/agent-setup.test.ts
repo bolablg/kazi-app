@@ -4,7 +4,7 @@ import {
   mcpClientConfiguration,
 } from "../shared/agentSetup";
 
-const endpoint = "https://example.convex.site/mcp";
+const endpoint = "https://kazi.iyanju.com/mcp";
 const applicationUrl = "https://kazi.example.test/";
 it("provides a usable setup guide without inventing a missing credential", () => {
   const guide = agentSetupInstructions({ endpoint, applicationUrl });

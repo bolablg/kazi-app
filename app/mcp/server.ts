@@ -200,7 +200,7 @@ export function createKaziServer(
     update_task:
       "Edit one shared task. Status stages: backlog, todo, in_progress, to_validate, done (Completed), archived. Archived work is outside the board; restore with backlog. All global and project views update together. Set startDate and deadline for the timeline. Empty date strings clear dates.",
     create_task:
-      "Capture a task in the exact workspace/team, optionally in Backlog. A personal workspace is private; a team workspace shares according to project access. Omitting projectId uses that workspace’s planning project. Exact assignee/owner/collaborator IDs only; unassigned clears assignment. descriptionMentions contains {memberId,start,end} references to @text using UTF-16 string offsets. Mentions add collaborators and notify on save. Same validation as the app.",
+      "Capture a task in Backlog in the exact workspace/team. Set status to todo only when explicitly ready to commit it. A personal workspace is private; a team workspace shares according to project access. Omitting projectId uses that workspace’s planning project. Exact assignee/owner/collaborator IDs only; unassigned clears assignment. descriptionMentions contains {memberId,start,end} references to @text using UTF-16 string offsets. Mentions add collaborators and notify on save. Same validation as the app.",
     comment:
       "Post a comment with optional files and people mentions. mentions contains {memberId,start,end} references to @text in body using UTF-16 string offsets. Use list_members with projectId to find eligible people. Mentioned people become collaborators and receive one notification per comment; no access is granted to outsiders.",
     update_project:

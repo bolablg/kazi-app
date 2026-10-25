@@ -1,4 +1,5 @@
 import { localAuthPlugin } from "./scripts/local-auth.ts";
+import { developmentMcpPlugin } from "./scripts/mcp-development.ts";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
@@ -34,11 +35,18 @@ export default defineConfig(({ mode }) => ({
           "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(""),
           "import.meta.env.VITE_CONVEX_URL": JSON.stringify(""),
           "import.meta.env.VITE_KAZI_LOCAL_DEV": JSON.stringify("false"),
+          "import.meta.env.VITE_KAZI_MCP_URL": JSON.stringify(""),
         }
-      : undefined,
+      : mode === "development"
+        ? { "import.meta.env.VITE_KAZI_MCP_URL": JSON.stringify("") }
+        : undefined,
   plugins: [
     react(),
     developmentReload(mode === "development"),
+    developmentMcpPlugin(
+      mode === "development",
+      loadEnv(mode, process.cwd(), ""),
+    ),
     localAuthPlugin(
       mode === "development" &&
         loadEnv(mode, process.cwd()).VITE_KAZI_LOCAL_DEV === "true",
@@ -79,7 +87,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/mcp(?:\/|$)/],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4000000,
       },

@@ -109,23 +109,29 @@ describe("workspace, task and permission boundaries", () => {
       visibleState(state, "demo-amira").members[1].favoriteProjectIds,
     ).toEqual(["website"]);
   });
-  it("A01 routes capture without a project to the selected workspace Inbox", () => {
-    const s = seedState(now);
-    const r = execute(
-      s,
-      {
-        type: "create_task",
-        title: "Renew passport",
-        description: "",
-        priority: "medium",
-        dependencies: [],
-        labels: [],
-      },
-      ctx(),
-    );
-    expect(r.state.tasks.at(-1)?.projectId).toBe(s.workspace.inboxId);
-    expect(r.state.tasks.at(-1)?.assigneeId).toBe(DEMO_USER);
-  });
+  it.each([undefined, "backlog", "todo"] as const)(
+    "A01 routes capture to the workspace Inbox and honors initial stage %s",
+    (status) => {
+      const s = seedState(now);
+      const r = execute(
+        s,
+        {
+          type: "create_task",
+          title: "Renew passport",
+          description: "",
+          priority: "medium",
+          dependencies: [],
+          labels: [],
+          status,
+        },
+        ctx(),
+      );
+      expect(r.state.tasks.at(-1)?.projectId).toBe(s.workspace.inboxId);
+      expect(r.state.tasks.at(-1)?.assigneeId).toBe(DEMO_USER);
+      expect(r.state.tasks.at(-1)?.status).toBe(status ?? "backlog");
+      expect(r.state.tasks.slice(0, -1)).toEqual(s.tasks);
+    },
+  );
   it("A02 keeps accountable owners and hides a private project from a teammate", () => {
     const s = visibleState(seedState(now), "demo-amira");
     expect(s.tasks.some((t) => t.assigneeId === "demo-daniel")).toBe(true);

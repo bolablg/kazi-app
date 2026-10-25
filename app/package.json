@@ -22,7 +22,7 @@
     "check:deploy": "npm run build && wrangler deploy --dry-run",
     "mcp:stdio": "tsx mcp/stdio.ts",
     "benchmark": "node --import tsx scripts/benchmark.ts",
-    "format:check": "prettier --check src shared convex mcp tests scripts *.ts *.json",
+    "format:check": "prettier --check src shared convex mcp api server tests scripts *.ts *.json",
     "backend:local": "tsx scripts/start-local.ts",
     "setup:local": "tsx scripts/configure-local.ts",
     "dev:local": "npm run setup:local && vite --host 127.0.0.1",

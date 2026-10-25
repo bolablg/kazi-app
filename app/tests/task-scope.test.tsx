@@ -73,6 +73,7 @@ it("creates personal work in its own team even while the page is filtered to a s
       ownerId: DEMO_USER,
       assigneeId: DEMO_USER,
       collaborators: [],
+      status: "backlog",
     }),
     { teamId: "personal" },
   );

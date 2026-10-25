@@ -321,6 +321,7 @@ describe("Convex transactional services", () => {
     const s = await a.query(api.commands.snapshot, { workspaceId });
     expect(s.tasks).toHaveLength(1);
     expect(s.tasks[0].projectId).toBe(s.workspace.inboxId);
+    expect(s.tasks[0].status).toBe("backlog");
     expect(s.activities).toHaveLength(1);
   });
   it("rejects a cross-workspace project reference", async () => {
@@ -430,7 +431,11 @@ describe("Convex transactional services", () => {
     await a.mutation(api.commands.execute, {
       workspaceId,
       requestId: "overdue-task",
-      command: JSON.stringify({ ...command, deadline: "2026-01-01" }),
+      command: JSON.stringify({
+        ...command,
+        status: "todo",
+        deadline: "2026-01-01",
+      }),
     });
     await t.run((ctx) => ctx.db.patch(workspaceId, { nextEvaluationAt: 0 }));
     await t.mutation(internal.jobs.tick, {});

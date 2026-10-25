@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { hostedMcpConfiguration } from "./hosted-environment.mjs";
 
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: "inherit", shell: false });
@@ -6,25 +8,24 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-if (process.env.VERCEL_ENV === "preview") {
+const configuration = hostedMcpConfiguration(process.env);
+writeFileSync(
+  new URL("../server/mcp-deployment.js", import.meta.url),
+  `// Generated for this deployment; do not reuse across environments.\nexport default ${JSON.stringify({ environment: configuration.environment, upstream: configuration.upstream })};\n`,
+);
+// Vite and the server manifest are generated from the same Convex injection.
+// Ignore any stale public MCP endpoint copied into platform environment values.
+process.env.VITE_KAZI_MCP_URL = configuration.publicEndpoint;
+
+if (configuration.environment === "preview") {
   const backend = new URL(process.env.VITE_CONVEX_URL);
-  const branchHost = process.env.VERCEL_BRANCH_URL;
-  if (
-    backend.protocol !== "https:" ||
-    !/^[a-z0-9-]+(?:\.[a-z0-9-]+)?\.convex\.cloud$/.test(backend.hostname) ||
-    !branchHost ||
-    !/^[a-z0-9-]+\.vercel\.app$/.test(branchHost)
-  )
-    throw new Error(
-      "A Git preview requires its Convex backend and stable Vercel branch URL.",
-    );
   // Invitations and callbacks must return to this branch's frontend and data.
   run("npx", [
     "convex",
     "env",
     "set",
     "APP_ORIGIN",
-    `https://${branchHost}`,
+    configuration.applicationUrl,
     "--deployment",
     backend.hostname.split(".")[0],
   ]);
