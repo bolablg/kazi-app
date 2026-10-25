@@ -2,18 +2,20 @@
 
 ## Workspace roles
 
-| Operation                                         | Owner        | Admin                              | Member                     | Guest                              |
-| ------------------------------------------------- | ------------ | ---------------------------------- | -------------------------- | ---------------------------------- |
-| Read public workspace projects                    | Yes          | Yes                                | Yes                        | Only explicitly shared projects    |
-| Read restricted team project                      | Yes          | Yes                                | If owner/member of project | If explicitly selected             |
-| Create projects                                   | Yes          | Yes                                | Yes                        | No                                 |
-| Manage a project and assign other people          | Yes          | Yes                                | If project owner           | If explicitly made project owner   |
-| Update assigned task/progress                     | Yes          | Yes                                | Within authorized project  | Within explicitly shared project   |
-| Invite/revoke/remove members                      | Yes          | Yes, excluding owner/admin removal | No                         | No                                 |
-| Remove the owner                                  | No           | No                                 | No                         | No                                 |
-| Change someone else’s planning policy             | No           | No                                 | No                         | No                                 |
-| Write another person’s calendar merely as manager | No           | No                                 | No                         | No                                 |
-| Approve personal focus sessions                   | Own calendar | Own calendar                       | Own calendar               | Own calendar, with resource access |
+| Operation                                         | Owner        | Manager                                                | Member                     | Guest                              |
+| ------------------------------------------------- | ------------ | ------------------------------------------------------ | -------------------------- | ---------------------------------- |
+| Read public workspace projects                    | Yes          | Yes                                                    | Yes                        | Only explicitly shared projects    |
+| Read restricted team project                      | Yes          | Yes                                                    | If owner/member of project | If explicitly selected             |
+| Create projects                                   | Yes          | Yes                                                    | Yes                        | No                                 |
+| Manage a project and assign other people          | Yes          | Yes                                                    | If project owner           | If explicitly made project owner   |
+| Update assigned task/progress                     | Yes          | Yes                                                    | Within authorized project  | Within explicitly shared project   |
+| Invite/revoke/remove members                      | Yes          | Invite members/guests; cannot remove managers or owner | No                         | No                                 |
+| Remove the owner                                  | No           | No                                                     | No                         | No                                 |
+| Change someone else’s planning policy             | No           | No                                                     | No                         | No                                 |
+| Write another person’s calendar merely as manager | No           | No                                                     | No                         | No                                 |
+| Approve personal focus sessions                   | Own calendar | Own calendar                                           | Own calendar               | Own calendar, with resource access |
+
+Only the team owner can grant or change member roles, including inviting a manager. The owner cannot be demoted or removed. The API retains `admin` as the stored value for the Manager role.
 
 Personal work lives in a separate workspace. Team owners do not gain access to another user’s personal workspace. Project restrictions are an additional layer within a team. Workspace managers may administer restricted team projects; do not place private personal capture in a team workspace.
 

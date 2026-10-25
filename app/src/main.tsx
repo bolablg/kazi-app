@@ -16,6 +16,7 @@ import "./theme.css";
 import "./today.css";
 import "./account-navigation.css";
 import "./interface.css";
+import "./settings.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker

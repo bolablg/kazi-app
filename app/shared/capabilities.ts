@@ -52,6 +52,7 @@ export const commandScopes: Record<
   notification: "tasks:write",
   invite: "people:manage",
   revoke_invitation: "people:manage",
+  set_member_role: "people:manage",
   remove_member: "people:manage",
   use_kazi_agenda: "agenda:write",
 };
