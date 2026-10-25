@@ -34,6 +34,9 @@ it("accessible capture needs no calendar, project creation or AI key", async () 
   expect(screen.getByRole("button", { name: "Create task" })).toBeTruthy();
   expect(screen.getByLabelText("Project")).toBeTruthy();
   expect(
+    (screen.getByLabelText("Initial stage") as HTMLSelectElement).value,
+  ).toBe("backlog");
+  expect(
     screen.getByRole("dialog").getAttribute("aria-describedby"),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Create task" }));

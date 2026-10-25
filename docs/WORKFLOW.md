@@ -11,7 +11,7 @@ Tasks has one collection with List, Board, and Archive tabs. Project, assignee, 
 | Completed   | Accepted finished work                  | Immutable completion fact              |
 | Archive     | Rejected, blocked, or discontinued work | Excluded; restore to Backlog           |
 
-Stages can be changed directly, by pointer/touch/keyboard drag, or through the status field in the full task view. Touch devices can scroll the board horizontally; the drag handle has its own touch activation. New tasks may start as Backlog or To do. Quick capture in Personal planning adds to Backlog. Archiving never counts as completion. List always shows the five active stages, including zero counts, followed by a collapsed Archive section. Board shows only the five active stages; the Archive tab opens archived work. Task details remain available for review and restoration.
+Stages can be changed directly, by pointer/touch/keyboard drag, or through the status field in the full task view. Touch devices can scroll the board horizontally; the drag handle has its own touch activation. New tasks start in Backlog in the app and through MCP. Choose To do explicitly when the task is ready to commit. Quick capture in Personal planning also adds to Backlog. Archiving never counts as completion. List always shows the five active stages, including zero counts, followed by a collapsed Archive section. Board shows only the five active stages; the Archive tab opens archived work. Task details remain available for review and restoration.
 
 Global and project boards show the same tasks. Moving a task updates every view and its reporting history. Future Kazi reservations are released when work leaves execution or its owner changes; accepted plan snapshots remain unchanged.
 

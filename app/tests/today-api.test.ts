@@ -32,6 +32,7 @@ it("MCP Today matches the app's read model, enforces read scope, and isolates se
       command: JSON.stringify({
         type: "create_task",
         title: "Review delivery",
+        status: "todo",
         description: "",
         deadline: "2026-10-26",
         priority: "high",
@@ -111,6 +112,7 @@ it("MCP Today matches the app's read model, enforces read scope, and isolates se
       command: JSON.stringify({
         type: "create_task",
         title: "Page task " + index,
+        status: "todo",
         description: "",
         deadline: "2026-10-26",
         priority: "medium",

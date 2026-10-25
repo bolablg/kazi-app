@@ -629,7 +629,7 @@ export function execute(
         projectId,
         assigneeId: command.assigneeId ?? c.actorId,
         ownerId: command.ownerId ?? c.actorId,
-        status: command.status ?? "todo",
+        status: command.status ?? "backlog",
         collaborators: command.collaborators ?? [],
         loggedMinutes: 0,
         statusChangedAt: c.now,

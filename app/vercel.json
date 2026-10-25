@@ -4,6 +4,9 @@
   "buildCommand": "npm run build:vercel",
   "installCommand": "npm ci",
   "outputDirectory": "dist",
+  "functions": {
+    "api/mcp.ts": { "supportsCancellation": true }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -25,5 +28,8 @@
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     }
   ],
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/((?!api/|mcp(?:/|$)).*)", "destination": "/index.html" }
+  ]
 }

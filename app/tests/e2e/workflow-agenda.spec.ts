@@ -15,7 +15,7 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
   await form
     .getByLabel("Project", { exact: true })
     .selectOption({ label: "Website launch" });
-  await form.getByLabel("Initial stage").selectOption("backlog");
+  await expect(form.getByLabel("Initial stage")).toHaveValue("backlog");
   await form.getByLabel("Planned start", { exact: true }).fill("2026-10-27");
   await form.getByLabel(/^Deadline/).fill("2026-10-30");
   await form.getByRole("button", { name: "Create task", exact: true }).click();
