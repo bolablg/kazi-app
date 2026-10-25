@@ -1,5 +1,5 @@
 import deployment from "../server/mcp-deployment.js";
-import { createMcpProxy, unavailableMcp } from "../server/mcp-proxy";
+import { createMcpProxy, unavailableMcp } from "../server/mcp-proxy.js";
 
 const proxy = createMcpProxy(deployment.upstream);
 
