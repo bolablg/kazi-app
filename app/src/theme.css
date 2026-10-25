@@ -1,19 +1,21 @@
-/* Color expresses place, workflow, and outcome; typography and dividers stay crisp. */
+/* Kazi Coral identifies actions and navigation; data colors keep their meaning. */
 :root {
-  --brand: #f47c65;
-  --brand-hover: #ee6a51;
-  --brand-ink: #b83b2b;
-  --brand-wash: #fff0e9;
+  --brand: #f36f58;
+  --brand-hover: #e85d47;
+  --brand-ink: #a63224;
+  --brand-wash: #fff0ec;
+  --brand-line: #e9b6aa;
+  --shell: #fff8f5;
   --status-backlog: #7552a3;
   --status-todo: #1764c0;
   --status-progress: #006f6b;
   --status-review: #9b6300;
   --status-done: #1b734e;
   --status-archived: #69707d;
-  --focus: #1764c0;
+  --focus: var(--brand-ink);
 }
 ::selection {
-  background: #ffdacb;
+  background: #ffd8d0;
   color: #111;
 }
 :is(button, a, input, select, textarea, summary):focus-visible {
@@ -44,7 +46,7 @@
   --tone-wash: #f1ebfa;
 }
 .sidebar {
-  background: #fff8f3;
+  background: var(--shell);
 }
 .wordmark .kazi-mark {
   background: var(--brand);
@@ -52,50 +54,31 @@
   color: #111;
 }
 .sidebar-search {
-  border-color: #c7b8ad;
+  border-color: #c9bbb7;
 }
 .nav-item {
-  --nav-color: var(--brand-ink);
-  --nav-wash: var(--brand-wash);
   border: 1px solid transparent;
-}
-.nav-item[href="/"] {
-  --nav-color: #7552a3;
-  --nav-wash: #eee6f8;
-}
-.nav-item[href="/tasks"] {
-  --nav-color: #007d79;
-  --nav-wash: #dcefe8;
-}
-.nav-item[href="/projects"] {
-  --nav-color: #1764c0;
-  --nav-wash: #e2ecff;
-}
-.nav-item[href="/plans"] {
-  --nav-color: #ad531d;
-  --nav-wash: #ffead7;
-}
-.nav-item[href="/reports"] {
-  --nav-color: #1f845a;
-  --nav-wash: #deefdf;
+  min-height: 40px;
 }
 .nav-item > svg {
-  color: var(--nav-color);
-  width: 26px;
-  height: 26px;
-  padding: 4px;
-  border-radius: 7px;
-  background: var(--nav-wash);
+  color: #55565c;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
 }
 .nav-item.active,
 .nav-item.active:hover {
-  background: var(--nav-wash);
-  border-color: color-mix(in srgb, var(--nav-color) 28%, transparent);
+  background: #ffe0d8;
+  border-color: var(--brand-line);
   color: #111;
+}
+.nav-item.active > svg {
+  color: var(--brand-ink);
 }
 .nav-item:hover,
 .sidebar-project:hover {
-  background: #f4e9e0;
+  background: var(--brand-wash);
 }
 .sidebar-project.active {
   background: var(--brand-wash);
@@ -127,11 +110,19 @@
 .icon-button:hover {
   background: var(--brand-wash);
 }
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--brand-ink);
+}
+.tabs button:hover,
+.overview-tabs button:hover {
+  background: var(--brand-wash);
+}
 .overview-tabs button[aria-selected="true"],
 .tabs button.active,
 .tabs button[aria-selected="true"] {
   border-bottom-color: var(--brand-ink);
-  color: #a83324;
+  color: var(--brand-ink);
 }
 .overview-tabs button:hover {
   color: var(--brand-ink);
@@ -141,8 +132,8 @@
   color: #fff;
 }
 .time-basis-control button[aria-pressed="true"] {
-  background: #ffe1d3;
-  color: #8f2f22;
+  background: var(--brand-wash);
+  color: var(--brand-ink);
 }
 .today .calendar-date-button > span:first-child {
   background: var(--brand-ink);
@@ -266,6 +257,15 @@
   background: #196947;
 }
 @media (max-width: 1023px) {
+  .nav-item,
+  .sidebar-project,
+  .sidebar-search,
+  .sidebar-favorites-toggle,
+  .button,
+  .overview-tabs button,
+  .tabs button {
+    min-height: 44px;
+  }
   .overview-summary > div[data-tone] {
     padding: 12px;
   }
