@@ -438,14 +438,18 @@ test("Tasks preserves assigned-task bookmarks and mobile settings", async ({
   ).toBe(true);
 });
 
-test("Overview opens Today and keeps Calendar and Schedule beside it", async ({
+test("Overview opens the daily dashboard and Calendar owns both date views", async ({
   page,
 }) => {
   await nav(page, "Overview");
   await expect(
-    page.getByRole("tab", { name: "Today", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+    page.getByRole("region", { name: /^Needs attention/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+  await nav(page, "Calendar");
+  await expect(
+    page.getByRole("heading", { name: "Calendar", exact: true }),
+  ).toBeVisible();
   const before = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
@@ -480,7 +484,7 @@ test("phone calendar opens the consolidated Plans workflow with persistent tabs"
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?view=calendar");
+  await page.goto("/calendar?view=calendar");
   await page.getByRole("button", { name: /Monday, Oct 26, \d+ items/ }).click();
   await expect(page.locator(".selected-day-agenda")).toContainText(
     "Refine the homepage direction",
@@ -532,7 +536,9 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 700 ? 844 : 1080 });
     for (const route of [
       "/",
-      "/?view=calendar",
+      "/calendar?view=calendar",
+      "/calendar?view=schedule",
+      "/insights",
       "/my-tasks",
       "/tasks?tab=inbox",
       "/settings",
@@ -566,9 +572,7 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
         ).toBeGreaterThan(sizes.page - (width < 701 ? 40 : 75));
       }
       if (route === "/") {
-        await expect(
-          page.getByRole("tab", { name: "Today", exact: true }),
-        ).toHaveAttribute("aria-selected", "true");
+        await expect(page.getByRole("tablist")).toHaveCount(0);
         for (const name of [
           "Needs attention",
           "My focus",
@@ -590,7 +594,7 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
       await expect(page.getByLabel("User menu")).toBeVisible();
     }
     if ([390, 768, 1440, 1920].includes(width)) {
-      await page.goto("/?view=calendar");
+      await page.goto("/calendar?view=calendar");
       await page.waitForLoadState("networkidle");
       await page.screenshot({
         animations: "disabled",
@@ -603,7 +607,7 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
 test("calendar switches month, week, and day with matching navigation and task details", async ({
   page,
 }) => {
-  await page.goto("/?view=calendar");
+  await page.goto("/calendar?view=calendar");
   const before = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
@@ -667,7 +671,7 @@ test("weekly and daily calendar fit phones and retain the selected cross-month d
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?view=calendar");
+  await page.goto("/calendar?view=calendar");
   const range = page.getByRole("group", { name: "Calendar range" });
   await range.getByRole("button", { name: "Week", exact: true }).click();
   expect(

@@ -6,7 +6,7 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Today in Kazi](docs/screenshots/today-1440.png)
+![Overview in Kazi](docs/screenshots/today-1440.png)
 
 ## Manage the work
 
@@ -22,7 +22,7 @@ Create teams, invite people, and control access to projects. If you belong to se
 
 ## Plan your day, week, and month
 
-Overview opens on **Today**, with priorities, work ready to start, favorite and recent projects, and recent task activity. **Calendar** and **Schedule** sit beside it when you need to see how the day fits together.
+**Overview** opens directly on your daily priorities, work ready to start, favorite and recent projects, and recent task activity. **Calendar** has Calendar and Schedule views for seeing when work happens. **Plans** keeps proposals and accepted plan history together.
 
 The agenda combines deadlines and scheduled focus sessions in daily, weekly, and monthly views. Review proposed plans before accepting them, adjust your working hours and capacity, and keep previous plan versions when priorities change.
 
@@ -30,7 +30,7 @@ Publish a private calendar subscription to view your Kazi agenda in Google Calen
 
 ## Understand how work moves
 
-Reports show completed work, on-time and late delivery, work in progress, stage durations, aging tasks, planned focus allocation, and progress toward project milestones. Filter by team, person, project, or period, and export daily totals.
+**Insights** shows completed work, on-time and late delivery, work in progress, stage durations, aging tasks, planned focus allocation, and progress toward project milestones. Filter by team, person, project, or period, and export daily totals.
 
 These insights come from task changes and plans. You do not need to log hours. Scheduled time describes your plan; it is not a measurement of hours worked or a productivity score.
 
@@ -45,7 +45,7 @@ Open **Account → Connections → MCP & agents** to copy the server endpoint an
 - Calendar subscriptions publish Kazi's agenda outward. Changes made in another calendar do not update Kazi, and refresh timing depends on that calendar provider.
 - Task review and other work notifications appear in the app. Invitation email delivery depends on the configured email service; shareable invitation links are also available.
 - The app can be installed on supported phones, tablets, and desktops. Accessing private account data and saving changes requires a connection.
-- Reports describe recorded workflow events, estimates, and planned allocation. They do not monitor activity or infer business outcomes from task counts.
+- The Insights page describes recorded workflow events, estimates, and planned allocation. It does not monitor activity or infer business outcomes from task counts.
 
 ## Guides
 
@@ -54,7 +54,7 @@ Open **Account → Connections → MCP & agents** to copy the server endpoint an
 | [Tasks and projects](docs/WORKFLOW.md) | Stages, ownership, review, dependencies, files, and timelines |
 | [Accounts and teams](docs/ACCOUNT.md)  | Your account, invitations, roles, and project access          |
 | [Product behavior](docs/PRODUCT.md)    | Planning, permissions, notifications, and offline behavior    |
-| [Reports](docs/REPORTS.md)             | Metric definitions, history, coverage, and exports            |
+| [Insights](docs/REPORTS.md)            | Metric definitions, history, coverage, and exports            |
 | [Calendar](docs/CALENDAR.md)           | Private subscriptions and availability                        |
 | [MCP](docs/MCP.md)                     | Agent connections, scopes, tools, and examples                |
 | [Resource links](docs/RESOURCE_IDS.md) | Stable task and project identifiers                           |

@@ -135,7 +135,7 @@ test("workflow reports switch between calendar and working-period durations", as
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-26T18:00:00Z") });
-  await page.goto("/reports");
+  await page.goto("/insights");
   await page.getByRole("tab", { name: "Workflow", exact: true }).click();
   const calendar = page.getByRole("button", {
     name: "Calendar time",

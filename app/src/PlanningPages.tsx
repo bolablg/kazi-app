@@ -599,7 +599,10 @@ export function PlansPage({ openPlan }: { openPlan: (id: string) => void }) {
           <p>Create proposals, review sessions, and track accepted plans.</p>
         </div>
         <div className="plans-heading-actions">
-          <Link className="button secondary" to="/?view=calendar&range=week">
+          <Link
+            className="button secondary"
+            to="/calendar?view=calendar&range=week"
+          >
             <CalendarDays size={16} />
             Open calendar
           </Link>
