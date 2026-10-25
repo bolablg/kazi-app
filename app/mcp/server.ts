@@ -205,6 +205,8 @@ export function createKaziServer(
       "Edit project dates, access, or lifecycle (planned, active, on_hold, done = Delivered). Delivery is independent from task completion. archived hides the project and preserves history.",
     favorite_project:
       "Star or unstar a project in your personal Favorites section.",
+    favorite_team:
+      "Star or unstar the exact workspace team in your personal mixed Favorites list. Requires current membership. Does not change sharing, roles or anyone else’s favorites; personal spaces are separate from shared teams. list_workspaces returns favoriteAt when starred.",
     approve:
       "Approve the exact current revision with calendar-owner authority and fresh conflict checks. Requires explicit user authorization and plans:approve scope. Reserves sessions in Kazi agenda; preserves an immutable accepted plan.",
     release_sessions:

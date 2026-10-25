@@ -50,6 +50,8 @@ export const memberV = v.object({
   color: v.string(),
   preferences: preferencesV,
   favoriteProjectIds: v.optional(v.array(v.string())),
+  favoriteProjectAt: v.optional(v.record(v.string(), v.number())),
+  favoriteTeamAt: v.optional(v.number()),
 });
 export const projectV = v.object({
   createdAt: v.optional(v.number()),

@@ -1,5 +1,6 @@
 import { defaultAgingDays } from "../shared/model";
 import { AgendaSettings } from "./AgendaSettings";
+import { TeamFavoriteButton } from "./Favorites";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -216,15 +217,29 @@ export function TeamPage({ directory = false }: { directory?: boolean }) {
             One account, with separate membership and performance for each team.
           </p>
         </div>
-        <button className="button primary" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          Create team
-        </button>
+        <div className="integration-actions">
+          <button
+            className="button secondary"
+            onClick={() => {
+              setTeam("all");
+              navigate("/");
+            }}
+          >
+            View all work
+          </button>
+          <button className="button primary" onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Create team
+          </button>
+        </div>
       </div>
       <div className="team-directory">
         {teams.map((team) => (
           <article key={team.id}>
-            <h2>{team.kind === "personal" ? "Personal" : team.name}</h2>
+            <div className="team-directory-heading">
+              <h2>{team.kind === "personal" ? "Personal" : team.name}</h2>
+              <TeamFavoriteButton team={team} />
+            </div>
             <p>
               {team.role === "owner"
                 ? "You manage this team"

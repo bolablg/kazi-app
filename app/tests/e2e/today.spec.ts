@@ -177,8 +177,8 @@ test("Today favorites share existing stars and project filters scope the daily s
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page
-      .locator("#favorite-projects")
-      .getByRole("link", { name: "Website launch", exact: true }),
+      .locator("#favorite-items")
+      .getByRole("link", { name: "Website launch Project", exact: true }),
   ).toBeVisible();
   await shortcuts
     .getByRole("button", { name: "Favorites", exact: true })

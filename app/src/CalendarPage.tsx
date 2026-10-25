@@ -208,7 +208,12 @@ export function CalendarPage(props: WorkProps) {
           aria-label="Calendar views"
           onKeyDown={(event) => {
             const views = ["calendar", "schedule"];
-            const index = views.indexOf(view);
+            const tab = (event.target as Element).closest<HTMLButtonElement>(
+              'button[role="tab"]',
+            );
+            // Focus moves before the URL transition commits. Follow the tab
+            // receiving this key instead of the previous rendered view.
+            const index = views.indexOf(tab?.id.replace(/^tab-/, "") ?? view);
             const next =
               event.key === "ArrowRight"
                 ? (index + 1) % views.length
@@ -222,7 +227,9 @@ export function CalendarPage(props: WorkProps) {
             if (next === undefined) return;
             event.preventDefault();
             updateView(views[next]);
-            document.getElementById("tab-" + views[next])?.focus();
+            event.currentTarget
+              .querySelector<HTMLButtonElement>("#tab-" + views[next])
+              ?.focus();
           }}
         >
           {[
