@@ -124,7 +124,7 @@ Reference: [official TypeScript SDK](https://github.com/modelcontextprotocol/typ
 
 ## Client visibility and activity
 
-Connections → MCP & agents walks through creating a scoped credential, adding the server URL and authorization header, and verifying the first request. Copy JSON template uses a token placeholder; after creating a credential, Copy client configuration includes the new token and must be kept private.
+Connections → MCP & agents walks through creating a scoped credential, adding the server URL and authorization header, and verifying the first request. Copy JSON template includes the explicit HTTP transport required by [Claude Code’s JSON configuration](https://code.claude.com/docs/en/mcp#option-1-add-a-remote-http-server) and uses a token placeholder; after creating a credential, Copy client configuration includes the new token and must be kept private.
 
 Connections → Overview and MCP & agents show clients seen through authenticated MCP requests. The protocol handshake supplies the reported client name/version; these are bounded display strings, not trusted identities. Credential identity and permissions come from the token hash lookup. Creating an unused credential does not create a connected-agent badge.
 

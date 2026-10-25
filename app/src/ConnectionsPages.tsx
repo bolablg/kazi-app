@@ -38,6 +38,7 @@ const clientConfiguration = (token = "YOUR_KAZI_TOKEN") =>
     {
       mcpServers: {
         kazi: {
+          type: "http",
           url: endpoint(),
           headers: { Authorization: "Bearer " + token },
         },
@@ -273,9 +274,10 @@ export function McpSettings() {
                 Copy JSON template
               </button>
               <InfoTip label="Using the MCP setup template">
-                This template contains a placeholder, not a credential. Replace
-                YOUR_KAZI_TOKEN with your token. If your client uses a setup
-                form, enter the URL and authorization header there instead.
+                This HTTP JSON template works with clients such as Claude Code.
+                Replace YOUR_KAZI_TOKEN with your token. Other clients may use a
+                different configuration format or a setup form; enter the server
+                URL and authorization header there instead.
               </InfoTip>
             </div>
           </li>
