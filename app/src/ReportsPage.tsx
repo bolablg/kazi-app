@@ -342,12 +342,12 @@ function ReportBody({
             <Metric
               value={elapsed(report.medianLeadMinutes)}
               label="Median lead time"
-              detail={`Creation → completion · ${report.leadTimes.length} measured finishes`}
+              detail={`Calendar time · ${report.leadTimes.length} finishes. Working time: ${report.medianWorkingLeadMinutes === null ? "—" : Math.round(report.medianWorkingLeadMinutes / 6) / 10 + "h"}`}
             />
             <Metric
               value={elapsed(report.medianCycleMinutes)}
               label="Median cycle time"
-              detail={`In progress → completion · ${report.cycleTimes.length} measured finishes`}
+              detail={`Calendar time · ${report.cycleTimes.length} finishes. Working time: ${report.medianWorkingCycleMinutes === null ? "—" : Math.round(report.medianWorkingCycleMinutes / 6) / 10 + "h"}`}
             />
             <Metric
               value={String(report.inProgress.length)}

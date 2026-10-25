@@ -33,6 +33,8 @@ Kazi application source uses the root MIT license. Dependencies keep their own l
 | vitest                    | 4.1.12         | MIT               | Development |
 | wrangler                  | 4.152.0        | MIT OR Apache-2.0 | Development |
 
-The interface uses system fonts and original vector app icons. Retained font license notices are included alongside this guide.
+The interface bundles Atlassian Sans, Copyright 2025 Atlassian Pty Ltd and Copyright 2016 The Inter Project Authors, under the [SIL Open Font License 1.1](LICENSE-Atlassian-Sans.txt). The app icons are original vector artwork. Other retained font license notices are included alongside this guide.
 
 Added dependencies: `@noble/hashes` 2.4.0 (MIT), used for namespaced deterministic resource identifiers, and `@dnd-kit/core` 6.3.1 (MIT), used for pointer/touch/keyboard board interaction. Their transitive dependencies remain pinned in the package lock. The local Convex binary/dashboard are downloaded by the official Convex CLI and are not embedded in the application bundle.
+
+`@radix-ui/react-select` is used for accessible task field menus under the MIT license; the exact version is pinned in the package lock.

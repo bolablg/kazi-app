@@ -1,3 +1,4 @@
+import { chooseStatus } from "./task-fields";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
@@ -23,9 +24,14 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
       .getByRole("region", { name: "Backlog column", exact: true })
       .getByRole("button", { name: title, exact: true }),
   ).toBeVisible();
-  for (const status of ["todo", "in_progress", "to_validate", "done"]) {
+  for (const status of [
+    "todo",
+    "in_progress",
+    "to_validate",
+    "done",
+  ] as const) {
     await page.getByRole("button", { name: title, exact: true }).click();
-    await page.getByLabel("Task status", { exact: true }).selectOption(status);
+    await chooseStatus(page, status);
     await page
       .getByRole("button", { name: "Save changes", exact: true })
       .click();
@@ -59,9 +65,7 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
       .getByRole("button", { name: title, exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: title, exact: true }).click();
-  await page
-    .getByLabel("Task status", { exact: true })
-    .selectOption("archived");
+  await chooseStatus(page, "archived");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByText("Task updated", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Close task", exact: true }).click();

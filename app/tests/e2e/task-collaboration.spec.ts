@@ -1,3 +1,4 @@
+import { choosePriority } from "./task-fields";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test.beforeEach(async ({ page }) => {
@@ -36,10 +37,13 @@ test("board titles stay compact and priorities keep their colors through editing
     title,
   );
   await expect(page.getByLabel("Owner", { exact: true })).toBeVisible();
-  await page.getByLabel("Priority", { exact: true }).selectOption("low");
+  await choosePriority(page, "low");
+  await expect(
+    page.getByLabel("Priority", { exact: true }).locator(".choice-dot"),
+  ).toHaveCSS("background-color", "rgb(31, 132, 90)");
   await expect(page.getByLabel("Priority", { exact: true })).toHaveCSS(
     "background-color",
-    "rgb(220, 252, 231)",
+    "rgb(255, 255, 255)",
   );
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("button", { name: "Close task", exact: true }).click();
@@ -55,7 +59,7 @@ test("comments support files, persist after reload, and keep description links w
   await page
     .getByRole("button", { name: "Refine the homepage direction", exact: true })
     .click();
-  const conversation = page.getByRole("region", { name: "Task conversation" });
+  const conversation = page.getByRole("region", { name: "Task activity" });
   await conversation
     .getByLabel("Add a comment")
     .fill("The first draft is ready. Please review the attached brief.");
@@ -68,16 +72,12 @@ test("comments support files, persist after reload, and keep description links w
     .getByRole("button", { name: "Post comment", exact: true })
     .click();
   await expect(
-    conversation
-      .getByRole("tabpanel", { name: "Task activity" })
-      .getByText(
-        "The first draft is ready. Please review the attached brief.",
-        { exact: true },
-      ),
+    conversation.getByText(
+      "The first draft is ready. Please review the attached brief.",
+      { exact: true },
+    ),
   ).toBeVisible();
-  await conversation
-    .getByRole("tab", { name: "Comments", exact: true })
-    .click();
+
   await expect(
     conversation.getByRole("button", {
       name: "Download review-brief.txt",
@@ -99,15 +99,13 @@ test("comments support files, persist after reload, and keep description links w
     description.getByRole("link", { name: /Design reference/ }),
   ).toHaveAttribute("href", "https://example.com/design-reference");
   await page.reload();
-  const fresh = page.getByRole("region", { name: "Task conversation" });
-  await fresh.getByRole("tab", { name: "Comments", exact: true }).click();
+  const fresh = page.getByRole("region", { name: "Task activity" });
+
   await expect(
-    fresh
-      .getByRole("tabpanel", { name: "Task comments" })
-      .getByText(
-        "The first draft is ready. Please review the attached brief.",
-        { exact: true },
-      ),
+    fresh.getByText(
+      "The first draft is ready. Please review the attached brief.",
+      { exact: true },
+    ),
   ).toBeVisible();
   const downloading = page.waitForEvent("download");
   await fresh

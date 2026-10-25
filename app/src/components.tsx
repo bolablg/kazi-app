@@ -1,5 +1,5 @@
-import { TaskArtifacts, TaskConversation } from "./TaskCollaboration";
-import { PrioritySelect } from "./PrioritySelect";
+import { TaskArtifacts, TaskActivity } from "./TaskCollaboration";
+import { PrioritySelect, StatusSelect } from "./PrioritySelect";
 import { resourceRole } from "../shared/teams";
 import { canEditTask, isArchivedTask } from "../shared/workflow";
 import { standaloneTaskPath } from "../shared/ids";
@@ -29,6 +29,7 @@ import {
   CornerDownLeft,
   AlertCircle,
   ChevronRight,
+  Circle,
 } from "lucide-react";
 import { useData } from "./data";
 import {
@@ -714,6 +715,18 @@ export function TaskDetail({
             All tasks
           </button>
           <span className="task-page-project">
+            {task.parentId && (
+              <button
+                type="button"
+                className="text-button parent-task-link"
+                onClick={() => onOpen(task.parentId!)}
+                aria-label="Open parent task"
+              >
+                {state.tasks.find((item) => item.id === task.parentId)?.title ??
+                  "Parent task"}
+                <ChevronRight size={13} />
+              </button>
+            )}
             {state.projects.find((p) => p.id === task.projectId)?.title ??
               "Task"}
           </span>
@@ -792,6 +805,44 @@ export function TaskDetail({
                 placeholder="What needs to happen? Add the context and the outcome you want."
               />
             </label>
+            {!task.parentId && (
+              <section className="task-subtasks" aria-label="Subtasks">
+                {children.length > 0 && <h2>Subtasks</h2>}
+                {children.length > 0 && (
+                  <div className="subtask-list">
+                    {children.map((child) => (
+                      <button
+                        type="button"
+                        key={child.id}
+                        className="subtask-row"
+                        onClick={() => onOpen(child.id)}
+                      >
+                        <span className={"subtask-status " + child.status}>
+                          {child.status === "done" ? (
+                            <Check size={13} />
+                          ) : (
+                            <Circle size={13} />
+                          )}
+                        </span>
+                        <span className="subtask-title">{child.title}</span>
+                        <span className="subtask-stage">
+                          {statusLabels[child.status]}
+                        </span>
+                        <ChevronRight size={14} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setSubtask(true)}
+                >
+                  <Plus size={14} />
+                  Add subtask
+                </button>
+              </section>
+            )}
             <TaskArtifacts task={task} placement="description" />
             {task.status === "to_validate" && (
               <TaskValidation key={task.id} task={task} />
@@ -802,18 +853,10 @@ export function TaskDetail({
                 <div className="task-property-rows">
                   <label>
                     <span>Status</span>
-                    <select
+                    <StatusSelect
                       key={task.status}
-                      name="status"
-                      aria-label="Task status"
                       defaultValue={task.status}
-                    >
-                      {taskStatusOptions.map((key) => (
-                        <option key={key} value={key}>
-                          {statusLabels[key]}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                   <label>
                     <span title="Requests the work and validates its result">
@@ -889,7 +932,7 @@ export function TaskDetail({
                     />
                   </label>
                   <label>
-                    <span>Initial estimate (min)</span>
+                    <span>Planning estimate (min)</span>
                     <input
                       name="estimate"
                       type="number"
@@ -939,9 +982,6 @@ export function TaskDetail({
               </section>
             </div>
             <div className="detail-save">
-              <span className="muted">
-                Calendar sessions never mark a task done.
-              </span>
               <button className="button primary" disabled={!online}>
                 Save changes
                 <Check size={15} />
@@ -949,84 +989,7 @@ export function TaskDetail({
             </div>
           </form>
           <TaskArtifacts task={task} placement="task" />
-          <TaskConversation key={"conversation:" + task.id} task={task} />
-          <div className="detail-section">
-            <div className="section-line">
-              <h3>Progress check-in</h3>
-              <span className="muted">
-                {duration(task.remainingMinutes ?? task.estimatedMinutes ?? 0)}{" "}
-                left
-              </span>
-            </div>
-            <form
-              className="progress-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                await run(
-                  () =>
-                    dispatch({
-                      type: "progress",
-                      id: task.id,
-                      remainingMinutes: Number(f.get("remaining")),
-                      loggedMinutes: 0,
-                      note: String(f.get("note")),
-                    }),
-                  "Progress recorded",
-                );
-              }}
-            >
-              <label>
-                Remaining minutes
-                <input
-                  key={task.remainingMinutes}
-                  name="remaining"
-                  type="number"
-                  min="0"
-                  max="100000"
-                  defaultValue={
-                    task.remainingMinutes ?? task.estimatedMinutes ?? 0
-                  }
-                  required
-                />
-              </label>
-              <label className="full">
-                What moved forward?
-                <input name="note" placeholder="Describe your progress" />
-              </label>
-              <button className="button secondary" disabled={!online}>
-                Record progress
-              </button>
-            </form>
-          </div>
-          {!task.parentId && (
-            <div className="detail-section">
-              <div className="section-line">
-                <h3>
-                  Subtasks <span className="count">{children.length}</span>
-                </h3>
-                <button
-                  className="text-button"
-                  onClick={() => setSubtask(true)}
-                >
-                  <Plus size={14} />
-                  Add subtask
-                </button>
-              </div>
-              {children.length ? (
-                <TaskRows
-                  tasks={children}
-                  onOpen={onOpen}
-                  showProject={false}
-                />
-              ) : (
-                <p className="muted">
-                  Break a bigger task into smaller steps. Only leaf tasks count
-                  toward workload.
-                </p>
-              )}
-            </div>
-          )}
+          <TaskActivity key={"activity:" + task.id} task={task} />
         </div>
       </article>
       <TaskForm

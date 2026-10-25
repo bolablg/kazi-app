@@ -8,15 +8,18 @@ import {
   X,
   Download,
   Plus,
+  ArrowRight,
+  CircleDot,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 import type { Activity, Task, TaskArtifact } from "../shared/model";
+import { statusLabels } from "../shared/model";
+import { stageColors } from "./PrioritySelect";
 import { checkFile, fileSize } from "../shared/artifacts";
 import { canEditTask } from "../shared/workflow";
 import { useData } from "./data";
 import { Avatar, useUI } from "./components";
-import { TaskHistory } from "./TaskHistory";
 
 export function ArtifactItem({
   artifact,
@@ -258,6 +261,7 @@ export function TaskArtifacts({
   const artifacts = (state.artifacts ?? []).filter(
     (a) => a.taskId === task.id && a.placement === placement && !a.removedAt,
   );
+  if (placement === "task" && !artifacts.length) return null;
   return (
     <section
       className={"task-artifacts " + placement}
@@ -331,7 +335,7 @@ function CommentComposer({ task }: { task: Task }) {
       <div className="comment-compose-body">
         <textarea
           aria-label="Add a comment"
-          placeholder="Share an update or ask a question…"
+          placeholder="Write a comment…"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           maxLength={5000}
@@ -421,20 +425,41 @@ function CommentComposer({ task }: { task: Task }) {
 }
 function ActivityRows({ events }: { events: Activity[] }) {
   const { state } = useData();
+  const commentedAttachments = new Set(
+    events
+      .filter((event) => event.kind === "comment")
+      .flatMap((event) => event.attachmentIds ?? []),
+  );
+  const visibleEvents = events.filter(
+    (event) =>
+      !(
+        event.kind === "change" &&
+        !event.toStatus &&
+        /^(Uploaded|Attached) /.test(event.message) &&
+        event.attachmentIds?.length &&
+        event.attachmentIds.every((id) => commentedAttachments.has(id))
+      ),
+  );
   return (
     <ol className="task-conversation-list">
-      {events.map((event) => {
+      {visibleEvents.map((event) => {
         const author = state.members.find((m) => m.id === event.actorId);
         return (
           <li
             key={event.id}
             className={"task-conversation-event " + event.kind}
           >
-            <Avatar
-              name={author?.name ?? "Former teammate"}
-              color={author?.color}
-              small
-            />
+            {event.kind === "comment" ? (
+              <Avatar
+                name={author?.name ?? "Former teammate"}
+                color={author?.color}
+                small
+              />
+            ) : (
+              <span className="activity-system-icon">
+                <CircleDot size={16} />
+              </span>
+            )}
             <div>
               <div className="comment-byline">
                 <strong>{author?.name ?? "Former teammate"}</strong>
@@ -450,7 +475,38 @@ function ActivityRows({ events }: { events: Activity[] }) {
                   })}
                 </time>
               </div>
-              {event.message && <p>{event.message}</p>}
+              {event.toStatus ? (
+                <div className="activity-status-update">
+                  <span>
+                    {event.fromStatus
+                      ? "changed the status"
+                      : "created the task"}
+                  </span>
+                  <div>
+                    {event.fromStatus && (
+                      <>
+                        <span className="activity-stage">
+                          <i
+                            style={{
+                              background: stageColors[event.fromStatus],
+                            }}
+                          />
+                          {statusLabels[event.fromStatus]}
+                        </span>
+                        <ArrowRight size={13} />
+                      </>
+                    )}
+                    <span className="activity-stage">
+                      <i style={{ background: stageColors[event.toStatus] }} />
+                      {statusLabels[event.toStatus]}
+                    </span>
+                  </div>
+                  {event.message !== "Updated task" &&
+                    event.message !== "Created task" && <p>{event.message}</p>}
+                </div>
+              ) : (
+                event.message && <p>{event.message}</p>
+              )}
               {!!event.attachmentIds?.length && (
                 <div className="artifact-grid">
                   {event.attachmentIds.map((id) => {
@@ -474,13 +530,7 @@ function ActivityRows({ events }: { events: Activity[] }) {
     </ol>
   );
 }
-function LiveActivity({
-  taskId,
-  comments,
-}: {
-  taskId: string;
-  comments: boolean;
-}) {
+function LiveActivity({ taskId }: { taskId: string }) {
   const { state, workspaceId } = useData();
   const { results, status, loadMore } = usePaginatedQuery(
     api.files.activity,
@@ -488,22 +538,14 @@ function LiveActivity({
       workspaceId: (state.resourceTeams?.[taskId] ??
         workspaceId) as Id<"workspaces">,
       taskId,
-      ...(comments ? { kind: "comment" as const } : {}),
     },
     { initialNumItems: 50 },
   );
-  const events = comments
-    ? results.filter((e) => e.kind === "comment")
-    : results;
   return (
     <>
-      <ActivityRows events={events} />
-      {!events.length && status !== "LoadingFirstPage" && (
-        <p className="muted">
-          {comments
-            ? "No comments yet. Start the conversation."
-            : "Updates will appear here."}
-        </p>
+      <ActivityRows events={results} />
+      {!results.length && status !== "LoadingFirstPage" && (
+        <p className="muted">No activity yet.</p>
       )}
       {status === "LoadingFirstPage" && (
         <p className="muted">Loading activity…</p>
@@ -520,63 +562,22 @@ function LiveActivity({
     </>
   );
 }
-export function TaskConversation({ task }: { task: Task }) {
-  const { demo, state } = useData(),
-    [view, setView] = useState<"activity" | "comments">("activity");
+export function TaskActivity({ task }: { task: Task }) {
+  const { demo, state } = useData();
   const events = state.activities
-    .filter(
-      (e) =>
-        e.taskId === task.id && (view === "activity" || e.kind === "comment"),
-    )
+    .filter((event) => event.taskId === task.id)
     .sort((a, b) => b.at - a.at);
   return (
-    <section className="task-conversation" aria-label="Task conversation">
-      <div className="task-conversation-heading">
-        <h2>Conversation</h2>
-        <div role="tablist" aria-label="Task discussion views">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === "activity"}
-            onClick={() => setView("activity")}
-          >
-            Activity
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === "comments"}
-            onClick={() => setView("comments")}
-          >
-            Comments
-          </button>
-        </div>
-      </div>
+    <section className="task-activity" aria-label="Task activity">
+      <h2>Activity</h2>
       <CommentComposer key={task.id} task={task} />
-      <div
-        role="tabpanel"
-        aria-label={view === "activity" ? "Task activity" : "Task comments"}
-      >
-        {demo ? (
-          <>
-            <ActivityRows events={events} />
-            {!events.length && (
-              <p className="muted">
-                {view === "comments"
-                  ? "No comments yet. Start the conversation."
-                  : "Updates will appear here."}
-              </p>
-            )}
-          </>
-        ) : (
-          <LiveActivity taskId={task.id} comments={view === "comments"} />
-        )}
-      </div>
-      {view === "activity" && (
-        <details className="task-status-history">
-          <summary>Detailed status history</summary>
-          <TaskHistory taskId={task.id} />
-        </details>
+      {demo ? (
+        <>
+          <ActivityRows events={events} />
+          {!events.length && <p className="muted">No activity yet.</p>}
+        </>
+      ) : (
+        <LiveActivity taskId={task.id} />
       )}
     </section>
   );

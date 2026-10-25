@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { X } from "lucide-react";
 import {
   normalizeTaskLabels,
   parseTaskLabels,
@@ -73,37 +74,85 @@ export function TaskLabelField({
   defaultValue?: string[];
 }) {
   const id = useId();
-  const [value, setValue] = useState(defaultValue.join(", "));
-  const labels = parseTaskLabels(value);
+  const input = useRef<HTMLInputElement>(null);
+  const [labels, setLabels] = useState(normalizeTaskLabels(defaultValue));
+  const [draft, setDraft] = useState("");
+  const all = normalizeTaskLabels([...labels, ...parseTaskLabels(draft)]);
+  const commit = (text: string) => {
+    const next = normalizeTaskLabels([...labels, ...parseTaskLabels(text)]);
+    if (next.length > 20 || next.some((label) => label.length > 180)) {
+      input.current?.setCustomValidity(
+        next.length > 20
+          ? "Use up to 20 labels."
+          : "Each label can have up to 180 characters.",
+      );
+      input.current?.reportValidity();
+      return false;
+    }
+    input.current?.setCustomValidity("");
+    setLabels(next);
+    setDraft("");
+    return true;
+  };
   return (
     <div className="task-label-field">
       <label htmlFor={id}>
         Labels <span className="optional">optional</span>
       </label>
-      <input
-        id={id}
-        name="labels"
-        aria-label="Task labels"
-        aria-describedby={id + "-help"}
-        value={value}
-        maxLength={3800}
-        placeholder="Research, Design, Development, Admin"
-        onChange={(event) => {
-          setValue(event.target.value);
-          const next = parseTaskLabels(event.target.value);
-          event.target.setCustomValidity(
-            next.length > 20
-              ? "Use up to 20 labels."
-              : next.some((label) => label.length > 180)
-                ? "Each label can have up to 180 characters."
-                : "",
-          );
-        }}
-      />
-      <TaskLabels labels={labels} limit={20} />
-      <small id={id + "-help"}>
-        Separate labels with commas. Each label has the same color across tasks.
-      </small>
+      <input type="hidden" name="labels" value={all.join(", ")} />
+      <div className="label-token-input" onClick={() => input.current?.focus()}>
+        {labels.map((label) => (
+          <span
+            className="label-token"
+            key={taskLabelKey(label)}
+            style={{ backgroundColor: color(label) }}
+          >
+            <span>{label}</span>
+            <button
+              type="button"
+              aria-label={`Remove ${label} label`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setLabels(labels.filter((item) => item !== label));
+                input.current?.setCustomValidity("");
+              }}
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        <input
+          id={id}
+          ref={input}
+          aria-label="Task labels"
+          aria-describedby={`${id}-help`}
+          value={draft}
+          maxLength={3800}
+          placeholder={labels.length ? "Add another…" : "Add labels…"}
+          onChange={(event) => {
+            const text = event.target.value;
+            event.target.setCustomValidity("");
+            if (/[,\n]/.test(text)) {
+              const parts = text.split(/[,\n]/);
+              const remainder = parts.pop() ?? "";
+              if (commit(parts.join(","))) setDraft(remainder);
+            } else setDraft(text);
+          }}
+          onBlur={() => {
+            if (draft.trim()) commit(draft);
+          }}
+          onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing) return;
+            if (event.key === "Enter" || event.key === ",") {
+              event.preventDefault();
+              commit(draft);
+            } else if (event.key === "Tab" && draft.trim()) commit(draft);
+            else if (event.key === "Backspace" && !draft && labels.length)
+              setLabels(labels.slice(0, -1));
+          }}
+        />
+      </div>
+      <small id={`${id}-help`}>Press Enter or comma to add a label.</small>
     </div>
   );
 }

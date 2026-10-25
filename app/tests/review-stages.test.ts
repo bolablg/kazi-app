@@ -284,3 +284,58 @@ it("keeps stage entry evidence through reassignment and uses the resource team's
   expect(report.stages[0].exits).toBe(1);
   expect(report.aged.find((entry) => entry.task.id === id)?.threshold).toBe(3);
 });
+
+it("clears optional dates accurately and does not invent none-to-none deadline changes", () => {
+  let state = fixtureState(now);
+  state = run(state, {
+    type: "create_task",
+    title: "An undated task",
+    description: "",
+    priority: "medium",
+    dependencies: [],
+    labels: [],
+  });
+  const id = state.tasks.at(-1)!.id;
+  state = run(
+    state,
+    {
+      type: "update_task",
+      id,
+      patch: { deadline: "", startDate: "", reviewDate: "" },
+    },
+    now + 1000,
+  );
+  expect(
+    state.activities.filter(
+      (event) =>
+        event.taskId === id && event.message.includes("deadline changed"),
+    ),
+  ).toHaveLength(0);
+  state = run(
+    state,
+    { type: "update_task", id, patch: { deadline: "2026-10-30" } },
+    now + 2000,
+  );
+  state = run(
+    state,
+    { type: "update_task", id, patch: { deadline: "" } },
+    now + 3000,
+  );
+  expect(state.tasks.find((task) => task.id === id)?.deadline).toBeUndefined();
+  expect(
+    state.lifecycleEvents?.find(
+      (event) => event.entityId === id && event.at === now + 3000,
+    )?.changes,
+  ).toContain("deadline");
+  state = run(
+    state,
+    { type: "update_task", id, patch: { deadline: "" } },
+    now + 4000,
+  );
+  expect(
+    state.activities.filter(
+      (event) =>
+        event.taskId === id && event.message.includes("deadline changed"),
+    ),
+  ).toHaveLength(2);
+});
