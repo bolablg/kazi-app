@@ -40,6 +40,7 @@ vi.mock("../src/components", async (load) => ({
     ) : null,
 }));
 beforeEach(() => {
+  vi.stubEnv("VITE_KAZI_MCP_URL", "https://kazi.iyanju.com/mcp");
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText: commands.writeText },
@@ -47,6 +48,7 @@ beforeEach(() => {
   commands.writeText.mockResolvedValue(undefined);
 });
 afterEach(() => {
+  vi.unstubAllEnvs();
   cleanup();
   commands.mintToken.mockReset();
   commands.writeText.mockReset();
@@ -66,6 +68,10 @@ it("copies a placeholder guide without minting a key", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Copy setup guide" }));
   await waitFor(() => expect(commands.writeText).toHaveBeenCalledOnce());
   expect(commands.writeText.mock.calls[0][0]).toContain("YOUR_KAZI_TOKEN");
+  expect(commands.writeText.mock.calls[0][0]).toContain(
+    "https://kazi.iyanju.com/mcp",
+  );
+  expect(commands.writeText.mock.calls[0][0]).not.toContain(".convex.site/mcp");
   expect(commands.mintToken).not.toHaveBeenCalled();
 });
 it("copies a newly issued setup pack and forgets its secret when closed", async () => {

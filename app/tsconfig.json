@@ -14,5 +14,14 @@
     "types": ["vite/client", "node"],
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "shared", "convex", "mcp", "tests", "*.ts"]
+  "include": [
+    "src",
+    "shared",
+    "convex",
+    "mcp",
+    "server",
+    "api",
+    "tests",
+    "*.ts"
+  ]
 }

@@ -43,7 +43,7 @@ These insights come from task changes and plans. You do not need to log hours. S
 
 Developers and agents can read and manage work through Kazi's MCP server. Create tasks and projects, update stages, post comments, attach artifacts, propose plans, and retrieve reports using the same permissions and validation as the app.
 
-Open **Account → Connections → MCP & agents** to create a scoped, revocable credential. **Copy agent setup** gives you a guide to paste into your chosen agent, including that connection's key and permissions. You control which actions each connection can perform, including whether it may approve plans. The [MCP guide](docs/MCP.md) covers connection details, scopes, and tool contracts.
+Connect to **`https://kazi.iyanju.com/mcp`**. Open **Account → Connections → MCP & agents** to create a scoped, revocable credential. **Copy agent setup** gives you a guide to paste into your chosen agent, including that connection's key and permissions. You control which actions each connection can perform, including whether it may approve plans. The [MCP guide](docs/MCP.md) covers connection details, scopes, and tool contracts.
 
 ## Current boundaries
 

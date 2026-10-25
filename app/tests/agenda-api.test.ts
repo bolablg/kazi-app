@@ -131,7 +131,7 @@ it("native plan approval uses the real verified action and creates no provider o
   await a.mutation(api.commands.execute, {
     workspaceId,
     requestId: "native-task",
-    command: JSON.stringify(capture),
+    command: JSON.stringify({ ...capture, status: "todo" }),
   });
   const id = await a.action(api.commands.plan, {
     workspaceId,
@@ -212,6 +212,9 @@ it("MCP covers every command and enforces granular scopes, same-state edits, and
   });
   expect(created.isError).not.toBe(true);
   const id = created.structuredContent.result;
+  expect(
+    (await call("get_task", { id })).structuredContent.result.task.status,
+  ).toBe("backlog");
   await call("add_comment", {
     id,
     body: "Same activity service",

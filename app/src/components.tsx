@@ -605,7 +605,7 @@ export function TaskForm({
             <select
               name="status"
               aria-label="Initial stage"
-              defaultValue="todo"
+              defaultValue="backlog"
             >
               <option value="backlog">Backlog</option>
               <option value="todo">To do</option>
