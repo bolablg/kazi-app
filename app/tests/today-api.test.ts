@@ -19,6 +19,8 @@ it("MCP Today matches the app's read model, enforces read scope, and isolates se
     email: "alice@example.test",
     emailVerified: true,
   });
+  // The authenticated initial read can run alongside account bootstrap.
+  expect(await alice.query(api.commands.allSnapshot, {})).toEqual([]);
   const workspaceId = (await alice.mutation(api.commands.bootstrap, {}))!;
   const teamId = await alice.mutation(api.commands.createTeam, {
     name: "Delivery",
@@ -97,7 +99,48 @@ it("MCP Today matches the app's read model, enforces read scope, and isolates se
   );
   expect((await call({ person: "unknown-person" })).isError).toBe(true);
   expect((await call({ projectId: "unknown-project" })).isError).toBe(true);
+  expect((await call({ attentionPage: -1 })).isError).toBe(true);
+  expect((await call({ focusPage: 1.5 })).isError).toBe(true);
   expect(
     (await alice.query(api.commands.snapshot, { workspaceId })).tasks,
   ).toEqual(snapshot.tasks);
+  for (let index = 0; index < 7; index++)
+    await alice.mutation(api.commands.execute, {
+      workspaceId,
+      requestId: "pagination-" + index,
+      command: JSON.stringify({
+        type: "create_task",
+        title: "Page task " + index,
+        description: "",
+        deadline: "2026-10-26",
+        priority: "medium",
+        dependencies: [],
+        labels: [],
+      }),
+    });
+  const page = (await call({ attentionPage: 2, focusPage: 2, activityPage: 2 }))
+    .structuredContent.result;
+  expect(page.pagination.attention.all).toMatchObject({
+    page: 2,
+    total: 8,
+    from: 6,
+    to: 8,
+  });
+  expect(page.attention.all).toHaveLength(3);
+  expect(page).toEqual(
+    JSON.parse(
+      JSON.stringify(
+        buildTodayOverview(
+          await alice.query(api.commands.snapshot, { workspaceId }),
+          {
+            actorId: subject,
+            now: Date.now(),
+            attentionPage: 2,
+            focusPage: 2,
+            activityPage: 2,
+          },
+        ),
+      ),
+    ),
+  );
 });

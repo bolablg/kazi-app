@@ -1,3 +1,4 @@
+import { PageLoading } from "./LoadingScreen";
 import { SidebarFavorites, FavoritesPage, TeamScope } from "./Favorites";
 import {
   projectPath,
@@ -309,7 +310,6 @@ function Shell() {
             <span>Search</span>
             <kbd>⌘ K</kbd>
           </button>
-          <div className="nav-group-label">Work</div>
           <nav aria-label="Main navigation">
             {primary.map((item) => (
               <NavLink
@@ -443,9 +443,9 @@ function Shell() {
           ) : (
             <Suspense
               fallback={
-                <p role="status" className="muted">
-                  Loading…
-                </p>
+                <div role="status" aria-label="Opening page">
+                  <PageLoading />
+                </div>
               }
             >
               <Routes
@@ -543,9 +543,9 @@ function Shell() {
                   element={
                     <Suspense
                       fallback={
-                        <p role="status" className="muted">
-                          Loading insights…
-                        </p>
+                        <div role="status" aria-label="Opening insights">
+                          <PageLoading />
+                        </div>
                       }
                     >
                       <InsightsPage openTask={openTask} />

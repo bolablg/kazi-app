@@ -153,7 +153,7 @@ describe("Today overview", () => {
       ),
     ).toBe(false);
   });
-  it("bounds the snapshot, keeps exact counts, and includes relevant history on archived tasks", () => {
+  it("paginates complete authorized queues, keeps exact counts, and includes relevant history on archived tasks", () => {
     const state = fixtureState(now);
     const template = state.tasks[0];
     state.tasks = Array.from({ length: 20 }, (_, index) => ({
@@ -172,9 +172,64 @@ describe("Today overview", () => {
     }));
     const result = buildTodayOverview(state, options);
     expect(result.counts.attention).toBe(20);
-    expect(result.attention.all).toHaveLength(6);
+    expect(result.attention.all).toHaveLength(5);
     expect(result.focus).toHaveLength(5);
-    expect(result.activity).toHaveLength(6);
+    expect(result.activity).toHaveLength(5);
+    expect(result.pagination.activity).toEqual({
+      page: 1,
+      pages: 4,
+      total: 20,
+      from: 1,
+      to: 5,
+    });
+    const paged = buildTodayOverview(state, {
+      ...options,
+      attentionPage: 2,
+      focusPage: 3,
+      activityPage: 4,
+    });
+    expect(paged.attention.all).toHaveLength(5);
+    expect(
+      paged.attention.all.some((task) =>
+        result.attention.all.some((first) => first.id === task.id),
+      ),
+    ).toBe(false);
+    expect(paged.pagination.focus).toMatchObject({ page: 3, from: 11, to: 15 });
+    expect(paged.activity.map(({ event }) => event.id)).toEqual([
+      "event-15",
+      "event-16",
+      "event-17",
+      "event-18",
+      "event-19",
+    ]);
+    expect(
+      buildTodayOverview(state, { ...options, activityPage: 999 }).pagination
+        .activity.page,
+    ).toBe(4);
+    expect(
+      buildTodayOverview(state, { ...options, attentionPage: NaN }).pagination
+        .attention.all.page,
+    ).toBe(1);
+    expect(
+      buildTodayOverview(state, { ...options, focusPage: -1 }).pagination.focus
+        .page,
+    ).toBe(1);
+    state.tasks = state.tasks.slice(0, 7);
+    const last = buildTodayOverview(state, {
+      ...options,
+      attentionPage: 4,
+      focusPage: 4,
+      activityPage: 4,
+    });
+    expect(last.pagination.focus).toEqual({
+      page: 2,
+      pages: 2,
+      total: 7,
+      from: 6,
+      to: 7,
+    });
+    expect(last.focus).toHaveLength(2);
+    expect(last.activity).toHaveLength(2);
     state.tasks[0].status = "archived";
     expect(buildTodayOverview(state, options).activity[0].task.status).toBe(
       "archived",
@@ -185,5 +240,22 @@ describe("Today overview", () => {
         ({ event }) => event.id === "event-0",
       ),
     ).toBe(false);
+  });
+  it("returns a stable empty page when filters remove all matches", () => {
+    const state = fixtureState(now);
+    const result = buildTodayOverview(state, {
+      ...options,
+      project: "unavailable",
+      activityPage: 3,
+    });
+    expect(result.focus).toEqual([]);
+    expect(result.activity).toEqual([]);
+    expect(result.pagination.activity).toEqual({
+      page: 1,
+      pages: 1,
+      total: 0,
+      from: 0,
+      to: 0,
+    });
   });
 });

@@ -3,7 +3,33 @@ import { dateInZone, deadlineAt } from "./scheduler";
 import { taskDate } from "./overview";
 import { isCommittedTask, isSchedulableTask } from "./workflow";
 
-/** A bounded read model over the caller's already-authorized, selected team data. */
+export interface TodayPage {
+  page: number;
+  pages: number;
+  total: number;
+  from: number;
+  to: number;
+}
+function paginate<T>(items: T[], requested = 1) {
+  const pages = Math.max(1, Math.ceil(items.length / 5));
+  const page = Math.min(
+    pages,
+    Math.max(1, Number.isSafeInteger(requested) ? requested : 1),
+  );
+  const start = (page - 1) * 5;
+  return {
+    items: items.slice(start, start + 5),
+    pagination: {
+      page,
+      pages,
+      total: items.length,
+      from: items.length ? start + 1 : 0,
+      to: Math.min(start + 5, items.length),
+    } satisfies TodayPage,
+  };
+}
+
+/** Five-item pages over the caller's already-authorized, selected team data. */
 export function buildTodayOverview(
   state: State,
   options: {
@@ -11,6 +37,9 @@ export function buildTodayOverview(
     now: number;
     person?: string;
     project?: string;
+    attentionPage?: number;
+    focusPage?: number;
+    activityPage?: number;
   },
 ) {
   const { actorId, now } = options;
@@ -95,7 +124,6 @@ export function buildTodayOverview(
       );
     })
     .sort((a, b) => b.at - a.at || a.id.localeCompare(b.id))
-    .slice(0, 6)
     .map((event) => ({ event, task: taskById.get(event.taskId!)! }));
   const updated = new Map(
     projects.map((item) => [item.id, item.updatedAt ?? item.createdAt ?? 0]),
@@ -126,6 +154,14 @@ export function buildTodayOverview(
   const favorites = projects.filter((item) =>
     me.favoriteProjectIds?.includes(item.id),
   );
+  const attentionPages = {
+    all: paginate(attention, options.attentionPage),
+    overdue: paginate(overdue, options.attentionPage),
+    dueToday: paginate(dueToday, options.attentionPage),
+    toValidate: paginate(toValidate, options.attentionPage),
+  };
+  const focusPage = paginate(focus, options.focusPage);
+  const activityPage = paginate(activity, options.activityPage);
   return {
     date: today,
     timezone: zone,
@@ -137,19 +173,30 @@ export function buildTodayOverview(
       focus: focus.length,
       favorites: favorites.length,
       recent: recent.length,
+      activity: activity.length,
     },
     attention: {
-      all: attention.slice(0, 6),
-      overdue: overdue.slice(0, 6),
-      dueToday: dueToday.slice(0, 6),
-      toValidate: toValidate.slice(0, 6),
+      all: attentionPages.all.items,
+      overdue: attentionPages.overdue.items,
+      dueToday: attentionPages.dueToday.items,
+      toValidate: attentionPages.toValidate.items,
     },
-    focus: focus.slice(0, 5),
+    focus: focusPage.items,
     projects: {
       favorites: favorites.slice(0, 4),
       recent: recent.slice(0, 4),
       updatedAt: Object.fromEntries(updated),
     },
-    activity,
+    activity: activityPage.items,
+    pagination: {
+      attention: {
+        all: attentionPages.all.pagination,
+        overdue: attentionPages.overdue.pagination,
+        dueToday: attentionPages.dueToday.pagination,
+        toValidate: attentionPages.toValidate.pagination,
+      },
+      focus: focusPage.pagination,
+      activity: activityPage.pagination,
+    },
   };
 }

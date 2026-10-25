@@ -321,12 +321,15 @@ export function createKaziServer(
   );
   register(
     "get_today_overview",
-    "Read the same Today overview as the app: overdue and upcoming tasks due today, tasks you own awaiting validation, ready-to-start focus work, favorite/recently updated projects, and recent task activity. Uses your timezone and selected accessible teams; lists are bounded and counts include all matches. Read-only.",
+    "Read the same Overview dashboard as the app: overdue and upcoming tasks due today, tasks you own awaiting validation, ready-to-start focus work, favorite/recently updated projects, and recent task activity. Uses your timezone and selected accessible teams. Each task/activity list has five items per page; pagination includes page counts and ranges. Read-only.",
     {
       ...workspace,
       teamIds: z.array(z.string()).min(1).max(10).optional(),
       person: z.string().optional(),
       projectId: z.string().optional(),
+      attentionPage: z.number().int().min(1).optional(),
+      focusPage: z.number().int().min(1).optional(),
+      activityPage: z.number().int().min(1).optional(),
     },
   );
   register(

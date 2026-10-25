@@ -124,6 +124,7 @@ export function CalendarTimeGrid({
                 className="time-calendar-date-header"
                 aria-label={"View " + dateLabel(day)}
                 aria-pressed={selected === day}
+                aria-controls="selected-day-agenda"
                 onClick={() => onSelectDay(day)}
               >
                 <span>
@@ -163,6 +164,13 @@ export function CalendarTimeGrid({
                 className="time-calendar-body"
                 style={{ height: maxHours * hourPixels }}
               >
+                <button
+                  className="time-calendar-select"
+                  aria-label={"Show details for " + dateLabel(day)}
+                  aria-controls="selected-day-agenda"
+                  tabIndex={-1}
+                  onClick={() => onSelectDay(day)}
+                />
                 {timing.ticks.map((at, i) => (
                   <div
                     className="time-calendar-hour"
@@ -178,30 +186,36 @@ export function CalendarTimeGrid({
                   zone,
                   startHour,
                   endHour,
-                ).map(({ event: e, top, height, lane, lanes }) => (
-                  <button
-                    key={e.id}
-                    className={cx("time-calendar-event", e.kind)}
-                    title={`${labels[e.kind]}: ${e.title}\n${clock(e.start!, zone)} – ${clock(e.end!, zone)}`}
-                    aria-label={`${labels[e.kind]}: ${e.title}, ${clock(e.start!, zone)} to ${clock(e.end!, zone)}`}
-                    style={{
-                      ...color(e.projectId),
-                      top: top * hourPixels,
-                      height: Math.max(20, height * hourPixels - 3),
-                      left: `calc(${(lane / lanes) * 100}% + 3px)`,
-                      width: `calc(${100 / lanes}% - 6px)`,
-                    }}
-                    onClick={() =>
-                      e.taskId ? onOpenTask(e.taskId) : onSelectDay(day)
-                    }
-                  >
-                    <span className="time-event-clock">
-                      {clock(e.start!, zone)}
-                    </span>
-                    <strong>{e.title}</strong>
-                    <small>{labels[e.kind]}</small>
-                  </button>
-                ))}
+                ).map(({ event: e, top, height, lane, lanes }) => {
+                  const pixels = Math.max(20, height * hourPixels - 3);
+                  const density =
+                    pixels < 48 ? "compact" : pixels < 78 ? "standard" : "full";
+                  return (
+                    <button
+                      key={e.id}
+                      className={cx("time-calendar-event", e.kind)}
+                      data-density={density}
+                      title={`${labels[e.kind]}: ${e.title}\n${clock(e.start!, zone)} – ${clock(e.end!, zone)}`}
+                      aria-label={`${labels[e.kind]}: ${e.title}, ${clock(e.start!, zone)} to ${clock(e.end!, zone)}`}
+                      style={{
+                        ...color(e.projectId),
+                        top: top * hourPixels,
+                        height: pixels,
+                        left: `calc(${(lane / lanes) * 100}% + 3px)`,
+                        width: `calc(${100 / lanes}% - 6px)`,
+                      }}
+                      onClick={() =>
+                        e.taskId ? onOpenTask(e.taskId) : onSelectDay(day)
+                      }
+                    >
+                      <strong>{e.title}</strong>
+                      <span className="time-event-clock">
+                        {clock(e.start!, zone)}
+                      </span>
+                      <small>{labels[e.kind]}</small>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );
