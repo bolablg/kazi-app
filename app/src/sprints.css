@@ -30,9 +30,6 @@
 .sprint-card:hover {
   border-color: var(--muted);
 }
-.sprint-card.active {
-  border-left: 3px solid var(--sprint-accent);
-}
 .sprint-card-top,
 .sprint-card-footer,
 .sprint-summary,
@@ -90,7 +87,6 @@
 }
 .sprint-objective {
   border: 1px solid var(--line);
-  border-left: 3px solid var(--sprint-accent);
   border-radius: 10px;
   padding: 24px;
   margin-bottom: 26px;
