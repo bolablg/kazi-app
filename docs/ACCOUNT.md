@@ -22,7 +22,7 @@ Connections belong to the signed-in person. Administrators cannot retrieve teamm
 
 ## Work across teams
 
-You can belong to several teams. Use the sidebar's **Teams** filter to choose All teams or one team across tasks, projects, Calendar, and Insights. Permissions apply separately in each team. A role in one team does not grant access to another team's projects or anyone's personal work.
+You can belong to several teams. Open a team from Favorites or choose **Open work** in **Team & people** to focus tasks, projects, Calendar, and Insights on that team. The top bar shows the current team; clear its filter or choose **View all work** in Team & people to return to all teams. Permissions apply separately in each team. A role in one team does not grant access to another team's projects or anyone's personal work.
 
 Under **Account → Team & people**, choose **Create team**, then use **People & access** to manage invitations and project access. Your existing personal work can also be shared through **Enable collaboration**.
 
@@ -34,12 +34,10 @@ Select the team, enter an email address, and choose the person's role and projec
 
 When email delivery is configured, invitations show queued, sent, or failed status. Otherwise, they show **Link only**, and you can share the invitation link yourself. Signing in preserves the invitation so the recipient can complete acceptance.
 
-## Teams in the sidebar
-
-Teams is the single global team filter. Choose All teams or an individual membership; up to five shortcuts appear, including the current selection. More teams opens the complete team directory. Open work focuses Overview on that team, while People & access opens its membership controls. The top bar shows the current scope without a second selector. Both sidebar sections collapse, and the account menu stays accessible when the sidebar scrolls.
-
 ## Favorites
 
-Star projects in the project list or project details. The collapsible **Favorites** section shows up to five active starred projects. When you have more, **More projects** opens the complete Projects page. Favorites are personal and do not change ownership or permissions. Losing access to a project hides its favorite entry. **Projects** opens the complete project list.
+Star projects in the project list or project details, and star teams in **Account → Team & people**. The collapsible **Favorites** section combines both kinds, with a **Project** or **Team** tag after each name. It shows five shortcuts in total, with the most recently added first. **More favorites** opens the complete mixed list, where either kind can be removed. Personal work remains available through Team & people and its Personal planning project.
+
+Opening a team favorite focuses Overview on that team. A project favorite opens that project, switching the team filter when needed. Favorites stay available across team filters, are private to you, and do not change ownership or permissions. Losing access to a project hides its favorite entry. **Projects** still opens the complete project list; **Team & people** remains the complete team directory. The account menu stays accessible when the sidebar scrolls.
 
 See [permissions](PRODUCT.md), [calendar subscriptions](CALENDAR.md), and [MCP connections](MCP.md).

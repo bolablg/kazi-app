@@ -174,8 +174,21 @@ export function visibleState(s: State, userId: string): State {
             favoriteProjectIds: m.favoriteProjectIds?.filter((id) =>
               projectIds.has(id),
             ),
+            favoriteProjectAt: m.favoriteProjectAt
+              ? Object.fromEntries(
+                  Object.entries(m.favoriteProjectAt).filter(([id]) =>
+                    projectIds.has(id),
+                  ),
+                )
+              : undefined,
           }
-        : { ...m, preferences: { ...defaults }, favoriteProjectIds: undefined },
+        : {
+            ...m,
+            preferences: { ...defaults },
+            favoriteProjectIds: undefined,
+            favoriteProjectAt: undefined,
+            favoriteTeamAt: undefined,
+          },
     ),
     calendars: s.calendars.filter((c) => c.ownerId === userId),
     busy: s.busy.filter((b) => b.ownerId === userId),
@@ -584,10 +597,24 @@ export function execute(
     case "favorite_project": {
       const project = projectFor(s, command.projectId, c.actorId);
       const favorites = new Set(me.favoriteProjectIds ?? []);
-      if (command.favorite) favorites.add(project.id);
-      else favorites.delete(project.id);
+      if (command.favorite) {
+        if (!favorites.has(project.id))
+          (me.favoriteProjectAt ??= {})[project.id] = c.now;
+        favorites.add(project.id);
+      } else {
+        favorites.delete(project.id);
+        if (me.favoriteProjectAt) delete me.favoriteProjectAt[project.id];
+      }
       me.favoriteProjectIds = [...favorites];
       result = project.id;
+      break;
+    }
+    case "favorite_team": {
+      if (s.workspace.kind !== "team")
+        fail("TEAM", "Choose a shared team to add it to Favorites.");
+      if (command.favorite) me.favoriteTeamAt ??= c.now;
+      else delete me.favoriteTeamAt;
+      result = s.workspace.id;
       break;
     }
     case "create_task": {

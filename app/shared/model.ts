@@ -78,6 +78,8 @@ export interface Member {
   color: string;
   preferences: Preferences;
   favoriteProjectIds?: string[];
+  favoriteProjectAt?: Record<string, number>;
+  favoriteTeamAt?: number;
 }
 export interface Workspace {
   id: string;
@@ -318,6 +320,7 @@ export interface State {
     id: string;
     key: string;
     role: Member["role"];
+    favoriteAt?: number;
   })[];
   resourceTeams?: Record<string, string>;
   teamMemberships?: Record<string, Member[]>;
@@ -467,6 +470,7 @@ export const commandSchema = z.discriminatedUnion("type", [
     projectId: id,
     favorite: z.boolean(),
   }),
+  z.object({ type: z.literal("favorite_team"), favorite: z.boolean() }),
   z.object({ type: z.literal("preferences"), preferences: preferencesSchema }),
   z.object({
     type: z.literal("propose"),
