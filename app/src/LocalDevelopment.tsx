@@ -6,6 +6,7 @@ import {
 } from "convex/react";
 import { LiveProvider } from "./data";
 import App from "./App";
+import { LoadingScreen } from "./LoadingScreen";
 function useLocalAuth() {
   const fetchAccessToken = useCallback(async () => {
     const response = await fetch("/__kazi_local_session", {
@@ -21,14 +22,11 @@ function useLocalAuth() {
 }
 function LocalSession() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated)
     return (
       <div className="startup">
-        <h1>
-          {isLoading
-            ? "Connecting to local Convex…"
-            : "Local Convex needs setup"}
-        </h1>
+        <h1>Local Convex needs setup</h1>
         <p>
           Run npm run dev:local to start the development backend and session.
         </p>

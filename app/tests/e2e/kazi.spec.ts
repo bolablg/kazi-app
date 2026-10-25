@@ -341,7 +341,7 @@ test("Connections shows truthful statuses, MCP setup, and empty client activity"
   await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page.getByText("Demo calendar", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("No agents connected yet", { exact: true }),
+    page.getByText("No clients seen yet", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     animations: "disabled",

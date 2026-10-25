@@ -4,13 +4,15 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Circle,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   MessageSquare,
   Plus,
   Star,
   TriangleAlert,
 } from "lucide-react";
-import { buildTodayOverview } from "../shared/today";
+import { buildTodayOverview, type TodayPage } from "../shared/today";
 import { projectPath } from "../shared/ids";
 import { statusLabels, type Task } from "../shared/model";
 import { taskDate } from "../shared/overview";
@@ -23,6 +25,7 @@ import {
 } from "./WorkPages";
 import { projectStyle } from "./projectColors";
 import { TaskLabels } from "./TaskLabels";
+import { InfoTip } from "./InfoTip";
 
 type Attention = "all" | "overdue" | "dueToday" | "toValidate";
 const attentionLabels = {
@@ -34,11 +37,36 @@ const attentionLabels = {
 export function TodayOverview({
   person,
   project,
+  ...props
+}: WorkProps & { person: string; project: string; now: number }) {
+  return (
+    <TodayDashboard
+      key={JSON.stringify([person, project])}
+      person={person}
+      project={project}
+      {...props}
+    />
+  );
+}
+function TodayDashboard({
+  person,
+  project,
   now,
   ...props
 }: WorkProps & { person: string; project: string; now: number }) {
   const { state, actorId } = useData();
-  const overview = buildTodayOverview(state, { actorId, person, project, now });
+  const [attentionPage, setAttentionPage] = useState(1);
+  const [focusPage, setFocusPage] = useState(1);
+  const [activityPage, setActivityPage] = useState(1);
+  const overview = buildTodayOverview(state, {
+    actorId,
+    person,
+    project,
+    now,
+    attentionPage,
+    focusPage,
+    activityPage,
+  });
   const [attention, setAttention] = useState<Attention>("all");
   const [projectView, setProjectView] = useState<"favorites" | "recent">(() =>
     overview.counts.favorites ? "favorites" : "recent",
@@ -49,11 +77,11 @@ export function TodayOverview({
     if (focus && person !== "all") params.set("assignee", person);
     return "/tasks?" + params;
   };
-  const rows = overview.attention[attention].slice(0, 4);
-  const attentionCount =
-    attention === "all"
-      ? overview.counts.attention
-      : overview.counts[attention];
+  const rows = overview.attention[attention];
+  const changeAttention = (next: Attention) => {
+    setAttention(next);
+    setAttentionPage(1);
+  };
   return (
     <div className="today-dashboard">
       <div className="today-intro">
@@ -96,7 +124,7 @@ export function TodayOverview({
             key={item.key}
             data-tone={item.tone}
             aria-pressed={attention === item.key}
-            onClick={() => setAttention(item.key)}
+            onClick={() => changeAttention(item.key)}
           >
             <item.icon size={20} />
             <strong>{overview.counts[item.key]}</strong>
@@ -105,163 +133,159 @@ export function TodayOverview({
         ))}
       </div>
       <div className="today-grid">
-        <div className="today-column">
-          <section
-            className="today-panel today-attention"
-            aria-labelledby="today-attention-heading"
+        <section
+          className="today-panel today-attention"
+          aria-labelledby="today-attention-heading"
+        >
+          <div className="today-panel-heading">
+            <h2 id="today-attention-heading">
+              Needs attention <span>{overview.counts.attention}</span>
+            </h2>
+            <Link className="text-button" to={tasksLink()}>
+              Open tasks <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          <div
+            className="today-switches"
+            role="group"
+            aria-label="Attention filters"
           >
-            <div className="today-panel-heading">
-              <h2 id="today-attention-heading">
-                Needs attention <span>{overview.counts.attention}</span>
-              </h2>
-              <Link className="text-button" to={tasksLink()}>
-                Open tasks <ArrowUpRight size={14} />
-              </Link>
-            </div>
-            <div
-              className="today-switches"
-              role="group"
-              aria-label="Attention filters"
-            >
-              {(Object.keys(attentionLabels) as Attention[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={attention === key}
-                  onClick={() => setAttention(key)}
-                >
-                  {attentionLabels[key]}
-                </button>
+            {(Object.keys(attentionLabels) as Attention[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={attention === key}
+                onClick={() => changeAttention(key)}
+              >
+                {attentionLabels[key]}
+              </button>
+            ))}
+          </div>
+          {rows.length ? (
+            <div className="today-task-list">
+              {rows.map((task) => (
+                <TodayTaskRow
+                  key={task.id}
+                  task={task}
+                  zone={overview.timezone}
+                  today={overview.date}
+                  onOpen={props.openTask}
+                />
               ))}
             </div>
-            {rows.length ? (
-              <div className="today-task-list">
-                {rows.map((task) => (
-                  <TodayTaskRow
-                    key={task.id}
-                    task={task}
-                    zone={overview.timezone}
-                    today={overview.date}
-                    onOpen={props.openTask}
-                  />
-                ))}
-              </div>
-            ) : (
-              <TodayEmpty
-                icon={CheckCircle2}
-                title="Nothing needs attention here."
-                body="Deadlines and tasks waiting for your validation appear here."
-              />
-            )}
-            {attentionCount > rows.length && (
-              <p className="today-more">
-                Showing {rows.length} of {attentionCount}. Open Tasks for the
-                full list.
-              </p>
-            )}
-          </section>
-          <section
-            className="today-panel today-focus"
-            aria-labelledby="today-focus-heading"
-          >
-            <div className="today-panel-heading">
-              <div className="section-title-group">
-                <h2 id="today-focus-heading">
-                  {person === actorId ? "My focus" : "Focus"}{" "}
-                  <span>{overview.counts.focus}</span>
-                </h2>
-                <InfoTip label="About focus tasks">
-                  In progress first, followed by work ready to start. Tasks are
-                  ready when their planned start has arrived and prerequisites
-                  are completed.
-                </InfoTip>
-              </div>
-              <Link className="text-button" to={tasksLink(true)}>
-                View tasks <ArrowUpRight size={14} />
-              </Link>
+          ) : (
+            <TodayEmpty
+              icon={CheckCircle2}
+              title="Nothing needs attention here."
+              body="Deadlines and tasks waiting for your validation appear here."
+            />
+          )}
+          <TodayPagination
+            label="Needs attention"
+            value={overview.pagination.attention[attention]}
+            onChange={setAttentionPage}
+          />
+        </section>
+        <section
+          className="today-panel today-focus"
+          aria-labelledby="today-focus-heading"
+        >
+          <div className="today-panel-heading">
+            <div className="section-title-group">
+              <h2 id="today-focus-heading">
+                {person === actorId ? "My focus" : "Focus"}{" "}
+                <span>{overview.counts.focus}</span>
+              </h2>
+              <InfoTip label="About focus tasks">
+                In progress first, followed by work ready to start. Tasks are
+                ready when their planned start has arrived and prerequisites are
+                completed.
+              </InfoTip>
             </div>
-            {overview.focus.length ? (
-              <div className="today-task-list">
-                {overview.focus.map((task) => (
-                  <TodayTaskRow
-                    key={task.id}
-                    task={task}
-                    zone={overview.timezone}
-                    today={overview.date}
-                    onOpen={props.openTask}
-                  />
-                ))}
-              </div>
-            ) : (
-              <TodayEmpty
-                icon={Clock3}
-                title="Choose what comes next."
-                body="Your tasks in To do and In progress will appear here."
-              >
-                <button
-                  className="button secondary"
-                  onClick={() =>
-                    props.addTask(project === "all" ? undefined : project)
-                  }
-                >
-                  <Plus size={14} /> Add a task
-                </button>
-              </TodayEmpty>
-            )}
-            {overview.counts.focus > overview.focus.length && (
-              <p className="today-more">
-                Showing {overview.focus.length} of {overview.counts.focus} ready
-                tasks.
-              </p>
-            )}
-          </section>
-        </div>
-        <div className="today-column">
-          <section
-            className="today-panel today-projects"
-            aria-labelledby="today-projects-heading"
-          >
-            <div className="today-panel-heading">
-              <h2 id="today-projects-heading">Projects</h2>
-              <Link className="text-button" to="/projects">
-                All projects <ArrowUpRight size={14} />
-              </Link>
+            <Link className="text-button" to={tasksLink(true)}>
+              View tasks <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          {overview.focus.length ? (
+            <div className="today-task-list">
+              {overview.focus.map((task) => (
+                <TodayTaskRow
+                  key={task.id}
+                  task={task}
+                  zone={overview.timezone}
+                  today={overview.date}
+                  onOpen={props.openTask}
+                />
+              ))}
             </div>
-            <div
-              className="today-switches"
-              role="group"
-              aria-label="Project shortcuts"
+          ) : (
+            <TodayEmpty
+              icon={Clock3}
+              title="Choose what comes next."
+              body="Your tasks in To do and In progress will appear here."
             >
               <button
-                aria-pressed={projectView === "favorites"}
-                onClick={() => setProjectView("favorites")}
+                className="button secondary"
+                onClick={() =>
+                  props.addTask(project === "all" ? undefined : project)
+                }
               >
-                <Star size={13} /> Favorites
+                <Plus size={14} /> Add a task
               </button>
-              <button
-                aria-pressed={projectView === "recent"}
-                onClick={() => setProjectView("recent")}
-              >
-                <Clock3 size={13} /> Recent
-              </button>
-              <span>
-                {projectView === "recent"
-                  ? "Recently updated"
-                  : "Your starred projects"}
-              </span>
-            </div>
-            {overview.projects[projectView].length ? (
-              <div className="today-project-grid">
-                {overview.projects[projectView].map((item) => (
-                  <div
-                    className="today-project-tile"
-                    key={item.id}
-                    style={projectStyle(item.color)}
-                  >
-                    <Link to={projectPath(item.id)} aria-label={item.title}>
-                      <span className="today-project-art">
-                        <ProjectIcon project={item} />
-                      </span>
+            </TodayEmpty>
+          )}
+          <TodayPagination
+            label={person === actorId ? "My focus" : "Focus"}
+            value={overview.pagination.focus}
+            onChange={setFocusPage}
+          />
+        </section>
+        <section
+          className="today-panel today-projects"
+          aria-labelledby="today-projects-heading"
+        >
+          <div className="today-panel-heading">
+            <h2 id="today-projects-heading">Projects</h2>
+            <Link className="text-button" to="/projects">
+              All projects <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          <div
+            className="today-switches"
+            role="group"
+            aria-label="Project shortcuts"
+          >
+            <button
+              aria-pressed={projectView === "favorites"}
+              onClick={() => setProjectView("favorites")}
+            >
+              <Star size={13} /> Favorites
+            </button>
+            <button
+              aria-pressed={projectView === "recent"}
+              onClick={() => setProjectView("recent")}
+            >
+              <Clock3 size={13} /> Recent
+            </button>
+            <span>
+              {projectView === "recent"
+                ? "Recently updated"
+                : "Your starred projects"}
+            </span>
+          </div>
+          {overview.projects[projectView].length ? (
+            <div className="today-project-grid">
+              {overview.projects[projectView].map((item) => (
+                <div
+                  className="today-project-tile"
+                  key={item.id}
+                  style={projectStyle(item.color)}
+                >
+                  <Link to={projectPath(item.id)} aria-label={item.title}>
+                    <span className="today-project-art">
+                      <ProjectIcon project={item} />
+                    </span>
+                    <span className="today-project-copy">
                       <strong>{item.title}</strong>
                       <small>
                         {item.status === "done"
@@ -272,121 +296,165 @@ export function TodayOverview({
                               ? "Planned"
                               : "In progress"}
                       </small>
-                    </Link>
-                    <ProjectFavoriteButton project={item} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <TodayEmpty
-                icon={Star}
-                title={
-                  projectView === "favorites"
-                    ? "Keep your favorites close."
-                    : "Start something worth doing."
-                }
-                body={
-                  projectView === "favorites"
-                    ? "Star a project to keep it here and in your sidebar."
-                    : "Create a project to organize related work."
-                }
-              >
-                {projectView === "favorites" ? (
-                  <Link className="text-button" to="/projects">
-                    Browse projects <ArrowUpRight size={14} />
+                    </span>
                   </Link>
-                ) : (
-                  <button
-                    className="button secondary"
-                    onClick={props.addProject}
-                  >
-                    <Plus size={14} /> Create a project
-                  </button>
-                )}
-              </TodayEmpty>
-            )}
-          </section>
-          <section
-            className="today-panel today-activity"
-            aria-labelledby="today-activity-heading"
-          >
-            <div className="today-panel-heading">
-              <div className="section-title-group">
-                <h2 id="today-activity-heading">Recent activity</h2>
-                <InfoTip label="About recent activity">
-                  Comments and system updates on your work. Open a task to see
-                  its full Activity history.
-                </InfoTip>
-              </div>
-              <Link className="text-button" to="/notifications">
-                Notifications <ArrowUpRight size={14} />
-              </Link>
+                  <ProjectFavoriteButton project={item} />
+                </div>
+              ))}
             </div>
-            {overview.activity.length ? (
-              <ol className="today-activity-list">
-                {overview.activity.map(({ event, task }) => {
-                  const author = state.members.find(
-                    (member) => member.id === event.actorId,
-                  );
-                  return (
-                    <li key={event.id}>
-                      <button onClick={() => props.openTask(task.id)}>
-                        <Avatar
-                          name={author?.name ?? "Former teammate"}
-                          color={author?.color}
-                          small
-                        />
-                        <span className="today-activity-copy">
-                          <span>
-                            <strong>{author?.name ?? "Former teammate"}</strong>
-                            <time dateTime={new Date(event.at).toISOString()}>
-                              {new Intl.DateTimeFormat("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                                timeZone: overview.timezone,
-                              }).format(event.at)}
-                            </time>
-                          </span>
-                          <strong className="today-activity-task">
-                            {task.title}
-                          </strong>
-                          <span className="today-activity-message">
-                            {event.toStatus ? (
-                              <>
-                                <span
-                                  className="activity-stage"
-                                  data-status={event.toStatus}
-                                >
-                                  {statusLabels[event.toStatus]}
-                                </span>{" "}
-                                {event.fromStatus
-                                  ? "Status updated"
-                                  : "Task created"}
-                              </>
-                            ) : (
-                              event.message || "Attached a file"
-                            )}
-                          </span>
+          ) : (
+            <TodayEmpty
+              icon={Star}
+              title={
+                projectView === "favorites"
+                  ? "Keep your favorites close."
+                  : "Start something worth doing."
+              }
+              body={
+                projectView === "favorites"
+                  ? "Star a project to keep it here and in your sidebar."
+                  : "Create a project to organize related work."
+              }
+            >
+              {projectView === "favorites" ? (
+                <Link className="text-button" to="/projects">
+                  Browse projects <ArrowUpRight size={14} />
+                </Link>
+              ) : (
+                <button className="button secondary" onClick={props.addProject}>
+                  <Plus size={14} /> Create a project
+                </button>
+              )}
+            </TodayEmpty>
+          )}
+        </section>
+        <section
+          className="today-panel today-activity"
+          aria-labelledby="today-activity-heading"
+        >
+          <div className="today-panel-heading">
+            <div className="section-title-group">
+              <h2 id="today-activity-heading">Recent activity</h2>
+              <InfoTip label="About recent activity">
+                Comments and system updates on your work. Open a task to see its
+                full Activity history.
+              </InfoTip>
+            </div>
+            <Link className="text-button" to="/notifications">
+              Notifications <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          {overview.activity.length ? (
+            <ol className="today-activity-list">
+              {overview.activity.map(({ event, task }) => {
+                const author = state.members.find(
+                  (member) => member.id === event.actorId,
+                );
+                return (
+                  <li key={event.id}>
+                    <button onClick={() => props.openTask(task.id)}>
+                      <Avatar
+                        name={author?.name ?? "Former teammate"}
+                        color={author?.color}
+                        small
+                      />
+                      <span className="today-activity-copy">
+                        <span>
+                          <strong>{author?.name ?? "Former teammate"}</strong>
+                          <time dateTime={new Date(event.at).toISOString()}>
+                            {new Intl.DateTimeFormat("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              timeZone: overview.timezone,
+                            }).format(event.at)}
+                          </time>
                         </span>
-                        <ArrowUpRight size={14} />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <TodayEmpty
-                icon={MessageSquare}
-                title="No recent activity."
-                body="Task comments and status updates will appear here."
-              />
-            )}
-          </section>
-        </div>
+                        <strong className="today-activity-task">
+                          {task.title}
+                        </strong>
+                        <span className="today-activity-message">
+                          {event.toStatus ? (
+                            <>
+                              <span
+                                className="activity-stage"
+                                data-status={event.toStatus}
+                              >
+                                {statusLabels[event.toStatus]}
+                              </span>{" "}
+                              {event.fromStatus
+                                ? "Status updated"
+                                : "Task created"}
+                            </>
+                          ) : (
+                            event.message || "Attached a file"
+                          )}
+                        </span>
+                      </span>
+                      <ArrowUpRight size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <TodayEmpty
+              icon={MessageSquare}
+              title="No recent activity."
+              body="Task comments and status updates will appear here."
+            />
+          )}
+          <TodayPagination
+            label="Recent activity"
+            value={overview.pagination.activity}
+            onChange={setActivityPage}
+          />
+        </section>
       </div>
     </div>
+  );
+}
+
+function TodayPagination({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: TodayPage;
+  onChange: (page: number) => void;
+}) {
+  if (!value.total) return null;
+  return (
+    <nav className="today-pagination" aria-label={label + " pages"}>
+      <span aria-live="polite" aria-atomic="true">
+        {value.from}–{value.to} of {value.total}
+      </span>
+      {value.pages > 1 && (
+        <div>
+          <button
+            className="icon-button"
+            aria-label={"Previous " + label.toLowerCase() + " page"}
+            disabled={value.page === 1}
+            onClick={() => onChange(value.page - 1)}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span>
+            {value.page} / {value.pages}
+          </span>
+          <button
+            className="icon-button"
+            aria-label={"Next " + label.toLowerCase() + " page"}
+            disabled={value.page === value.pages}
+            onClick={() => onChange(value.page + 1)}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+    </nav>
   );
 }
 
@@ -460,4 +528,3 @@ function TodayEmpty({
     </div>
   );
 }
-import { InfoTip } from "./InfoTip";

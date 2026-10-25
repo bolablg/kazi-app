@@ -1,7 +1,7 @@
 import { projectStyle } from "./projectColors";
 import { PageTitle } from "./InfoTip";
 import { TaskLabels } from "./TaskLabels";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   WorkViewFilters,
   useWorkViewScope,
@@ -66,6 +66,23 @@ export function CalendarPage(props: WorkProps) {
   const [anchor, setAnchor] = useState(today),
     [selected, setSelected] = useState(today),
     [drafts, setDrafts] = useState(false);
+  const agenda = useRef<HTMLElement>(null);
+  const selectDay = (day: string) => {
+    setSelected(day);
+    requestAnimationFrame(() => {
+      const panel = agenda.current;
+      if (!panel) return;
+      const bounds = panel.getBoundingClientRect();
+      if (bounds.top > window.innerHeight - 120 || bounds.bottom < 0)
+        panel.scrollIntoView({
+          block: "start",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "instant"
+            : "smooth",
+        });
+    });
+  };
   const scale: CalendarScale = ["month", "week", "day"].includes(
     params.get("range") ?? "",
   )
@@ -188,7 +205,7 @@ export function CalendarPage(props: WorkProps) {
     <div className="page overview-page">
       <div className="page-heading">
         <div>
-          <PageTitle help="See deadlines, planned focus sessions, and availability. Calendar supports month, week, and day; Schedule lists the same agenda by date.">
+          <PageTitle help="Select a day or empty calendar cell to see its full agenda below. Select a task entry to open it. Calendar supports month, week, and day; Schedule lists the same agenda by date.">
             Calendar
           </PageTitle>
         </div>
@@ -398,7 +415,8 @@ export function CalendarPage(props: WorkProps) {
                                   labelDate(day) + ", " + rows.length + " items"
                                 }
                                 aria-pressed={selected === day}
-                                onClick={() => setSelected(day)}
+                                aria-controls="selected-day-agenda"
+                                onClick={() => selectDay(day)}
                               >
                                 <span>{Number(day.slice(-2))}</span>
                                 <span className="mobile-item-count">
@@ -418,7 +436,7 @@ export function CalendarPage(props: WorkProps) {
                                     onClick={() =>
                                       e.taskId
                                         ? props.openTask(e.taskId)
-                                        : setSelected(day)
+                                        : selectDay(day)
                                     }
                                     title={kinds[e.kind] + ": " + e.title}
                                   >
@@ -434,7 +452,8 @@ export function CalendarPage(props: WorkProps) {
                                 {rows.length > 3 && (
                                   <button
                                     className="more-day-events"
-                                    onClick={() => setSelected(day)}
+                                    aria-controls="selected-day-agenda"
+                                    onClick={() => selectDay(day)}
                                   >
                                     +{rows.length - 3} more
                                   </button>
@@ -454,7 +473,7 @@ export function CalendarPage(props: WorkProps) {
                 events={events}
                 zone={zone}
                 selected={selected}
-                onSelectDay={setSelected}
+                onSelectDay={selectDay}
                 onOpenTask={props.openTask}
               />
             )}
@@ -479,9 +498,20 @@ export function CalendarPage(props: WorkProps) {
               )}
               <small>{zone}</small>
             </div>
-            <section className="selected-day-agenda">
+            <section
+              className="selected-day-agenda"
+              id="selected-day-agenda"
+              aria-labelledby="selected-day-heading"
+              ref={agenda}
+            >
               <div className="section-line">
-                <h2>{labelDate(selected)}</h2>
+                <h2
+                  id="selected-day-heading"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {labelDate(selected)}
+                </h2>
                 <span>{(byDay.get(selected) ?? []).length} items</span>
               </div>
               {renderEvents(byDay.get(selected) ?? [])}

@@ -271,12 +271,13 @@
 }
 .today-grid {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-areas: "attention projects" "focus activity";
   gap: 24px;
-}
-.today-column {
-  gap: 24px;
+  align-items: stretch;
 }
 .today-panel {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--ui-line);
   border-radius: 12px;
   background: #fff;
@@ -303,13 +304,20 @@
 }
 .today-project-grid {
   padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 .today-project-art {
-  border-radius: 8px;
-  min-height: 80px;
+  border-radius: 9px;
+  min-height: 44px;
+  height: 44px;
+  width: 44px;
+  flex-shrink: 0;
 }
-.today-project-tile > a > small {
+.today-project-copy > small {
   font-size: 12px;
+  color: var(--ui-muted);
 }
 .today-panel-note,
 .today-more {
@@ -554,6 +562,7 @@
   }
   .today-grid {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "attention" "focus" "projects" "activity";
   }
   .today-project-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -864,6 +873,219 @@
   .auth-page input:not([type="checkbox"]):not([type="radio"]),
   .embedded-account-profile input:not([type="checkbox"]):not([type="radio"]) {
     font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+/* Dashboard rows share their height; pagination always ends each panel. */
+.today-attention {
+  grid-area: attention;
+}
+.today-focus {
+  grid-area: focus;
+}
+.today-projects {
+  grid-area: projects;
+}
+.today-activity {
+  grid-area: activity;
+}
+.today-pagination {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+.today-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.today-pagination .icon-button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+.today-project-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ui-line);
+}
+.today-project-tile:last-child {
+  border-bottom: 0;
+}
+.today-project-tile > a {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.today-project-art .project-icon {
+  width: 24px;
+  height: 24px;
+}
+.today-project-art svg {
+  width: 22px;
+  height: 22px;
+}
+.today-project-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.today-project-copy > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.today-project-tile .project-favorite {
+  position: static;
+  flex-shrink: 0;
+  min-width: 36px;
+  min-height: 36px;
+}
+.sidebar-search + nav {
+  margin-top: 16px;
+}
+.mcp-setup-steps {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.mcp-setup-steps > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.mcp-setup-steps > li > div {
+  flex: 1;
+  min-width: 0;
+}
+.mcp-setup-steps p {
+  margin: 6px 0 10px;
+}
+.mcp-step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand-wash);
+  color: var(--brand-ink);
+  font-weight: 650;
+}
+.mcp-setup-steps code {
+  overflow-wrap: anywhere;
+}
+.mcp-setup-steps .endpoint-row {
+  margin: 12px 0;
+}
+
+/* The date button covers the cell; event buttons stay independently clickable. */
+.overview-calendar td {
+  position: relative;
+  cursor: pointer;
+}
+.calendar-date-button {
+  position: static;
+}
+.calendar-date-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.overview-calendar td:has(.calendar-date-button:hover) {
+  background: var(--brand-wash);
+}
+.overview-calendar td:has(.calendar-date-button:focus-visible) {
+  outline: 2px solid var(--brand-ink);
+  outline-offset: -2px;
+}
+.month-events {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.month-events > button {
+  pointer-events: auto;
+}
+.selected-day-agenda {
+  scroll-margin-top: 24px;
+}
+.time-calendar-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: transparent;
+}
+.time-calendar-select:hover {
+  background: var(--brand-wash);
+}
+.time-calendar-hour {
+  pointer-events: none;
+}
+.time-calendar-event {
+  gap: 3px;
+  padding: 4px;
+}
+.time-calendar-event strong,
+.overview-time-calendar.daily .time-calendar-event strong {
+  display: block;
+  flex-shrink: 0;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.time-calendar-event[data-density="standard"] small {
+  display: none;
+}
+.time-calendar-event[data-density="compact"],
+.overview-time-calendar.daily .time-calendar-event[data-density="compact"] {
+  padding: 1px 4px;
+  justify-content: center;
+  gap: 0;
+}
+.time-calendar-event[data-density="compact"] :is(.time-event-clock, small),
+.overview-time-calendar.daily
+  .time-calendar-event[data-density="compact"]
+  :is(.time-event-clock, small) {
+  display: none;
+}
+.overview-time-calendar.daily
+  .time-calendar-event[data-density="standard"]
+  small {
+  display: none;
+}
+.time-calendar-event[data-density="compact"] strong {
+  font-size: 11px;
+  line-height: 16px;
+}
+@media (max-width: 700px) {
+  .today-pagination {
+    padding-inline: 12px;
+  }
+  .today-pagination .icon-button,
+  .today-project-tile .project-favorite {
+    min-width: 44px;
     min-height: 44px;
   }
 }

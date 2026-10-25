@@ -41,6 +41,25 @@ The review caught a mobile Filters button inheriting a 40 px desktop height; it 
 
 ## Validation and limits
 
-Local validation passed: 173 unit/backend tests, three deployment guards, the production build, formatting, the 105-combination interface audit and overlay checks, and all four Insights regression tests. CI runs the complete 59-test browser/PWA suite before each promotion through staging to production. Browser tests use isolated synthetic data and do not alter personal production records.
+The initial modernization passed 173 unit/backend tests, three deployment guards, the production build, formatting, the 105-combination interface audit and overlay checks, and all four Insights regression tests. The initial release ran 59 browser/PWA tests before each promotion through staging to production. Browser tests use isolated synthetic data and do not alter personal production records.
 
 Viewport checks run in Chromium. They do not replace testing on physical iOS/Android devices or every browser engine. The deployed Clerk sign-in page was separately reviewed; provider inputs and social sign-in buttons now have explicit flat borders and 44 px control heights. The synthetic demo cannot verify account-provider behavior, so hosted authentication and account pages also need live checks.
+
+## Calendar, Overview, and refresh follow-up
+
+- Empty month-cell and timed-day areas select the complete day agenda below the calendar. Date buttons retain keyboard support and task entries still open the task.
+- Short proposals show a single title line that fits their duration. Tests measure title bounds inside the event at 390, 768, and 1440 px in Week and Day. Screenshots include the previously clipped short sessions.
+- Needs attention, My focus, and Recent activity each have independent five-item pagination, exact ranges, clamped last pages, and reset on person/project scope changes. The same pagination is available through MCP. My focus and Recent activity share a desktop grid row and bottom edge.
+- Project shortcuts use compact colored icons, names, statuses, and favorite controls. The redundant Work sidebar heading is removed.
+- MCP retains credentials, client visibility, and activity. A three-step setup explains credential creation, HTTP configuration, and verification, with a placeholder JSON template and an explicit warning when copying a configuration containing a newly created token.
+- HTML renders an identity-free skeleton before JavaScript. Clerk, Convex verification, and the initial data read use the same skeleton. The initial authenticated read runs alongside bootstrap. The skeleton follows the tablet/phone navigation breakpoint, and private data is never persisted for a loading preview.
+
+The follow-up passed 176 unit/backend tests, three deployment guards, build/format checks, the full 66-test browser/PWA suite, and nine final focused browser cases. The final suite has 68 browser/PWA tests, including delayed-script first-paint checks at all three viewport sizes. Account-switch tests verify that previous private content disappears and each identity gets a separate Convex cache.
+
+![Aligned desktop panels and pagination](screenshots/overview-pagination-desktop.png)
+
+![Readable short proposal entries on phone](screenshots/calendar-proposals-390.png)
+
+![MCP setup on phone](screenshots/mcp-setup-phone.png)
+
+![Refresh skeleton on tablet before JavaScript](screenshots/refresh-skeleton-768.png)
