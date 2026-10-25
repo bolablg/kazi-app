@@ -17,6 +17,7 @@ import {
   Plus,
   Clock3,
   CalendarDays,
+  ChartGantt,
   MoreHorizontal,
   Globe2,
   BookOpen,
@@ -538,7 +539,8 @@ export function ProjectDetail(props: WorkProps) {
     [viewParams, setViewParams] = useSearchParams(),
     [membersOpen, setMembersOpen] = useState(false);
   const viewTabs = useRef<HTMLDivElement>(null);
-  const view = viewParams.get("view") ?? "list";
+  const requestedView = viewParams.get("view") ?? "list";
+  const view = requestedView === "timeline" ? "gantt" : requestedView;
   useEffect(() => {
     viewTabs.current
       ?.querySelector('[aria-pressed="true"]')
@@ -678,12 +680,12 @@ export function ProjectDetail(props: WorkProps) {
             Board
           </button>
           <button
-            className={view === "timeline" ? "active" : ""}
-            aria-pressed={view === "timeline"}
-            onClick={() => setView("timeline")}
+            className={view === "gantt" ? "active" : ""}
+            aria-pressed={view === "gantt"}
+            onClick={() => setView("gantt")}
           >
-            <CalendarDays size={15} />
-            Timeline
+            <ChartGantt size={15} />
+            Gantt
           </button>
           <button
             className={view === "archive" ? "active" : ""}
@@ -710,7 +712,7 @@ export function ProjectDetail(props: WorkProps) {
           openTask={props.openTask}
           expanded
         />
-      ) : view === "timeline" ? (
+      ) : view === "gantt" ? (
         <ProjectTimeline
           project={project}
           tasks={allProjectTasks.filter((t) => !isArchivedTask(t))}

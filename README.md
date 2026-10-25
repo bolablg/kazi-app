@@ -9,8 +9,6 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Overview in Kazi](docs/screenshots/momentum-1440.png)
-
 ## Manage the work
 
 Use lists and drag-and-drop boards to move tasks through **Backlog → To do → In progress → To validate → Completed**. Keep rejected or discontinued work in Archive, and save ideas for a later review with **To Brainstorm**.

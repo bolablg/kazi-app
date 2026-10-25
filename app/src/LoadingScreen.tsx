@@ -1,34 +1,15 @@
-import { Brand } from "./Brand";
+import { LoadingSignal } from "./LoadingSignal";
 
-/** Identity-free placeholders: private data is never cached for the loading UI. */
+/** The same brand motion accompanies refresh, account verification, and page loads. */
 export function PageLoading() {
   return (
-    <div className="loading-content" aria-hidden="true">
-      <div className="loading-bar loading-title" />
-      <div className="loading-tiles">
-        {[0, 1, 2].map((n) => (
-          <div className="loading-tile" key={n}>
-            <span className="loading-bar" />
-            <span className="loading-bar" />
-          </div>
-        ))}
-      </div>
-      <div className="loading-panels">
-        {[0, 1].map((n) => (
-          <div className="loading-panel" key={n}>
-            <div className="loading-bar loading-title" />
-            {[0, 1, 2, 3].map((row) => (
-              <div className="loading-row" key={row}>
-                <span className="loading-dot" />
-                <span className="loading-bar" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+    <div className="loading-content loading-page" aria-hidden="true">
+      <LoadingSignal />
+      <p className="loading-title">Loading…</p>
     </div>
   );
 }
+
 export function LoadingScreen({
   online = navigator.onLine,
 }: {
@@ -38,26 +19,23 @@ export function LoadingScreen({
     <div
       className="loading-shell"
       role="status"
-      aria-label="Opening Kazi"
-      aria-busy="true"
+      aria-label={online ? "Opening Kazi" : "Kazi is offline"}
+      aria-busy={online}
+      data-offline={!online}
     >
-      <div className="loading-brand">
-        <Brand />
+      <div className="loading-content">
+        <LoadingSignal />
+        <div className="loading-copy">
+          <p className="loading-title">
+            {online ? "Opening Kazi" : "You’re offline"}
+          </p>
+          <p className="loading-description">
+            {online
+              ? "Getting your workspace ready"
+              : "Reconnect to load your private data."}
+          </p>
+        </div>
       </div>
-      <div className="loading-sidebar" aria-hidden="true">
-        {[0, 1, 2, 3, 4].map((n) => (
-          <span className="loading-bar" key={n} />
-        ))}
-      </div>
-      <div className="loading-header" aria-hidden="true">
-        <span className="loading-bar" />
-      </div>
-      <PageLoading />
-      {!online && (
-        <p className="loading-offline">
-          You’re offline. Reconnect to load your private data.
-        </p>
-      )}
     </div>
   );
 }

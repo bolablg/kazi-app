@@ -1,8 +1,27 @@
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createElement } from "react";
+import { LoadingSignal } from "../src/LoadingSignal";
 
 const asset = (name: string) => new URL(`../public/${name}`, import.meta.url);
+
+it("keeps refresh animation artwork identical before JavaScript and during account loading", async () => {
+  const parts = (source: string) =>
+    [...source.matchAll(/<path\b[^>]*>/g)].map(([path]) => ({
+      fill: path.match(/\bfill="([^"]+)"/)?.[1],
+      d: path.match(/\bd="([^"]+)"/)?.[1],
+    }));
+  const original = parts(await readFile(asset("brand/kazi-mark.svg"), "utf8"));
+  expect(original).toHaveLength(3);
+  expect(parts(renderToStaticMarkup(createElement(LoadingSignal)))).toEqual(
+    original,
+  );
+  expect(
+    parts(await readFile(new URL("../index.html", import.meta.url), "utf8")),
+  ).toEqual(original);
+});
 
 it("matches the visible symbol to the capital K in both logo lockups", async () => {
   for (const name of ["brand/kazi-logo.svg", "brand/kazi-logo-dark.svg"]) {

@@ -244,7 +244,7 @@ test("MCP setup explains each step while keeping client and activity features", 
 });
 
 for (const width of [390, 768, 1440]) {
-  test(`refresh renders a skeleton before JavaScript at ${width}px`, async ({
+  test(`refresh animates the brand before JavaScript at ${width}px`, async ({
     page,
   }) => {
     let release!: () => void;
@@ -264,12 +264,13 @@ for (const width of [390, 768, 1440]) {
       await expect(
         page.getByRole("status", { name: "Opening Kazi", exact: true }),
       ).toBeVisible();
-      await expect(page.locator(".loading-tiles")).toBeVisible();
+      await expect(page.locator(".loading-signal")).toBeVisible();
+      await expect(page.locator(".loading-step")).toHaveCount(3);
       await expect(
         page.getByRole("navigation", { name: "Main navigation" }),
       ).toHaveCount(0);
       await page.screenshot({
-        path: `../docs/screenshots/refresh-skeleton-${width}.png`,
+        path: test.info().outputPath("refresh-animation.png"),
         animations: "disabled",
       });
     } finally {

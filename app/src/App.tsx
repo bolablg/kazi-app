@@ -141,6 +141,9 @@ function Shell() {
     needRefresh: [needsUpdate],
     updateServiceWorker,
   } = useRegisterSW();
+  useEffect(() => {
+    if (import.meta.env.DEV && needsUpdate) void updateServiceWorker(true);
+  }, [needsUpdate, updateServiceWorker]);
   const addTask = (projectId?: string) => {
     setTaskProject(projectId);
     setTaskForm(true);
@@ -209,7 +212,21 @@ function Shell() {
         { replace: true },
       );
   };
-  const closeTask = () =>
+  const closeTask = () => {
+    if (
+      background &&
+      ["gantt", "timeline"].includes(
+        new URLSearchParams(background.search).get("view") ?? "",
+      ) &&
+      resourceRoute(state, background.pathname, background.search).kind ===
+        "project"
+    ) {
+      navigate(
+        { pathname: background.pathname, search: background.search },
+        { replace: true },
+      );
+      return;
+    }
     navigate(
       {
         pathname: "/tasks",
@@ -222,6 +239,7 @@ function Shell() {
       },
       { replace: true },
     );
+  };
   const props = {
     openTask,
     addTask,
@@ -406,7 +424,7 @@ function Shell() {
             approve, or confirm calendar changes.
           </div>
         )}
-        {needsUpdate && (
+        {import.meta.env.PROD && needsUpdate && (
           <div className="connection-banner update">
             <RefreshCw size={16} />A Kazi update is available.
             <button

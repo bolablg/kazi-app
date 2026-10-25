@@ -29,9 +29,13 @@ Needs attention, My focus, and Recent activity each display five items per page,
 
 Planned → In progress → On hold / Delivered is a separate project property. The header exposes it to authorized managers; project settings also edit dates and ownership. A project’s delivery decision does not force task statuses or mark unfinished work complete. Progress uses non-archived tasks. Archiving a project preserves history.
 
-## Timeline
+## Project Gantt view
 
-The project Timeline is a horizontally scrollable Gantt-style date view with week/month scales. It uses explicit `startDate` and original deadline; dates are editable in task details and through MCP. Start-only tasks appear as one-day bars; deadline-only tasks appear as markers, without an invented start. Milestones use diamonds. Tasks without dates are counted separately. Dependency names appear on each row, and a prerequisite due after its successor’s planned start is flagged for review. There is no automatic cascading reschedule or critical-path solver in this version. Date validation rejects a start after its deadline. Allocation respects planned starts.
+Open a project and select **Gantt** beside List and Board to compare task date ranges, overlapping work, milestones, and dependencies. The chart scrolls horizontally with week/month scales; **Today** and **First task** jump to the relevant dates. Existing `?view=timeline` links still open Gantt.
+
+The chart uses explicit `startDate` and original deadline; open a task name or bar to edit its dates. Start-only tasks appear as one-day bars; deadline-only tasks appear as circular markers, without an invented start. Milestones use diamonds on their deadline (or start date if no deadline exists). Expand **tasks without dates** to open and schedule undated work, including subtasks.
+
+Dependency names appear on each row, with arrows connecting dated tasks in the project. An unfinished prerequisite due after its successor’s explicit planned start is flagged for review. Dependencies from other projects remain listed by name. There is no automatic cascading reschedule or critical-path solver in this version. Date validation rejects a start after its deadline. Allocation respects planned starts.
 
 ## Full-page tasks and responsibilities
 

@@ -89,7 +89,7 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
   await archive
     .getByRole("button", { name: `Restore ${title}`, exact: true })
     .click();
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Gantt", exact: true }).click();
   await expect(
     page.getByRole("button", {
       name: `${title}, 2026-10-27 to 2026-10-30`,
