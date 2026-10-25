@@ -601,6 +601,8 @@ export function execute(
           );
       }
       Object.assign(t, command.patch);
+      for (const field of ["deadline", "startDate", "reviewDate"] as const)
+        if (t[field] === "") delete t[field];
       if (t.status !== priorStatus) {
         t.statusChangedAt = c.now;
         if (priorStatus === "done" || isArchivedTask({ status: priorStatus }))
@@ -608,7 +610,7 @@ export function execute(
         if (t.status === "in_progress" && t.startedAt === undefined)
           t.startedAt = c.now;
       }
-      if (priorDeadline !== t.deadline)
+      if ((priorDeadline || undefined) !== (t.deadline || undefined))
         audit(
           s,
           c,
@@ -1386,13 +1388,41 @@ export function execute(
         entityType === "task"
           ? priorTasks.get(entity.id)
           : priorProjects.get(entity.id);
-      const changes = Object.keys(entity).filter(
+      const changes = [
+        ...new Set([...Object.keys(old ?? {}), ...Object.keys(entity)]),
+      ].filter(
         (key) =>
           JSON.stringify((old as any)?.[key]) !==
           JSON.stringify((entity as any)[key]),
       );
       if (!changes.length) continue;
       const task = entityType === "task" ? (entity as Task) : undefined;
+      if (task) {
+        const priorActivityIds = new Set(
+          state.activities.map((event) => event.id),
+        );
+        const activity = s.activities.find(
+          (event) =>
+            event.taskId === task.id &&
+            event.kind === "change" &&
+            !priorActivityIds.has(event.id),
+        );
+        if (activity) {
+          activity.changes = changes.filter(
+            (field) =>
+              ![
+                "updatedAt",
+                "revision",
+                "lastProgress",
+                "statusChangedAt",
+              ].includes(field),
+          );
+          if (!old || old.status !== entity.status) {
+            activity.fromStatus = old?.status as Task["status"] | undefined;
+            activity.toStatus = task.status;
+          }
+        }
+      }
       (s.lifecycleEvents ??= []).push({
         id: c.id(),
         entityType,
@@ -1592,8 +1622,8 @@ export function evaluateRisks(state: State, c: Context): State {
           ? "Progress update needed"
           : `${task.title} is approaching its deadline`,
       overdue
-        ? "The original deadline has passed. Update your progress or review a recovery proposal."
-        : `${task.remainingMinutes ?? task.estimatedMinutes ?? "Unknown"} minutes remaining. ${shortfall > 0 ? `${confirmedMinutes} minutes of confirmed permitted time fit before the deadline; ${shortfall} minutes remain unscheduled. ` : ""}${stale ? "No recent progress update has been recorded." : "Review your remaining effort and available time."}`,
+        ? "The original deadline has passed. Review the task status or a recovery proposal."
+        : `${task.remainingMinutes ?? task.estimatedMinutes ?? "Unknown"} minutes remaining. ${shortfall > 0 ? `${confirmedMinutes} minutes of confirmed permitted time fit before the deadline; ${shortfall} minutes remain unscheduled. ` : ""}${stale ? "No recent workflow change has been recorded." : "Review your remaining effort and available time."}`,
       kind,
       task.id,
     );
@@ -1625,7 +1655,7 @@ export function evaluateRisks(state: State, c: Context): State {
         member.id,
         "overdue-digest:" + day,
         "Overdue task summary",
-        `${overdue.length} unfinished ${overdue.length === 1 ? "task has" : "tasks have"} passed the original deadline. Update your progress or review a recovery proposal.`,
+        `${overdue.length} unfinished ${overdue.length === 1 ? "task has" : "tasks have"} passed the original deadline. Review the task status or a recovery proposal.`,
         "system",
         overdue[0].id,
       );

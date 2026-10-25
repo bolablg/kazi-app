@@ -23,7 +23,7 @@ Your account starts with a personal space and a Personal planning project. Tasks
 
 Tasks have an owner and a worker, who can be the same person. A worker can also be unassigned. Tasks include priority, stage, deadlines, estimates, labels, dependencies, and subtasks. Overdue is an indicator, not a task state. Explicit completion and reopening generate activity. Scheduling time does not complete a task. Remaining-effort estimates can be updated as work progresses. Parents with children are excluded from planning workload so effort is counted once.
 
-Comments/title changes do not reset the meaningful-progress timestamp. Progress check-ins, remaining-effort updates, and completion/reopening do. Reassignment increments task revision and notifies the new assignee; member removal unassigns their tasks and revokes future workspace/job access while preserving historical actor IDs.
+Comments and title edits do not reset a task’s stage age. Status changes, completion, and reopening are recorded automatically. Planning estimates guide allocation and do not measure time worked. Reassignment increments task revision and notifies the new assignee; member removal unassigns their tasks and revokes future workspace/job access while preserving historical actor IDs.
 
 ## Plans and recovery
 

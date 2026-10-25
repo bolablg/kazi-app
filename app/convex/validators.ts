@@ -261,6 +261,9 @@ export const activityV = v.object({
   at: v.number(),
   kind: v.union(v.literal("change"), v.literal("comment"), v.literal("policy")),
   attachmentIds: v.optional(v.array(v.string())),
+  fromStatus: v.optional(taskV.fields.status),
+  toStatus: v.optional(taskV.fields.status),
+  changes: v.optional(v.array(v.string())),
 });
 export const artifactV = v.object({
   id: v.string(),

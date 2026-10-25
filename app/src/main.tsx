@@ -11,6 +11,8 @@ import "./style.css";
 import "./height.css";
 import "./workspace.css";
 import "./collaboration.css";
+import "./task-refinement.css";
+import "./typography.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker
@@ -169,6 +171,9 @@ createRoot(document.getElementById("root")!).render(
         ) : configured ? (
           <ClerkProvider
             publishableKey={key}
+            appearance={{
+              variables: { fontFamily: '"Atlassian Sans", sans-serif' },
+            }}
             signInUrl={location.origin}
             signUpUrl={location.origin}
             signInFallbackRedirectUrl={location.origin}

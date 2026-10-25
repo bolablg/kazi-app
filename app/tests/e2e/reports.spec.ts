@@ -1,3 +1,4 @@
+import { chooseStatus } from "./task-fields";
 import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
@@ -62,7 +63,7 @@ test("completion updates analytics automatically, custom periods filter records,
     })
     .click();
   const dialog = page.getByRole("article", { name: "Task details" });
-  await dialog.getByLabel("Task status", { exact: true }).selectOption("done");
+  await chooseStatus(page, "done");
   await dialog
     .getByRole("button", { name: "Save changes", exact: true })
     .click();

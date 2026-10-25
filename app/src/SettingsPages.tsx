@@ -146,7 +146,7 @@ export function NotificationsPage({
                     className="text-button"
                     onClick={() => openTask(n.taskId!)}
                   >
-                    Update progress
+                    Open task
                     <ArrowUpRight size={14} />
                   </button>
                 )}

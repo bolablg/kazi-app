@@ -29,6 +29,10 @@ test("production PWA precaches its shell and reloads into a read-only offline vi
   await expect(
     page.getByText(/You’re offline. This is a read-only view/),
   ).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  expect(
+    await page.evaluate(() => document.fonts.check('14px "Atlassian Sans"')),
+  ).toBe(true);
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Create task" }),
@@ -55,4 +59,7 @@ test("service-worker caches contain only static assets and no live account API d
     false,
   );
   expect(cached.some((url) => url.includes("/assets/"))).toBe(true);
+  expect(cached.some((url) => /atlassian-sans-latin.*\.woff2/.test(url))).toBe(
+    true,
+  );
 });

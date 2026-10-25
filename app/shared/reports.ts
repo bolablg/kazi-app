@@ -6,6 +6,7 @@ import {
 } from "./workflow";
 import type { ReportEvent, State } from "./model";
 import { Temporal } from "@js-temporal/polyfill";
+import { reportingCalendar, workingClock } from "./workingTime";
 import { addDays, dateInZone, deadlineAt } from "./scheduler";
 import { dayBounds, occupiedMinutes, overviewEvents } from "./overview";
 
@@ -145,6 +146,14 @@ export function buildReport(
   const cycleTimes = completed
     .filter((e) => e.startedAt !== undefined && e.at >= e.startedAt)
     .map((e) => (e.at - e.startedAt!) / 60000);
+  const workingCalendar = reportingCalendar(state, f.actorId);
+  const workingMinutes = workingClock(workingCalendar);
+  const workingLeadTimes = completed
+    .filter((e) => e.taskCreatedAt !== undefined && e.at >= e.taskCreatedAt)
+    .map((e) => workingMinutes(e.taskCreatedAt!, e.at));
+  const workingCycleTimes = completed
+    .filter((e) => e.startedAt !== undefined && e.at >= e.startedAt)
+    .map((e) => workingMinutes(e.startedAt!, e.at));
   const goals = state.projects
     .filter((p) => !p.archived && (f.project === "all" || p.id === f.project))
     .map((project) => {
@@ -202,6 +211,11 @@ export function buildReport(
     cycleTimes,
     medianLeadMinutes: median(leadTimes),
     medianCycleMinutes: median(cycleTimes),
+    workingCalendar,
+    workingLeadTimes,
+    workingCycleTimes,
+    medianWorkingLeadMinutes: median(workingLeadTimes),
+    medianWorkingCycleMinutes: median(workingCycleTimes),
     inProgress: open.filter((t) => t.status === "in_progress"),
     blocked: [],
     archived: scopedTasks.filter(isArchivedTask),

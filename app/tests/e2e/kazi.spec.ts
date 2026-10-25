@@ -147,34 +147,51 @@ test("previews a weekly plan without accepting or scheduling it", async ({
     path: "../docs/screenshots/06-plan-proposals.png",
   });
 });
-test("progress check-in is separate from comments and task completion", async ({
+test("comments and system status changes share one activity feed without time reporting", async ({
   page,
 }) => {
   await page
     .getByRole("button", { name: /^Refine the homepage direction/ })
     .click();
-  const dialog = page.getByRole("article", { name: "Task details" });
-  await dialog.getByLabel("Remaining minutes").fill("45");
-  await dialog
-    .getByLabel("What moved forward?")
-    .fill("First draft ready for review");
-  await dialog.getByRole("button", { name: "Record progress" }).click();
+  const task = page.getByRole("article", { name: "Task details" });
+  const priorLogs = await page.evaluate(
+    () =>
+      JSON.parse(
+        localStorage.getItem("kazi.synthetic-demo.v2")!,
+      ).reportEvents.filter(
+        (event: { type: string }) => event.type === "time_logged",
+      ).length,
+  );
   await expect(
-    dialog.getByText(/Progress: 45 minutes remaining/),
-  ).toBeVisible();
-  const state = await page.evaluate(() =>
+    task.getByRole("heading", { name: "Activity", exact: true }),
+  ).toHaveCount(1);
+  await expect(task.getByRole("tab")).toHaveCount(0);
+  await expect(
+    task.getByText("Progress check-in", { exact: true }),
+  ).toHaveCount(0);
+  await expect(task.getByLabel("Remaining minutes")).toHaveCount(0);
+  await task
+    .getByLabel("Add a comment")
+    .fill("The first draft is ready for review.");
+  await task.getByRole("button", { name: "Post comment", exact: true }).click();
+  await expect(
+    task
+      .getByRole("region", { name: "Task activity" })
+      .getByText("The first draft is ready for review.", { exact: true }),
+  ).toHaveCount(1);
+  const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
   expect(
-    state.tasks.find(
-      (t: { id: string }) => t.id === state.legacyResourceIds.tasks.t1,
-    ).remainingMinutes,
-  ).toBe(45);
-  expect(
-    state.tasks.find(
-      (t: { id: string }) => t.id === state.legacyResourceIds.tasks.t1,
+    stored.tasks.find(
+      (t: { id: string }) => t.id === stored.legacyResourceIds.tasks.t1,
     ).status,
   ).toBe("in_progress");
+  expect(
+    stored.reportEvents.filter(
+      (event: { type: string }) => event.type === "time_logged",
+    ),
+  ).toHaveLength(priorLogs);
 });
 test("review setting needs a deliberate save and records an audit trail", async ({
   page,

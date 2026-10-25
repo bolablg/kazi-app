@@ -234,6 +234,9 @@ export interface Activity {
   at: number;
   kind: "change" | "comment" | "policy";
   attachmentIds?: string[];
+  fromStatus?: Task["status"];
+  toStatus?: Task["status"];
+  changes?: string[];
 }
 export interface TaskArtifact {
   id: string;

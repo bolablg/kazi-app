@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { buildStageReport } from "../shared/lifecycle";
@@ -52,8 +52,20 @@ function StageBody({
 }) {
   const { state } = useData(),
     report = buildStageReport(state, history, filter);
+  const [basis, setBasis] = useState<"calendar" | "working">("calendar");
   const days = (value: number | null) =>
     value === null ? "—" : Math.round(value * 10) / 10 + "d";
+  const elapsed = (minutes: number | null) =>
+    minutes === null
+      ? "—"
+      : minutes >= 60
+        ? Math.round(minutes / 6) / 10 + "h"
+        : Math.round(minutes) + "m";
+  const hour = (value: number) =>
+    `${String(Math.floor(value)).padStart(2, "0")}:${String(Math.round((value % 1) * 60)).padStart(2, "0")}`;
+  const calendar = report.workingCalendar;
+  const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const schedule = `${calendar.workingDays.map((day) => weekdayNames[day - 1]).join(", ")} · ${hour(calendar.startHour)}–${hour(calendar.endHour)} · ${calendar.timezone}`;
   return (
     <section
       id="report-content"
@@ -64,13 +76,40 @@ function StageBody({
         <div>
           <h2>Time in each stage</h2>
           <p>
-            Average and median of recorded stage exits during the selected
-            period.
+            Repeated visits to a stage are added together for each task before
+            calculating the average and median.
           </p>
         </div>
         <Link to="/settings?tab=planning" className="text-button">
           Configure review thresholds
         </Link>
+      </div>
+      <div className="workflow-time-controls">
+        <div
+          className="time-basis-control"
+          role="group"
+          aria-label="Duration calculation"
+        >
+          <button
+            type="button"
+            aria-pressed={basis === "calendar"}
+            onClick={() => setBasis("calendar")}
+          >
+            Calendar time
+          </button>
+          <button
+            type="button"
+            aria-pressed={basis === "working"}
+            onClick={() => setBasis("working")}
+          >
+            Working time
+          </button>
+        </div>
+        <p>
+          {basis === "calendar"
+            ? "All elapsed time, including nights and weekends."
+            : `Only time within your working calendar: ${schedule}`}
+        </p>
       </div>
       <div className="report-table-wrap">
         <table className="report-table">
@@ -78,7 +117,8 @@ function StageBody({
             <tr>
               <th>Stage</th>
               <th>Currently here</th>
-              <th>Recorded exits</th>
+              <th>Visits / tasks measured</th>
+              <th>Total duration</th>
               <th>Average duration</th>
               <th>Median duration</th>
               <th>Median current age</th>
@@ -89,18 +129,25 @@ function StageBody({
               <tr key={stage.status}>
                 <td>{statusLabels[stage.status]}</td>
                 <td>{stage.count}</td>
-                <td>{stage.exits}</td>
+                <td>
+                  {stage.exits} / {stage.sampleTasks}
+                </td>
                 <td>
                   {stage.status === "done"
-                    ? "Final stage"
-                    : days(stage.meanDays)}
+                    ? "—"
+                    : elapsed(stage[basis].totalMinutes)}
                 </td>
                 <td>
                   {stage.status === "done"
                     ? "Final stage"
-                    : days(stage.medianDays)}
+                    : elapsed(stage[basis].meanMinutes)}
                 </td>
-                <td>{days(stage.medianCurrentAgeDays)}</td>
+                <td>
+                  {stage.status === "done"
+                    ? "Final stage"
+                    : elapsed(stage[basis].medianMinutes)}
+                </td>
+                <td>{elapsed(stage[basis].medianCurrentAgeMinutes)}</td>
               </tr>
             ))}
           </tbody>
@@ -108,7 +155,9 @@ function StageBody({
       </div>
       <p className="report-footnote">
         {report.coverage} Completion is the final stage; waiting time after
-        completion is not a performance duration.
+        completion is not a performance duration. Working-calendar settings:{" "}
+        {schedule}. Change them in Settings → Planning. Changing the report
+        calendar recalculates working durations from the saved timestamps.
       </p>
       <section className="report-panel">
         <div className="section-line">
@@ -122,26 +171,30 @@ function StageBody({
                 <tr>
                   <th>Task</th>
                   <th>Stage</th>
-                  <th>Age</th>
-                  <th>Review threshold</th>
+                  <th>Calendar age</th>
+                  <th>Working time</th>
+                  <th>Review threshold (calendar)</th>
                 </tr>
               </thead>
               <tbody>
-                {report.aged.map(({ task, days: age, threshold }) => (
-                  <tr key={task.id}>
-                    <td>
-                      <button
-                        className="report-task-link"
-                        onClick={() => openTask(task.id)}
-                      >
-                        {task.title}
-                      </button>
-                    </td>
-                    <td>{statusLabels[task.status]}</td>
-                    <td>{days(age)}</td>
-                    <td>{threshold}d</td>
-                  </tr>
-                ))}
+                {report.aged.map(
+                  ({ task, days: age, workingMinutes, threshold }) => (
+                    <tr key={task.id}>
+                      <td>
+                        <button
+                          className="report-task-link"
+                          onClick={() => openTask(task.id)}
+                        >
+                          {task.title}
+                        </button>
+                      </td>
+                      <td>{statusLabels[task.status]}</td>
+                      <td>{days(age)}</td>
+                      <td>{elapsed(workingMinutes)}</td>
+                      <td>{threshold}d</td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>

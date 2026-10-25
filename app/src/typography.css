@@ -1,0 +1,28 @@
+@font-face {
+  font-family: "Atlassian Sans";
+  src: url("./assets/fonts/atlassian-sans-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-ui:
+    "Atlassian Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+  font-feature-settings:
+    "ss01" on,
+    "ss02" on;
+}
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+}
+.report-table,
+.task-due,
+time {
+  font-variant-numeric: tabular-nums;
+}
