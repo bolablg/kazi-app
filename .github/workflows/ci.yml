@@ -55,6 +55,11 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run format:check
+      - name: Show MCP formatting diagnostic
+        if: failure()
+        run: |
+          npx prettier tests/mcp-proxy.test.ts > "$RUNNER_TEMP/mcp-proxy.formatted.ts"
+          diff -u tests/mcp-proxy.test.ts "$RUNNER_TEMP/mcp-proxy.formatted.ts" || true
       - run: npm run typecheck
       - run: npm test -- --maxWorkers=1
       - run: npm run test:deployment
