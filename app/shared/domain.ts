@@ -1807,11 +1807,13 @@ export function evaluateRisks(state: State, c: Context): State {
       overdue
         ? `${task.title} needs a new plan`
         : kind === "stale"
-          ? "Progress update needed"
+          ? `${task.title} is ready for a workflow review`
           : `${task.title} is approaching its deadline`,
       overdue
         ? "The original deadline has passed. Review the task status or a recovery proposal."
-        : `${task.remainingMinutes ?? task.estimatedMinutes ?? "Unknown"} minutes remaining. ${shortfall > 0 ? `${confirmedMinutes} minutes of confirmed permitted time fit before the deadline; ${shortfall} minutes remain unscheduled. ` : ""}${stale ? "No recent workflow change has been recorded." : "Review your remaining effort and available time."}`,
+        : kind === "stale"
+          ? "This task has had no recent status change. Review its status, dependencies, or next step."
+          : `Review the task status and upcoming deadline.${shortfall > 0 ? " Available planning capacity may not cover the remaining scope. Consider a recovery proposal." : ""}`,
       kind,
       task.id,
     );

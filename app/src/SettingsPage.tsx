@@ -1,4 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -78,6 +84,7 @@ export function SettingsPage({
   const [prefs, setPrefs] = useState<Preferences>(preferences),
     [saving, setSaving] = useState(false);
   const requested = params.get("tab");
+  const tabStrip = useRef<HTMLElement>(null);
   const tabs = connections
     ? [
         { id: "overview", label: "Overview" },
@@ -100,6 +107,24 @@ export function SettingsPage({
             ? "overview"
             : "planning";
   const savedPreferences = JSON.stringify(preferences);
+  useLayoutEffect(() => {
+    const strip = tabStrip.current;
+    if (!strip) return;
+    const revealSelected = () => {
+      const active = strip.querySelector<HTMLButtonElement>("button.active");
+      if (!active) return;
+      const bounds = strip.getBoundingClientRect();
+      const selected = active.getBoundingClientRect();
+      if (selected.left < bounds.left)
+        strip.scrollLeft += selected.left - bounds.left - 8;
+      else if (selected.right > bounds.right)
+        strip.scrollLeft += selected.right - bounds.right + 8;
+    };
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(strip);
+    revealSelected();
+    return () => observer.disconnect();
+  }, [tab, connections]);
   useEffect(
     () => setPrefs(JSON.parse(savedPreferences)),
     [state.workspace.id, actorId, savedPreferences],
@@ -168,6 +193,7 @@ export function SettingsPage({
         )}
       </div>
       <nav
+        ref={tabStrip}
         className="tabs settings-tabs"
         aria-label={connections ? "Connection views" : "Settings sections"}
       >

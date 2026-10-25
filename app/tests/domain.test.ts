@@ -697,16 +697,32 @@ describe("review, recovery and immutable history", () => {
   });
 });
 describe("durable incident semantics", () => {
-  it("known capacity risk is quantified only against fresh authorized availability", () => {
+  it("known capacity risk suggests planning review without asking for a progress report", () => {
     const s = seedState(now);
     s.notifications = [];
     const t = s.tasks.find((t) => t.id === "t1")!;
     t.deadline = "2026-10-26";
     t.remainingMinutes = 600;
     const r = evaluateRisks(s, ctx());
-    expect(r.notifications.find((n) => n.taskId === t.id)?.body).toContain(
-      "minutes remain unscheduled",
-    );
+    const notice = r.notifications.find((n) => n.taskId === t.id)!;
+    expect(notice.kind).toBe("capacity");
+    expect(notice.body).toContain("Available planning capacity");
+    expect(notice.body).not.toMatch(/minutes remaining|report|log time/i);
+  });
+  it("stale task reminders ask for a workflow review rather than manual progress updates", () => {
+    const s = seedState(now);
+    s.notifications = [];
+    const t = s.tasks.find((t) => t.id === "t1")!;
+    t.deadline = "2026-11-20";
+    t.lastProgress = now - 14 * 86400000;
+    t.remainingMinutes = undefined;
+    const notice = evaluateRisks(s, ctx()).notifications.find(
+      (n) => n.taskId === t.id,
+    )!;
+    expect(notice.kind).toBe("stale");
+    expect(notice.title).toContain("workflow review");
+    expect(notice.body).toContain("status, dependencies, or next step");
+    expect(notice.body).not.toMatch(/minutes|progress update|report/i);
   });
   it("daily overdue digest windows remain deduplicated", () => {
     const s = seedState(now);

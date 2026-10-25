@@ -89,7 +89,12 @@ export function ProjectTimeline({
           role="region"
           aria-label="Gantt timeline, scroll to explore dates"
         >
-          <div className="gantt" style={{ minWidth: 240 + days * width }}>
+          <div
+            className="gantt"
+            style={{
+              minWidth: `calc(var(--gantt-label-width, 240px) + ${days * width}px)`,
+            }}
+          >
             <div className="gantt-head">
               <strong>Task / dependency</strong>
               <div className="gantt-dates">

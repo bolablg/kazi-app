@@ -14,6 +14,7 @@ import {
 import { useData, type Data } from "./data";
 import { Modal, useUI } from "./components";
 import { InfoTip } from "./InfoTip";
+import { ScrollTable } from "./ScrollTable";
 const endpoint = () => {
   const configured = import.meta.env.VITE_CONVEX_SITE_URL;
   if (configured) return configured.replace(/\/$/, "") + "/mcp";
@@ -50,10 +51,12 @@ const clientConfiguration = (token = "YOUR_KAZI_TOKEN") =>
 export function ConnectionsOverview() {
   const { state, actorId, demo, tokens } = useData();
   const cal = state.calendars.find((c) => c.ownerId === actorId);
+  const externalConnected =
+    !!cal?.selectedIds.length && ["native", "connected"].includes(cal.status);
   const agents = tokens.filter((t) => t.lastUsedAt);
   const active = tokens.filter((t) => credentialStatus(t) === "Active").length;
   return (
-    <div className="settings-form connections-overview">
+    <div className="settings-form connections-form connections-overview">
       <section className="settings-section">
         <h2>Your connections</h2>
         <p>Manage access to your calendar and the tools that use Kazi.</p>
@@ -66,16 +69,10 @@ export function ConnectionsOverview() {
             <small>Optional Google free/busy connection</small>
           </span>
           <span className="connection-status">
-            <i
-              className={
-                ["native", "connected"].includes(cal?.status ?? "")
-                  ? "connected"
-                  : ""
-              }
-            />
+            <i className={externalConnected ? "connected" : ""} />
             {cal?.status === "demo"
               ? "Demo calendar"
-              : ["native", "connected"].includes(cal?.status ?? "")
+              : externalConnected
                 ? "Connected"
                 : "Not connected"}
           </span>
@@ -143,8 +140,8 @@ function AgentTable() {
   const { tokens } = useData();
   const seen = tokens.filter((t) => t.lastUsedAt);
   return seen.length ? (
-    <div className="connection-table-wrap">
-      <table className="connection-table">
+    <ScrollTable className="connection-table-wrap" label="Connection details">
+      <table className="connection-table client-table">
         <thead>
           <tr>
             <th>Client</th>
@@ -177,7 +174,7 @@ function AgentTable() {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   ) : (
     <div className="connection-empty">
       <Plug size={22} />
@@ -198,7 +195,7 @@ export function McpSettings() {
     [token, setToken] = useState(""),
     [saving, setSaving] = useState(false);
   return (
-    <div className="settings-form">
+    <div className="settings-form connections-form">
       <section className="settings-section">
         <div className="section-line">
           <div>
@@ -314,8 +311,11 @@ export function McpSettings() {
           </div>
         </div>
         {tokens.length ? (
-          <div className="connection-table-wrap">
-            <table className="connection-table">
+          <ScrollTable
+            className="connection-table-wrap"
+            label="Connection details"
+          >
+            <table className="connection-table credential-table">
               <thead>
                 <tr>
                   <th>Name & permissions</th>
@@ -352,7 +352,7 @@ export function McpSettings() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         ) : (
           <div className="connection-empty">
             <KeyRound size={22} />
@@ -401,7 +401,7 @@ export function McpSettings() {
           </div>
         ) : token ? (
           <div className="form">
-            <div className="inline-info">
+            <div className="inline-info mcp-token-notice">
               <Check size={16} />
               Credential created. Copy it before closing this dialog.
             </div>
@@ -436,9 +436,10 @@ export function McpSettings() {
               configuration includes the token.
             </p>
             <p>
-              In your client, add a Streamable HTTP server with the endpoint
-              above and the header <code>Authorization: Bearer YOUR_TOKEN</code>
-              . The client appears in Agents & clients after use.
+              Use “Copy client configuration” to set up your client, or use the
+              server URL on the MCP setup page with the header{" "}
+              <code>Authorization: Bearer YOUR_TOKEN</code>. The client appears
+              in Agents & clients after use.
             </p>
             <button
               className="button primary"
@@ -479,7 +480,7 @@ export function McpSettings() {
                 placeholder="Codex on my laptop"
               />
             </label>
-            <fieldset>
+            <fieldset className="mcp-permissions">
               <legend>Permissions</legend>
               {tokenScopes.map((scope) => (
                 <label className="check-label" key={scope}>
@@ -514,7 +515,7 @@ export function McpSettings() {
 export function McpActivity() {
   const { mcpActivity } = useData();
   return (
-    <div className="settings-form">
+    <div className="settings-form connections-form">
       <section className="settings-section">
         <h2>Recent MCP activity</h2>
         <p>
@@ -522,8 +523,11 @@ export function McpActivity() {
           arguments, and secrets are not recorded here.
         </p>
         {mcpActivity.length ? (
-          <div className="connection-table-wrap">
-            <table className="connection-table">
+          <ScrollTable
+            className="connection-table-wrap"
+            label="Connection details"
+          >
+            <table className="connection-table activity-table">
               <thead>
                 <tr>
                   <th>Tool</th>
@@ -554,7 +558,7 @@ export function McpActivity() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         ) : (
           <div className="connection-empty">
             <Terminal size={22} />

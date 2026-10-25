@@ -296,7 +296,9 @@ export function TaskRows({
               aria-label={t.title}
               onClick={() => onOpen(t.id)}
             >
-              <span className="task-title">{t.title}</span>
+              <span className="task-title" title={t.title}>
+                {t.title}
+              </span>
               <TaskLabels labels={t.labels} limit={2} />
               {t.brainstorm && (
                 <span className="task-label">To Brainstorm</span>
@@ -355,7 +357,7 @@ export function GroupedTasks({
         <span>Priority</span>
         <span>Remaining</span>
         <span>Due date</span>
-        <span>Owner</span>
+        <span>Worker</span>
       </div>
       {groups.map((status) => {
         const rows = tasks.filter((t) => t.status === status);

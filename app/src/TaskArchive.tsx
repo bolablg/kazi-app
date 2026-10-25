@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Task } from "../shared/model";
 import { canEditTask } from "../shared/workflow";
 import { useData } from "./data";
-import { TaskRows, useUI } from "./components";
+import { Empty, TaskRows, useUI } from "./components";
 
 export function TaskArchive({
   tasks,
@@ -27,10 +27,6 @@ export function TaskArchive({
       </summary>
       {open && (
         <div>
-          <p>
-            Archived work, including blocked, rejected, and discontinued tasks.
-            Restore to Backlog to reconsider it.
-          </p>
           {tasks.length ? (
             tasks.map((task) => (
               <div className="archived-task" key={task.id}>
@@ -56,7 +52,10 @@ export function TaskArchive({
               </div>
             ))
           ) : (
-            <p>No archived tasks match these filters.</p>
+            <Empty
+              title="Nothing archived"
+              body="Archived tasks stay here until you restore them."
+            />
           )}
         </div>
       )}
