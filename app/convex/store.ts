@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { type State, type Member, defaults, fail } from "../shared/model";
 import { actor } from "../shared/domain";
+import { canonicalIdentity } from "./identityCore";
 export const tables = {
   members: "memberships",
   projects: "projects",
@@ -26,13 +27,7 @@ export type EntityField = keyof typeof tables;
 export const newId = transactionId;
 export const clean = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 export async function identity(ctx: QueryCtx | MutationCtx) {
-  const i = await ctx.auth.getUserIdentity();
-  if (!i)
-    throw new ConvexError({
-      code: "UNAUTHENTICATED",
-      message: "Sign in to continue.",
-    });
-  return i;
+  return canonicalIdentity(ctx);
 }
 export async function authorized(
   ctx: QueryCtx | MutationCtx,

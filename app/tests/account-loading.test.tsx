@@ -3,15 +3,18 @@ import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { AccountRoot } from "../src/AccountRoot";
 import { LoadingScreen } from "../src/LoadingScreen";
+import { MemoryRouter } from "react-router-dom";
 
 const session = vi.hoisted(() => ({
   clerk: { isLoaded: false, isSignedIn: false, userId: null as string | null },
   convex: { isLoading: true, isAuthenticated: false },
   clients: [] as { close: ReturnType<typeof vi.fn> }[],
+  statusQuery: vi.fn(),
 }));
 vi.mock("@clerk/react", () => ({
   useAuth: () => session.clerk,
   SignIn: () => <div>Sign in</div>,
+  useReverification: (request: unknown) => request,
 }));
 vi.mock("convex/react", () => ({
   ConvexReactClient: class {
@@ -21,6 +24,7 @@ vi.mock("convex/react", () => ({
     }
   },
   useConvexAuth: () => session.convex,
+  useQuery: session.statusQuery,
 }));
 vi.mock("convex/react-clerk", () => ({
   ConvexProviderWithClerk: ({ children }: { children: React.ReactNode }) =>
@@ -48,12 +52,15 @@ afterEach(() => {
   session.clerk = { isLoaded: false, isSignedIn: false, userId: null };
   session.convex = { isLoading: true, isAuthenticated: false };
   localStorage.clear();
+  session.statusQuery.mockReset();
 });
 
 it("keeps one identity-free loading screen through Clerk and Convex, and never mounts private content before verification", () => {
   vi.useFakeTimers();
   localStorage.setItem("kazi.private", "stale private data");
-  const view = render(<AccountRoot url="https://example.convex.cloud" />);
+  const view = render(<AccountRoot url="https://example.convex.cloud" />, {
+    wrapper: MemoryRouter,
+  });
   expect(screen.getByRole("status", { name: "Opening Kazi" })).toBeTruthy();
   expect(session.clients).toHaveLength(0);
   expect(localStorage.getItem("kazi.private")).toBeNull();
@@ -65,6 +72,7 @@ it("keeps one identity-free loading screen through Clerk and Convex, and never m
   session.convex = { isLoading: false, isAuthenticated: true };
   view.rerender(<AccountRoot url="https://example.convex.cloud" />);
   expect(screen.getByTestId("private-account").textContent).toContain("alice");
+  expect(session.statusQuery).not.toHaveBeenCalled();
   session.clerk.userId = "bob";
   session.convex = { isLoading: true, isAuthenticated: false };
   view.rerender(<AccountRoot url="https://example.convex.cloud" />);
@@ -80,7 +88,9 @@ it("keeps one identity-free loading screen through Clerk and Convex, and never m
   expect(screen.queryByText("Private tasks")).toBeNull();
 });
 it("shows actionable offline and failed verification states", () => {
-  const view = render(<LoadingScreen online={false} />);
+  const view = render(<LoadingScreen online={false} />, {
+    wrapper: MemoryRouter,
+  });
   expect(screen.getByText(/Reconnect to load your private data/)).toBeTruthy();
   session.clerk = { isLoaded: true, isSignedIn: true, userId: "alice" };
   session.convex = { isLoading: false, isAuthenticated: false };

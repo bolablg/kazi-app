@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { UserProfile, useClerk, useUser } from "@clerk/react";
+import { AccountIdentityContext } from "./IdentityScreens";
+import { prepareIdentitySignOut } from "./identityConfig";
 import {
   ChevronDown,
   Users,
@@ -8,6 +10,7 @@ import {
   Plug,
   LogOut,
   UserRound,
+  ShieldCheck,
 } from "lucide-react";
 import { useData } from "./data";
 import { Avatar, useUI } from "./components";
@@ -24,7 +27,14 @@ function SignOut() {
   const { signOut } = useClerk();
   const { run } = useUI();
   return (
-    <button onClick={() => void run(() => signOut({ redirectUrl: "/" }))}>
+    <button
+      onClick={() =>
+        void run(() => {
+          prepareIdentitySignOut();
+          return signOut({ redirectUrl: "/" });
+        })
+      }
+    >
       <LogOut size={15} />
       Sign out
     </button>
@@ -117,6 +127,15 @@ export function AccountMenu() {
           Team & people
         </Link>
         {!demo && !local && <SignOut />}
+        <Link
+          to="/privacy"
+          onClick={(event) =>
+            event.currentTarget.closest("details")?.removeAttribute("open")
+          }
+        >
+          <ShieldCheck size={15} />
+          Privacy policy
+        </Link>
         {demo && (
           <span className="account-demo-note">
             Local demo · sign-in not configured
@@ -135,6 +154,7 @@ export function AccountSettings() {
         className="embedded-account-profile"
         aria-label="Account profile and security"
       >
+        <AccountIdentityContext />
         <UserProfile
           routing="hash"
           fallback={<p role="status">Loading your account…</p>}

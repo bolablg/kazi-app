@@ -4,6 +4,12 @@ Open your avatar menu to find **My account**, **Settings**, **Connections**, and
 
 Sign in with your own account. Kazi creates your personal space and Personal planning project. There is no shared administrator login or default password. Creating a team makes you its **Owner**. Owners can invite **Managers** and **Members**, change existing member roles, and remove teammates. Managers can manage team projects and invite members. Guests receive access to specific projects. Only an owner can grant the Manager role, and the owner's role cannot be changed here.
 
+## Shared iYANJU account
+
+When shared sign-in is enabled, use your iYANJU account to open Kazi. Existing Kazi accounts must be linked by verifying both sign-ins and confirming the two accounts. Matching email addresses alone do not link accounts. Linking keeps your existing tasks, projects, team roles, calendar subscriptions, and agent permissions. Starting a new personal space is a separate, explicit choice.
+
+Your iYANJU profile and sign-in are shared across participating applications. Team membership, invitations, calendar connections, and MCP credentials remain managed by Kazi. Signing in does not connect Google Calendar or grant an agent access. Export my data includes your own account-link and first-use information when available; unknown historical dates stay unknown. Deleting a sign-in account does not by itself erase Kazi data or revoke product credentials.
+
 ## Settings and connections
 
 | Screen                              | Contents                                                                       |

@@ -33,22 +33,36 @@ import {
   shiftedCalendarSessions,
 } from "../shared/calendarPlanning";
 import { taskFor } from "../shared/domain";
+import { ownerIdentityExport } from "./identity";
+import {
+  actionIdentity,
+  canonicalIdentity,
+  recordServiceEntry,
+  verifiedPrincipal,
+} from "./identityCore";
 export const bootstrap = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await identity(ctx);
+    const principal = await verifiedPrincipal(ctx);
+    const user = await canonicalIdentity(ctx, principal);
     let profile = await ctx.db
       .query("profiles")
       .withIndex("by_subject", (q) => q.eq("subject", user.subject))
       .unique();
     if (!profile) {
-      const workspaceId = await createWorkspace(
-        ctx,
-        user.subject,
-        user.name ?? "You",
-        user.email ?? "",
-        "personal",
-      );
+      const existingMembership = await ctx.db
+        .query("memberships")
+        .withIndex("by_subject", (q) => q.eq("subject", user.subject))
+        .first();
+      const workspaceId =
+        existingMembership?.workspaceId ??
+        (await createWorkspace(
+          ctx,
+          user.subject,
+          user.name ?? "You",
+          user.email ?? "",
+          "personal",
+        ));
       const id = await ctx.db.insert("profiles", {
         subject: user.subject,
         name: user.name ?? "You",
@@ -170,6 +184,9 @@ export const bootstrap = mutation({
                 "Tasks outside a named project. Visibility follows project access.",
             },
           });
+        // Admission was checked against Kazi membership in this transaction.
+        // Identity lookup, link proof and public/token endpoints never activate.
+        await recordServiceEntry(ctx, principal, user.subject);
       }
     }
     return profile?.activeWorkspaceId;
@@ -608,8 +625,7 @@ export const calendar = action({
     requestId: v.string(),
   },
   handler: async (ctx, args): Promise<string> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.commands.calendarFor, {
       ...args,
       subject: user.subject,
@@ -763,8 +779,7 @@ export const plan = action({
     requestId: v.string(),
   },
   handler: async (ctx, args): Promise<string> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     const command = commandSchema.parse(JSON.parse(args.command));
     if (!["propose", "approve"].includes(command.type))
       throw new ConvexError("Unsupported planning action.");
@@ -796,8 +811,7 @@ export const invite = action({
     requestId: v.string(),
   },
   handler: async (ctx, args): Promise<{ url: string }> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.commands.inviteFor, {
       ...args,
       subject: user.subject,
@@ -924,8 +938,7 @@ export const release = action({
     requestId: v.string(),
   },
   handler: async (ctx, args): Promise<string> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runMutation(internal.commands.queueRelease, {
       ...args,
       subject: user.subject,
@@ -1014,10 +1027,12 @@ export const queueRelease = internalMutation({
 export const exportData = query({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args) => {
-    const user = await authorized(ctx, args.workspaceId);
+    const account = await identity(ctx);
+    const user = await authorized(ctx, args.workspaceId, account.subject);
     return {
       format: "kazi-export/1",
       exportedAt: Date.now(),
+      accountIdentity: await ownerIdentityExport(ctx, account.subject),
       data: clean(
         visibleState(await loadState(ctx, args.workspaceId), user.id),
       ),
