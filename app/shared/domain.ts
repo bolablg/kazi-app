@@ -261,6 +261,90 @@ function selectSprintTasks(
     ]),
   ];
 }
+/** A sprint commits only Backlog work; subsequent manual stage changes stay intact. */
+function promoteSprintBacklog(
+  s: State,
+  sprint: Sprint,
+  ids: string[],
+  c: Context,
+  recordLifecycle = false,
+) {
+  let promoted = 0;
+  if (!canSeeSprint(s, sprint, c.actorId)) return promoted;
+  for (const task of s.tasks) {
+    if (task.status !== "backlog" || !ids.includes(task.id)) continue;
+    if (s.projects.find((project) => project.id === task.projectId)?.archived)
+      continue;
+    try {
+      editable(s, task, c.actorId);
+    } catch {
+      // Scheduled commitments do not retain task access after it is revoked.
+      continue;
+    }
+    task.status = "todo";
+    task.statusChangedAt = task.lastProgress = task.updatedAt = c.now;
+    task.revision++;
+    const activityId = audit(
+      s,
+      c,
+      `Moved from Backlog to To do for sprint “${sprint.title}”`,
+      task.id,
+      task.projectId,
+    );
+    Object.assign(
+      s.activities.find((event) => event.id === activityId)!,
+      {
+        changes: ["status"],
+        fromStatus: "backlog",
+        toStatus: "todo",
+      },
+    );
+    if (recordLifecycle)
+      (s.lifecycleEvents ??= []).push({
+        id: c.id(),
+        entityType: "task",
+        entityId: task.id,
+        projectId: task.projectId,
+        actorId: c.actorId,
+        assigneeId: task.assigneeId,
+        ownerId: task.ownerId,
+        at: c.now,
+        revision: task.revision,
+        action: "sprint_activation",
+        changes: ["status"],
+        fromStatus: "backlog",
+        toStatus: "todo",
+      });
+    promoted++;
+  }
+  return promoted;
+}
+function sprintHasBegun(sprint: Sprint, now: number) {
+  return (
+    sprint.status === "active" &&
+    localInstant(sprint.startDate, 0, sprint.timezone) <= now &&
+    now < localInstant(sprint.endDate, 24, sprint.timezone)
+  );
+}
+function activateDueSprintBacklogs(s: State, c: Context) {
+  for (const sprint of s.sprints ?? []) {
+    if (
+      sprint.backlogPromotedAt !== undefined ||
+      !sprintHasBegun(sprint, c.now)
+    )
+      continue;
+    const promoted = promoteSprintBacklog(
+      s,
+      sprint,
+      sprint.taskIds,
+      { ...c, actorId: sprint.ownerId },
+      true,
+    );
+    sprint.backlogPromotedAt = sprint.updatedAt = c.now;
+    sprint.revision++;
+    if (promoted) staleSprintPlans(s, sprint.id);
+  }
+}
 function staleSprintPlans(s: State, sprintId: string) {
   for (const proposal of s.proposals)
     if (
@@ -749,6 +833,7 @@ export function execute(
       const beforeObjectives = JSON.stringify(sprintObjectives(sprint));
       const beforeAssignments = JSON.stringify(sprintAssignments(sprint));
       const changeCount = sprint.changes.length;
+      const previousTaskIds = new Set(sprint.taskIds);
       const { taskIds, objectiveAssignments, ...fields } = command.patch;
       if (
         sprint.objectives &&
@@ -792,6 +877,17 @@ export function execute(
             ...entry,
           });
       }
+      if (taskIds && sprintHasBegun(sprint, c.now)) {
+        promoteSprintBacklog(
+          s,
+          sprint,
+          sprint.backlogPromotedAt === undefined
+            ? sprint.taskIds
+            : sprint.taskIds.filter((id) => !previousTaskIds.has(id)),
+          c,
+        );
+        sprint.backlogPromotedAt ??= c.now;
+      }
       sprint.revision++;
       sprint.updatedAt = c.now;
       staleSprintPlans(s, sprint.id);
@@ -821,6 +917,10 @@ export function execute(
       );
       sprint.initialObjectives = structuredClone(sprintObjectives(sprint));
       sprint.initialObjectiveAssignments = { ...sprintAssignments(sprint) };
+      if (sprintHasBegun(sprint, c.now)) {
+        promoteSprintBacklog(s, sprint, sprint.taskIds, c);
+        sprint.backlogPromotedAt = c.now;
+      }
       sprint.revision++;
       sprint.updatedAt = c.now;
       staleSprintPlans(s, sprint.id);
@@ -2221,6 +2321,7 @@ function workingDaysSince(
 
 export function evaluateRisks(state: State, c: Context): State {
   const s = structuredClone(state);
+  activateDueSprintBacklogs(s, c);
   for (const task of s.tasks) {
     if (task.status === "backlog") {
       const owner = s.members.find(
@@ -2423,6 +2524,13 @@ export function evaluateRisks(state: State, c: Context): State {
 /** Event-driven checkpoints; the cron is a due-index reconciler, not a task poller. */
 export function nextRiskEvaluation(s: State, now: number): number {
   const candidates = [now + 86400000];
+  for (const sprint of s.sprints ?? [])
+    if (
+      sprint.status === "active" &&
+      sprint.backlogPromotedAt === undefined &&
+      now < localInstant(sprint.endDate, 24, sprint.timezone)
+    )
+      candidates.push(localInstant(sprint.startDate, 0, sprint.timezone));
   for (const member of s.members) {
     const p = member.preferences,
       day = dateInZone(now, p.timezone),

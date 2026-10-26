@@ -174,6 +174,8 @@ export interface Sprint {
   createdAt: number;
   updatedAt: number;
   startedAt?: number;
+  /** Backlog activation was reconciled once at or after the sprint start. */
+  backlogPromotedAt?: number;
   initialTasks?: SprintTaskSnapshot[];
   initialObjectives?: SprintObjective[];
   initialObjectiveAssignments?: Record<string, string>;

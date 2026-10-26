@@ -235,6 +235,13 @@ const mcp = httpAction(async (ctx, request) => {
         return {
           scopes: tokenScopes,
           commands: commandScopes,
+          additionalScopeRules: {
+            start_sprint: "tasks:write",
+            update_sprint: "tasks:write when patch.taskIds is supplied",
+            close_sprint: "tasks:write for a backlog closeout decision",
+          },
+          sprintActivation:
+            "Started sprints promote Backlog tasks to To do on their start date in their timezone; draft selection preserves stages.",
           taskStages: ["backlog", "todo", "in_progress", "to_validate", "done"],
           archived:
             "Blocked, rejected, and discontinued work; restore to backlog",
@@ -910,8 +917,11 @@ const mcp = httpAction(async (ctx, request) => {
       const command = commandSchema.parse(candidate);
       requireScope(commandScopes[command.type]);
       if (
-        command.type === "close_sprint" &&
-        command.decisions.some((decision) => decision.action === "backlog")
+        command.type === "start_sprint" ||
+        (command.type === "update_sprint" &&
+          command.patch.taskIds !== undefined) ||
+        (command.type === "close_sprint" &&
+          command.decisions.some((decision) => decision.action === "backlog"))
       )
         requireScope("tasks:write");
       const args = {
