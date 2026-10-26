@@ -26,6 +26,7 @@ import {
   type State,
 } from "../shared/model";
 import { sha256, invitationToken } from "./crypto";
+import { localInstant } from "../shared/scheduler";
 export const bootstrap = mutation({
   args: {},
   handler: async (ctx) => {
@@ -442,6 +443,15 @@ async function run(
     invitationHash,
   });
   await persist(ctx, workspaceId, before, state);
+  if (command.type === "start_sprint") {
+    const sprint = state.sprints!.find((item) => item.id === command.id)!;
+    if (sprint.backlogPromotedAt === undefined)
+      await ctx.scheduler.runAt(
+        localInstant(sprint.startDate, 0, sprint.timezone),
+        internal.jobs.activateSprint,
+        { workspaceId, sprintId: sprint.id },
+      );
+  }
   await ctx.db.insert("idempotency", {
     workspaceId,
     key,

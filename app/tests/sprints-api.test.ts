@@ -448,11 +448,14 @@ it("promotes future sprint Backlog work through the background job without an op
     owner = t.withIdentity(user);
   const workspaceId = (await owner.mutation(api.commands.bootstrap, {}))!;
   let request = 0;
-  const execute = (command: Command) =>
+  const execute = (
+    command: Command,
+    requestId = `automatic-sprint-${++request}`,
+  ) =>
     owner.mutation(api.commands.execute, {
       workspaceId,
       command: JSON.stringify(command),
-      requestId: `automatic-sprint-${++request}`,
+      requestId,
     });
   const taskId = await execute({
     type: "create_task",
@@ -467,9 +470,25 @@ it("promotes future sprint Backlog work through the background job without an op
     startDate: "2026-10-27",
     taskIds: [taskId],
   });
-  await execute({ type: "start_sprint", id: sprintId, revision: 1 });
+  const startCommand: Command = {
+    type: "start_sprint",
+    id: sprintId,
+    revision: 1,
+  };
+  await execute(startCommand, "schedule-start-once");
+  await execute(startCommand, "schedule-start-once");
   const startAt = Date.parse("2026-10-27T05:00:00Z");
-  vi.setSystemTime(startAt - 60000);
+  const scheduled = await t.run(async (ctx) =>
+    ctx.db.system.query("_scheduled_functions").collect(),
+  );
+  expect(
+    scheduled.filter(
+      (job) =>
+        job.name.includes("jobs:activateSprint") &&
+        job.scheduledTime === startAt,
+    ),
+  ).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(startAt - Date.now() - 60000);
   await t.mutation(internal.jobs.tick, {});
   let state = await owner.query(api.commands.snapshot, { workspaceId });
   expect(state.tasks[0].status).toBe("backlog");
@@ -478,8 +497,8 @@ it("promotes future sprint Backlog work through the background job without an op
       async (ctx) => (await ctx.db.get(workspaceId))!.nextEvaluationAt,
     ),
   ).toBe(startAt);
-  vi.setSystemTime(startAt);
-  await t.mutation(internal.jobs.tick, {});
+  await vi.advanceTimersByTimeAsync(60000);
+  await t.finishInProgressScheduledFunctions();
   state = await owner.query(api.commands.snapshot, { workspaceId });
   expect(state.tasks[0]).toMatchObject({
     status: "todo",

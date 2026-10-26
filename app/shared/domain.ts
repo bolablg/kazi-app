@@ -345,6 +345,12 @@ function activateDueSprintBacklogs(s: State, c: Context) {
     if (promoted) staleSprintPlans(s, sprint.id);
   }
 }
+/** Targeted scheduled activation, with the cron retained as recovery fallback. */
+export function activateSprintBacklogs(state: State, c: Context): State {
+  const s = structuredClone(state);
+  activateDueSprintBacklogs(s, c);
+  return s;
+}
 function staleSprintPlans(s: State, sprintId: string) {
   for (const proposal of s.proposals)
     if (
