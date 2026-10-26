@@ -1,3 +1,4 @@
+import { actionIdentity } from "./identityCore";
 import { mergeTeamStates } from "../shared/teams";
 import { v, ConvexError } from "convex/values";
 import {
@@ -37,8 +38,7 @@ export const createFeed = action({
     ctx,
     args,
   ): Promise<{ id: string; url: string; expiresAt: number }> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.calendar.createFeedFor, {
       ...args,
       subject: user.subject,
@@ -211,8 +211,7 @@ export const feedContent = internalQuery({
 export const connect = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<any> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.calendar.connectFor, {
       ...args,
       subject: user.subject,
@@ -366,8 +365,7 @@ export async function accessToken(
 export const list = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<any> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.calendar.listFor, {
       ...args,
       subject: user.subject,
@@ -426,8 +424,7 @@ export const choose = action({
     shareAvailability: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<any> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.calendar.chooseFor, {
       ...args,
       subject: user.subject,
@@ -530,8 +527,7 @@ export const selection = internalMutation({
 export const refresh = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<void> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     await ctx.runAction(internal.calendar.refreshFor, {
       ...args,
       subject: user.subject,
@@ -773,8 +769,7 @@ export const saveAvailability = internalMutation({
 export const disconnect = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<any> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.calendar.disconnectFor, {
       ...args,
       subject: user.subject,

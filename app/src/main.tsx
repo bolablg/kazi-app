@@ -6,6 +6,13 @@ import { ClerkProvider } from "@clerk/react";
 import { DemoProvider } from "./data";
 import { AccountRoot } from "./AccountRoot";
 import App from "./App";
+import { PublicPages } from "./PublicPages";
+import {
+  centralAccountUrl,
+  identityConfig,
+  identityPaths,
+} from "./identityConfig";
+import { IdentityConfigurationError } from "./IdentityScreens";
 import "./style.css";
 import "./height.css";
 import "./workspace.css";
@@ -21,6 +28,8 @@ import "./work-polish.css";
 import "./insights-connections.css";
 import "./daily-calendar.css";
 import "./sprints.css";
+import "./identity.css";
+import "./privacy.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker
@@ -36,7 +45,7 @@ if (import.meta.env.DEV && "serviceWorker" in navigator) {
       }
     });
 }
-const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+const key = identityConfig.publishableKey,
   url = import.meta.env.VITE_CONVEX_URL;
 const local =
   import.meta.env.DEV &&
@@ -65,62 +74,91 @@ class ErrorBoundary extends React.Component<
     );
   }
 }
+function PrivateApplication() {
+  return local ? (
+    <LocalDevelopment url={url} />
+  ) : identityConfig.error ? (
+    <IdentityConfigurationError />
+  ) : partial ? (
+    <div className="startup">
+      <h1>Finish connecting Kazi.</h1>
+      <p>
+        Configure both VITE_CONVEX_URL and VITE_CLERK_PUBLISHABLE_KEY. A partial
+        connection cannot open a secure workspace.
+      </p>
+    </div>
+  ) : configured ? (
+    <ClerkProvider
+      publishableKey={key}
+      appearance={{
+        variables: {
+          fontFamily: '"Atlassian Sans", sans-serif',
+          colorPrimary: "#8a3c0c",
+          colorForeground: "#111111",
+        },
+        elements: {
+          formButtonPrimary: {
+            backgroundColor: "#ff8a32",
+            color: "#111111",
+            boxShadow: "none",
+            "&[data-variant='solid'][data-color='primary']": {
+              border: "1px solid #8a3c0c",
+              boxShadow: "none",
+              "&::after": { background: "none" },
+              "&:focus, &:focus-visible, &:focus:not(:focus-visible)": {
+                boxShadow: "none",
+              },
+              "&:focus-visible": {
+                outline: "2px solid #8a3c0c",
+                outlineOffset: "-3px",
+              },
+            },
+            "&:hover": { backgroundColor: "#f57b24" },
+          },
+        },
+      }}
+      signInUrl={
+        identityConfig.provider === "central"
+          ? centralAccountUrl(identityConfig, location.origin)
+          : identityConfig.central
+            ? location.origin + identityPaths.legacyLink
+            : location.origin
+      }
+      signUpUrl={
+        identityConfig.central
+          ? centralAccountUrl(identityConfig, location.origin, true)
+          : location.origin
+      }
+      signInFallbackRedirectUrl={location.origin}
+      signUpFallbackRedirectUrl={location.origin}
+      allowedRedirectOrigins={
+        identityConfig.central
+          ? [location.origin, identityConfig.central.accountOrigin]
+          : undefined
+      }
+      allowedRedirectProtocols={
+        identityConfig.central
+          ? identityConfig.central.accountOrigin.startsWith("http:")
+            ? ["https", "http"]
+            : ["https"]
+          : undefined
+      }
+    >
+      <AccountRoot url={url} config={identityConfig} />
+    </ClerkProvider>
+  ) : (
+    <DemoProvider>
+      <App />
+    </DemoProvider>
+  );
+}
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        {local ? (
-          <LocalDevelopment url={url} />
-        ) : partial ? (
-          <div className="startup">
-            <h1>Finish connecting Kazi.</h1>
-            <p>
-              Configure both VITE_CONVEX_URL and VITE_CLERK_PUBLISHABLE_KEY. A
-              partial connection cannot open a secure workspace.
-            </p>
-          </div>
-        ) : configured ? (
-          <ClerkProvider
-            publishableKey={key}
-            appearance={{
-              variables: {
-                fontFamily: '"Atlassian Sans", sans-serif',
-                colorPrimary: "#8a3c0c",
-                colorForeground: "#111111",
-              },
-              elements: {
-                formButtonPrimary: {
-                  backgroundColor: "#ff8a32",
-                  color: "#111111",
-                  boxShadow: "none",
-                  "&[data-variant='solid'][data-color='primary']": {
-                    border: "1px solid #8a3c0c",
-                    boxShadow: "none",
-                    "&::after": { background: "none" },
-                    "&:focus, &:focus-visible, &:focus:not(:focus-visible)": {
-                      boxShadow: "none",
-                    },
-                    "&:focus-visible": {
-                      outline: "2px solid #8a3c0c",
-                      outlineOffset: "-3px",
-                    },
-                  },
-                  "&:hover": { backgroundColor: "#f57b24" },
-                },
-              },
-            }}
-            signInUrl={location.origin}
-            signUpUrl={location.origin}
-            signInFallbackRedirectUrl={location.origin}
-            signUpFallbackRedirectUrl={location.origin}
-          >
-            <AccountRoot url={url} />
-          </ClerkProvider>
-        ) : (
-          <DemoProvider>
-            <App />
-          </DemoProvider>
-        )}
+        <PublicPages>
+          <PrivateApplication />
+        </PublicPages>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,

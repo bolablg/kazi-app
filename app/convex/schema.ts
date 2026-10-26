@@ -61,6 +61,42 @@ export default defineSchema({
     username: v.optional(v.string()),
     activeWorkspaceId: v.optional(v.id("workspaces")),
   }).index("by_subject", ["subject"]),
+  identityAliases: defineTable({
+    environment: v.string(),
+    issuer: v.string(),
+    subject: v.string(),
+    actorId: v.string(),
+    provider: v.union(v.literal("legacy"), v.literal("central")),
+    registrationKind: v.union(v.literal("new"), v.literal("legacy")),
+    linkedAt: v.number(),
+    accountCreatedAt: v.optional(v.number()),
+  })
+    .index("by_identity", ["environment", "issuer", "subject"])
+    .index("by_actor_provider", ["environment", "actorId", "provider"]),
+  identityLinkChallenges: defineTable({
+    environment: v.string(),
+    legacyIssuer: v.string(),
+    legacySubject: v.string(),
+    actorId: v.string(),
+    secretHash: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+  })
+    .index("by_actor", ["environment", "actorId", "expiresAt"])
+    .index("by_expiry", ["expiresAt"]),
+  serviceActivations: defineTable({
+    environment: v.string(),
+    actorId: v.string(),
+    serviceId: v.literal("kazi"),
+    activatedAt: v.union(v.number(), v.null()),
+    firstObservedAt: v.number(),
+    provenance: v.union(
+      v.literal("new-authorized-entry"),
+      v.literal("legacy-history-unknown"),
+      v.literal("legacy-preserved"),
+    ),
+  }).index("by_identity", ["environment", "serviceId", "actorId"]),
   workspaces: defineTable({
     key: v.string(),
     name: v.string(),

@@ -1,3 +1,4 @@
+import { actionIdentity } from "./identityCore";
 import { tokenScopes } from "../shared/capabilities";
 import { v, ConvexError } from "convex/values";
 import {
@@ -73,8 +74,7 @@ export const listFor = internalQuery({
 export const mint = action({
   args: { label: v.string(), scopes: v.array(v.string()) },
   handler: async (ctx, args): Promise<string> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.tokens.mintFor, {
       ...args,
       subject: user.subject,

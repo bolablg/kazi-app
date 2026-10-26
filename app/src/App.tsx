@@ -1,5 +1,6 @@
 import { PageLoading } from "./LoadingScreen";
 import { Brand } from "./Brand";
+import { BrandAttribution } from "./BrandAttribution";
 import { SidebarFavorites, FavoritesPage, TeamScope } from "./Favorites";
 import {
   projectPath,
@@ -659,6 +660,7 @@ function Shell() {
               </Routes>
             </Suspense>
           )}
+          <BrandAttribution />
         </main>
       </div>
       <TaskForm
