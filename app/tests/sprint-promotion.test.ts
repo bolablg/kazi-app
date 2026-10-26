@@ -109,9 +109,9 @@ describe("sprint Backlog activation", () => {
   });
 
   it("waits for local midnight across the DST boundary and records the actual automatic transition once", () => {
-    const boundary = localInstant("2026-11-01", 0, "America/New_York");
-    expect(boundary).toBe(Date.parse("2026-11-01T04:00:00Z"));
-    let state = start(draft("2026-11-01", "America/New_York"));
+    const boundary = localInstant("2026-11-02", 0, "America/New_York");
+    expect(boundary).toBe(Date.parse("2026-11-02T05:00:00Z"));
+    let state = start(draft("2026-11-02", "America/New_York"));
     expect(state.tasks[0].status).toBe("backlog");
     expect(state.sprints![0].backlogPromotedAt).toBeUndefined();
     expect(nextRiskEvaluation(state, boundary - 60000)).toBe(boundary);
@@ -196,6 +196,22 @@ describe("sprint Backlog activation", () => {
   });
 
   it("rechecks membership and task editing authority before a scheduled promotion", () => {
+    let restricted = start(draft("2026-11-01"));
+    restricted.members.find((member) => member.id === DEMO_USER)!.role =
+      "member";
+    restricted.projects.find((project) => project.id === "website")!.ownerId =
+      "demo-amira";
+    restricted.tasks[0].ownerId = restricted.tasks[0].assigneeId = "demo-amira";
+    restricted = evaluateRisks(
+      restricted,
+      context(localInstant("2026-11-01", 0, "America/Chicago")),
+    );
+    expect(restricted.tasks[0].status).toBe("backlog");
+    expect(
+      restricted.activities.some(
+        (event) => event.taskId === "a" && event.toStatus === "todo",
+      ),
+    ).toBe(false);
     let state = start(draft("2026-11-01"));
     state.members = state.members.filter((member) => member.id !== DEMO_USER);
     state = evaluateRisks(
