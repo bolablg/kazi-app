@@ -277,7 +277,7 @@ test("dragging a task and keyboard-resizing a reservation both open explicit tim
     .click();
   await expect(dialog).not.toBeVisible();
   const resize = page.getByRole("button", {
-    name: "Resize time for " + title,
+    name: "Resize end time for " + title,
     exact: true,
   });
   await resize.focus();

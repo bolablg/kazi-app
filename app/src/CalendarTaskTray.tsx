@@ -124,7 +124,7 @@ export function CalendarTaskTray({
                     calendarDragType,
                     JSON.stringify({ taskId: task.id }),
                   );
-                  event.dataTransfer.effectAllowed = "copy";
+                  event.dataTransfer.effectAllowed = "move";
                 }}
               >
                 <div className="calendar-tray-task-top">

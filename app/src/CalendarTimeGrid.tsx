@@ -7,6 +7,7 @@ import {
   calendarHours,
   layoutCalendarEvents,
   timedCalendarBounds,
+  resizeCalendarInterval,
 } from "../shared/calendar";
 import type { OverviewEvent } from "../shared/overview";
 import { dateInZone } from "../shared/scheduler";
@@ -63,18 +64,27 @@ export function CalendarTimeGrid({
   const preferences = state.members.find(
     (member) => member.id === actorId,
   )!.preferences;
-  const { startHour, endHour } = timedCalendarBounds(events, zone);
+  const { startHour, endHour } = timedCalendarBounds(events, zone, [
+    // Other members carry redacted placeholder preferences. The viewer's
+    // configured week remains the reference even on nonworking days;
+    // visible bookings expand it without exposing anyone else's settings.
+    { startHour: preferences.startHour, endHour: preferences.endHour },
+  ]);
   const dayHours = days.map((day) =>
     calendarHours(day, zone, startHour, endHour),
   );
   const maxHours = Math.max(...dayHours.map((hours) => hours.hours));
   const reference = dayHours[0];
   const [dropTarget, setDropTarget] = useState<{ day: string; at: number }>();
-  const [resizing, setResizing] = useState<{ id: string; delta: number }>();
+  const [resizing, setResizing] = useState<{
+    id: string;
+    start: number;
+    end: number;
+  }>();
   const resizeClickHandled = useRef(false);
-  const resizeStart = useRef<{ event: OverviewEvent; y: number } | undefined>(
-    undefined,
-  );
+  const resizeStart = useRef<
+    { event: OverviewEvent; y: number; edge: "start" | "end" } | undefined
+  >(undefined);
   const canEdit = (event: OverviewEvent) =>
     online &&
     event.kind === "scheduled" &&
@@ -361,12 +371,22 @@ export function CalendarTimeGrid({
                             ?.assigneeId),
                     );
                     const workerLabel = worker ? `, worker ${worker.name}` : "";
-                    const delta =
-                      resizing?.id === event.id ? resizing.delta : 0;
+                    const preview =
+                      resizing?.id === event.id ? resizing : undefined;
                     const pixels = Math.max(
                       24,
-                      (height + delta / 60) * hourPixels - 3,
+                      (preview
+                        ? (preview.end - preview.start) / 3600000
+                        : height) *
+                        hourPixels -
+                        3,
                     );
+                    const previewTop =
+                      top * hourPixels +
+                      (preview
+                        ? ((preview.start - event.start!) / 3600000) *
+                          hourPixels
+                        : 0);
                     const density =
                       pixels < 48
                         ? "compact"
@@ -384,14 +404,15 @@ export function CalendarTimeGrid({
                         data-density={density}
                         style={{
                           ...color(event),
-                          top: top * hourPixels,
+                          top: previewTop,
                           height: pixels,
                           left: `calc(${(lane / lanes) * 100}% + 3px)`,
                           width: `calc(${100 / lanes}% - 6px)`,
                         }}
                         draggable={editable}
                         onDragStart={(drag) => {
-                          if (!editable) return drag.preventDefault();
+                          if (!editable || resizeStart.current)
+                            return drag.preventDefault();
                           drag.dataTransfer.setData(
                             calendarDragType,
                             JSON.stringify({ sessionId: event.sessionId }),
@@ -437,92 +458,130 @@ export function CalendarTimeGrid({
                             >
                               <Clock3 size={12} />
                             </button>
-                            <button
-                              className="calendar-event-resize"
-                              aria-label={"Resize time for " + event.title}
-                              title="Drag to resize; Enter to edit"
-                              onClick={() => {
-                                if (resizeClickHandled.current) {
+                            {(["start", "end"] as const).map((edge) => (
+                              <button
+                                key={edge}
+                                className="calendar-event-resize"
+                                data-edge={edge}
+                                aria-label={`Resize ${edge} time for ${event.title}`}
+                                title={`Drag to resize ${edge}; arrow keys adjust 15 minutes`}
+                                onClick={() => {
+                                  if (resizeClickHandled.current) {
+                                    resizeClickHandled.current = false;
+                                    return;
+                                  }
+                                  onEdit(event);
+                                }}
+                                onPointerDown={(pointer) => {
+                                  pointer.preventDefault();
+                                  pointer.stopPropagation();
                                   resizeClickHandled.current = false;
-                                  return;
-                                }
-                                onEdit(event);
-                              }}
-                              onPointerDown={(pointer) => {
-                                pointer.preventDefault();
-                                pointer.stopPropagation();
-                                resizeClickHandled.current = false;
-                                pointer.currentTarget.setPointerCapture(
-                                  pointer.pointerId,
-                                );
-                                resizeStart.current = {
-                                  event,
-                                  y: pointer.clientY,
-                                };
-                              }}
-                              onPointerMove={(pointer) => {
-                                const initial = resizeStart.current;
-                                if (!initial || initial.event.id !== event.id)
-                                  return;
-                                const delta =
-                                  Math.round(
-                                    ((pointer.clientY - initial.y) /
-                                      hourPixels) *
-                                      4,
-                                  ) * 15;
-                                setResizing({
-                                  id: event.id,
-                                  delta: Math.max(
-                                    15 - (event.end! - event.start!) / 60000,
+                                  pointer.currentTarget.setPointerCapture(
+                                    pointer.pointerId,
+                                  );
+                                  resizeStart.current = {
+                                    event,
+                                    y: pointer.clientY,
+                                    edge,
+                                  };
+                                }}
+                                onPointerMove={(pointer) => {
+                                  const initial = resizeStart.current;
+                                  if (
+                                    !initial ||
+                                    initial.event.id !== event.id ||
+                                    initial.edge !== edge
+                                  )
+                                    return;
+                                  const delta =
+                                    Math.round(
+                                      ((pointer.clientY - initial.y) /
+                                        hourPixels) *
+                                        4,
+                                    ) * 15;
+                                  if (!delta) {
+                                    setResizing(undefined);
+                                    return;
+                                  }
+                                  const interval = resizeCalendarInterval(
+                                    { start: event.start!, end: event.end! },
+                                    edge,
                                     delta,
-                                  ),
-                                });
-                              }}
-                              onPointerUp={(pointer) => {
-                                pointer.preventDefault();
-                                pointer.stopPropagation();
-                                const initial = resizeStart.current;
-                                resizeClickHandled.current = true;
-                                resizeStart.current = undefined;
-                                if (
-                                  initial &&
-                                  resizing?.id === event.id &&
-                                  resizing.delta
-                                )
-                                  onMove(
-                                    event,
-                                    event.start!,
-                                    event.end! + resizing.delta * 60000,
+                                    {
+                                      minMinutes: preferences.minSession,
+                                      maxMinutes: preferences.maxSession,
+                                    },
                                   );
-                                else onEdit(event);
-                                setResizing(undefined);
-                              }}
-                              onPointerCancel={() => {
-                                resizeStart.current = undefined;
-                                setResizing(undefined);
-                              }}
-                              onKeyDown={(key) => {
-                                if (
-                                  key.key === "ArrowDown" ||
-                                  key.key === "ArrowUp"
-                                ) {
+                                  setResizing({ id: event.id, ...interval });
+                                }}
+                                onPointerUp={(pointer) => {
+                                  pointer.preventDefault();
+                                  pointer.stopPropagation();
+                                  const initial = resizeStart.current;
+                                  resizeStart.current = undefined;
+                                  resizeClickHandled.current = true;
+                                  window.setTimeout(() => {
+                                    resizeClickHandled.current = false;
+                                  }, 0);
+                                  const delta = initial
+                                    ? Math.round(
+                                        ((pointer.clientY - initial.y) /
+                                          hourPixels) *
+                                          4,
+                                      ) * 15
+                                    : 0;
+                                  if (initial && delta) {
+                                    const interval = resizeCalendarInterval(
+                                      { start: event.start!, end: event.end! },
+                                      edge,
+                                      delta,
+                                      {
+                                        minMinutes: preferences.minSession,
+                                        maxMinutes: preferences.maxSession,
+                                      },
+                                    );
+                                    if (
+                                      interval.start !== event.start ||
+                                      interval.end !== event.end
+                                    )
+                                      onMove(
+                                        event,
+                                        interval.start,
+                                        interval.end,
+                                      );
+                                  } else onEdit(event);
+                                  setResizing(undefined);
+                                }}
+                                onPointerCancel={() => {
+                                  resizeStart.current = undefined;
+                                  setResizing(undefined);
+                                }}
+                                onKeyDown={(key) => {
+                                  if (
+                                    key.key !== "ArrowDown" &&
+                                    key.key !== "ArrowUp"
+                                  )
+                                    return;
                                   key.preventDefault();
-                                  onMove(
-                                    event,
-                                    event.start!,
-                                    Math.max(
-                                      event.start! + 900000,
-                                      event.end! +
-                                        (key.key === "ArrowDown"
-                                          ? 900000
-                                          : -900000),
-                                    ),
+                                  const interval = resizeCalendarInterval(
+                                    { start: event.start!, end: event.end! },
+                                    edge,
+                                    key.key === "ArrowDown" ? 15 : -15,
+                                    {
+                                      minMinutes: preferences.minSession,
+                                      maxMinutes: preferences.maxSession,
+                                    },
                                   );
-                                }
-                              }}
-                            >
-                              <span />
-                            </button>
+                                  if (
+                                    interval.start !== event.start ||
+                                    interval.end !== event.end
+                                  )
+                                    onMove(event, interval.start, interval.end);
+                                }}
+                              >
+                                <span />
+                              </button>
+                            ))}
                           </>
                         )}
                       </div>

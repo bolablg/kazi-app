@@ -359,7 +359,7 @@
 }
 .calendar-workbench-page .time-calendar-select {
   background: transparent;
-  cursor: crosshair;
+  cursor: grab;
 }
 .calendar-workbench-page .time-calendar-select:hover {
   background: #ffedd71c;
@@ -437,7 +437,7 @@
 }
 .calendar-workbench-page
   .time-calendar-event[data-density="compact"]
-  :is(.time-event-clock, small, .calendar-event-resize) {
+  :is(.time-event-clock, small) {
   display: none;
 }
 .calendar-event-edit {
@@ -458,22 +458,35 @@
 }
 .calendar-event-resize {
   position: absolute;
-  bottom: 0;
-  left: 20%;
-  width: 60%;
-  height: 10px;
-  min-height: 10px;
+  left: 0;
+  width: 100%;
+  height: 7px;
+  min-height: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: ns-resize;
   touch-action: none;
+  background: transparent;
+  z-index: 6;
+}
+.calendar-event-resize[data-edge="start"] {
+  top: 0;
+  bottom: auto;
+}
+.calendar-event-resize[data-edge="end"] {
+  top: auto;
+  bottom: 0;
 }
 .calendar-event-resize > span {
   width: 18px;
   height: 2px;
   background: #282e3840;
   border-radius: 2px;
+  opacity: 0;
+}
+.time-calendar-event:is(:hover, :focus-within) .calendar-event-resize > span {
+  opacity: 1;
 }
 .calendar-now-line {
   position: absolute;
@@ -1245,4 +1258,48 @@
 }
 .calendar-workbench-page .time-calendar-select:disabled {
   cursor: default;
+}
+
+/* Hide chrome, not scrolling: all frames retain wheel, touch and keyboard access. */
+.main-scroll:has(.calendar-workbench-page),
+.calendar-workbench-page
+  :is(.overview-time-calendar, .calendar-tray-tasks, .calendar-capacity-strip) {
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+.main-scroll:has(.calendar-workbench-page)::-webkit-scrollbar,
+.calendar-workbench-page
+  :is(
+    .overview-time-calendar,
+    .calendar-tray-tasks,
+    .calendar-capacity-strip
+  )::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.calendar-workbench-page .time-calendar-event.editable .calendar-event-open,
+.calendar-workbench-page
+  .calendar-tray-task[draggable="true"]
+  .calendar-tray-task-title {
+  cursor: grab;
+}
+.calendar-workbench-page .time-calendar-select:active,
+.calendar-workbench-page
+  .time-calendar-event.editable:active
+  .calendar-event-open,
+.calendar-workbench-page .calendar-tray-task[draggable="true"]:active,
+.calendar-workbench-page
+  .calendar-tray-task[draggable="true"]:active
+  .calendar-tray-task-title {
+  cursor: grabbing;
+}
+
+@media (max-width: 1100px) {
+  .calendar-workbench-page
+    .overview-time-calendar:not(.daily)
+    .time-calendar-columns {
+    grid-template-columns: 48px repeat(var(--day-count), minmax(100px, 1fr));
+    min-width: calc(48px + var(--day-count) * 100px);
+  }
 }

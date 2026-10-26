@@ -26,6 +26,8 @@ The compact capacity strip summarizes the selected day's known available and res
 
 Select a date or the +N indicator to expand its daily agenda. Month cells keep a bounded list, and short timed sessions keep a readable title. Include proposals is available in Calendar options; proposed sessions remain unconfirmed until approved through Plans. Calendar options also contain person/project filtering and view preferences.
 
+Timed views show your saved working hours with one hour before and after. Visible bookings outside that window expand it so they remain accessible. Scrollable panes support wheel, touch and keyboard navigation with hidden scrollbar tracks. Move reservations using the hand cursor; drag their upper or lower edge to adjust the start or end, then confirm the exact change.
+
 ## Calendar Insights
 
 Insights → Calendar shows current confirmed allocation within the selected dates: minutes by project/tag, ready-task scheduling coverage, short reservations and recorded calendar changes. Overlapping reservations are not counted as extra effort, and multi-tag allocation is shared among the task's tags. These metrics describe a plan, not hours worked or individual productivity. Workflow stage durations and completion outcomes remain separate.
