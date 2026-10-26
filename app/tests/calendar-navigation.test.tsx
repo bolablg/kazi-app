@@ -10,7 +10,9 @@ vi.mock("react-router-dom", async () => ({
   ...(await vi.importActual("react-router-dom")),
   // Keep the URL unchanged to model keys arriving before navigation commits.
   useSearchParams: () => [
-    new URLSearchParams("view=calendar&range=week"),
+    new URLSearchParams(
+      "view=calendar&range=week&date=2026-10-26&project=website",
+    ),
     navigation.set,
   ],
 }));
@@ -25,7 +27,7 @@ vi.mock("../src/WorkViewScope", () => ({
 vi.mock("../src/CalendarTimeGrid", () => ({ CalendarTimeGrid: () => null }));
 afterEach(cleanup);
 
-it("uses the focused Calendar tab for consecutive keys while the URL update is pending", () => {
+it("uses one view switcher and retains the date and filters while navigation is pending", () => {
   render(
     <MemoryRouter>
       <CalendarPage
@@ -36,19 +38,29 @@ it("uses the focused Calendar tab for consecutive keys while the URL update is p
       />
     </MemoryRouter>,
   );
-  const calendar = screen.getByRole("tab", { name: "Calendar" });
-  const schedule = screen.getByRole("tab", { name: "Schedule" });
-  calendar.focus();
-  fireEvent.keyDown(calendar, { key: "End" });
-  expect(document.activeElement).toBe(schedule);
-  fireEvent.keyDown(schedule, { key: "ArrowRight" });
-  expect(document.activeElement).toBe(calendar);
-  fireEvent.keyDown(calendar, { key: "Home" });
-  fireEvent.keyDown(calendar, { key: "ArrowLeft" });
-  expect(document.activeElement).toBe(schedule);
+  const view = screen.getByRole("combobox", { name: "Calendar view" });
+  expect(screen.queryByRole("tab", { name: "Calendar" })).toBeNull();
+  fireEvent.change(view, { target: { value: "schedule" } });
+  fireEvent.change(view, { target: { value: "workweek" } });
+  fireEvent.change(view, { target: { value: "day" } });
+  const requests = navigation.set.mock.calls.map(([update]) =>
+    update(new URLSearchParams("range=week&date=2026-10-26&project=website")),
+  );
+  expect(requests.map((params) => params.get("view"))).toEqual([
+    "schedule",
+    "calendar",
+    "calendar",
+  ]);
+  expect(requests.map((params) => params.get("range"))).toEqual([
+    "week",
+    "workweek",
+    "day",
+  ]);
   expect(
-    navigation.set.mock.calls.map(([update]) =>
-      update(new URLSearchParams("range=week")).get("view"),
+    requests.every(
+      (params) =>
+        params.get("project") === "website" &&
+        params.get("date") === "2026-10-26",
     ),
-  ).toEqual(["schedule", "calendar", "calendar", "schedule"]);
+  ).toBe(true);
 });

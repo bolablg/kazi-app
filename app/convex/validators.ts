@@ -54,6 +54,7 @@ export const memberV = v.object({
   favoriteTeamAt: v.optional(v.number()),
 });
 export const projectV = v.object({
+  revision: v.optional(v.number()),
   createdAt: v.optional(v.number()),
   updatedAt: v.optional(v.number()),
   statusChangedAt: v.optional(v.number()),
@@ -272,6 +273,7 @@ export const proposalV = v.object({
   approvedBy: v.array(v.string()),
   inputs: v.optional(
     v.object({
+      confirmedSessions: v.optional(v.array(sessionV)),
       windowStart: v.optional(v.number()),
       windowEnd: v.optional(v.number()),
       sprintObjectives: v.optional(v.array(sprintObjectiveV)),
@@ -312,6 +314,7 @@ export const versionV = v.object({
   algorithm: v.string(),
   inputs: v.optional(
     v.object({
+      confirmedSessions: v.optional(v.array(sessionV)),
       windowStart: v.optional(v.number()),
       windowEnd: v.optional(v.number()),
       sprintObjectives: v.optional(v.array(sprintObjectiveV)),
@@ -426,6 +429,8 @@ export const calendarV = v.object({
   destinationId: v.optional(v.string()),
   shareAvailability: v.optional(v.boolean()),
   lastSync: v.optional(v.number()),
+  availabilityFrom: v.optional(v.number()),
+  availabilityUntil: v.optional(v.number()),
   error: v.optional(v.string()),
 });
 
@@ -444,4 +449,38 @@ export const lifecycleEventV = v.object({
   changes: v.array(v.string()),
   fromStatus: v.optional(v.string()),
   toStatus: v.optional(v.string()),
+});
+
+export const calendarSessionV = v.object({
+  id: v.string(),
+  taskId: v.string(),
+  assigneeId: v.string(),
+  start: v.number(),
+  end: v.number(),
+  status: v.union(v.literal("scheduled"), v.literal("released")),
+  revision: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  createdBy: v.string(),
+  timezone: v.string(),
+  seriesId: v.optional(v.string()),
+  origin: v.optional(v.literal("plan")),
+  originalStart: v.number(),
+  originalEnd: v.number(),
+  reminderMinutes: v.optional(v.number()),
+  history: v.array(
+    v.object({
+      at: v.number(),
+      actorId: v.string(),
+      action: v.union(
+        v.literal("scheduled"),
+        v.literal("rescheduled"),
+        v.literal("released"),
+      ),
+      fromStart: v.optional(v.number()),
+      fromEnd: v.optional(v.number()),
+      toStart: v.optional(v.number()),
+      toEnd: v.optional(v.number()),
+    }),
+  ),
 });

@@ -1,12 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { dayBounds, type OverviewEvent } from "./overview";
-export type CalendarScale = "month" | "week" | "day";
+export type CalendarScale = "month" | "week" | "workweek" | "day" | "3day";
 export function calendarPeriod(anchor: string, scale: CalendarScale) {
   const date = Temporal.PlainDate.from(anchor);
   const start =
     scale === "month"
       ? date.with({ day: 1 })
-      : scale === "week"
+      : scale === "week" || scale === "workweek"
         ? date.subtract({ days: date.dayOfWeek - 1 })
         : date;
   const end =
@@ -14,7 +14,11 @@ export function calendarPeriod(anchor: string, scale: CalendarScale) {
       ? start.with({ day: start.daysInMonth })
       : scale === "week"
         ? start.add({ days: 6 })
-        : start;
+        : scale === "workweek"
+          ? start.add({ days: 4 })
+          : scale === "3day"
+            ? start.add({ days: 2 })
+            : start;
   const gridStart =
     scale === "month" ? start.subtract({ days: start.dayOfWeek - 1 }) : start;
   const count =
@@ -22,7 +26,11 @@ export function calendarPeriod(anchor: string, scale: CalendarScale) {
       ? Math.ceil((start.dayOfWeek - 1 + start.daysInMonth) / 7) * 7
       : scale === "week"
         ? 7
-        : 1;
+        : scale === "workweek"
+          ? 5
+          : scale === "3day"
+            ? 3
+            : 1;
   return {
     start: start.toString(),
     end: end.toString(),
@@ -40,7 +48,15 @@ export function moveCalendarDate(
     .add(
       scale === "month"
         ? { months: direction }
-        : { days: direction * (scale === "week" ? 7 : 1) },
+        : {
+            days:
+              direction *
+              (["week", "workweek"].includes(scale)
+                ? 7
+                : scale === "3day"
+                  ? 3
+                  : 1),
+          },
     )
     .toString();
 }
@@ -58,19 +74,87 @@ const clockHour = (at: number, zone: string) => {
   const t = Temporal.Instant.fromEpochMilliseconds(at).toZonedDateTimeISO(zone);
   return t.hour + t.minute / 60;
 };
-export function timedCalendarBounds(events: OverviewEvent[], zone: string) {
-  let startHour = 8,
-    endHour = 18;
-  for (const e of events) {
-    if (e.start === undefined || e.end === undefined) continue;
-    startHour = Math.min(startHour, Math.floor(clockHour(e.start, zone)));
-    const end =
-      e.end === dayBounds(e.date, zone).end
-        ? 24
-        : Math.ceil(clockHour(e.end, zone));
-    endHour = Math.max(endHour, end);
+export interface CalendarWorkingWindow {
+  startHour: number;
+  endHour: number;
+}
+/** The viewer supplies only authorized working windows in the displayed zone.
+ * Visible bookings always expand the window; hidden/redacted teammate settings
+ * must never be interpreted as their actual working hours. */
+export function timedCalendarBounds(
+  events: OverviewEvent[],
+  zone: string,
+  workingWindows: readonly CalendarWorkingWindow[] = [
+    { startHour: 9, endHour: 17 },
+  ],
+) {
+  const valid = workingWindows.filter(
+    (window) =>
+      Number.isFinite(window.startHour) &&
+      Number.isFinite(window.endHour) &&
+      window.startHour >= 0 &&
+      window.endHour <= 24 &&
+      window.endHour > window.startHour,
+  );
+  const windows = valid.length ? valid : [{ startHour: 9, endHour: 17 }];
+  let first = Math.min(...windows.map((window) => window.startHour));
+  let last = Math.max(...windows.map((window) => window.endHour));
+  for (const event of events) {
+    if (
+      event.start === undefined ||
+      event.end === undefined ||
+      !Number.isFinite(event.start) ||
+      !Number.isFinite(event.end) ||
+      event.end <= event.start
+    )
+      continue;
+    const bounds = dayBounds(event.date, zone);
+    if (event.end <= bounds.start || event.start >= bounds.end) continue;
+    first = Math.min(
+      first,
+      event.start <= bounds.start ? 0 : clockHour(event.start, zone),
+    );
+    last = Math.max(
+      last,
+      event.end >= bounds.end ? 24 : clockHour(event.end, zone),
+    );
   }
-  return { startHour, endHour };
+  return {
+    startHour: Math.max(0, Math.floor(first) - 1),
+    endHour: Math.min(24, Math.ceil(last) + 1),
+  };
+}
+
+/** UI preview only; the canonical command rechecks calendar rules on save. */
+export function resizeCalendarInterval(
+  interval: { start: number; end: number },
+  edge: "start" | "end",
+  deltaMinutes: number,
+  limits: { minMinutes: number; maxMinutes: number },
+) {
+  const minimum = Math.max(15, limits.minMinutes) * 60000;
+  const maximum = Math.max(limits.minMinutes, limits.maxMinutes) * 60000;
+  return edge === "start"
+    ? {
+        start: Math.max(
+          interval.end - maximum,
+          Math.min(
+            interval.end - minimum,
+            interval.start + deltaMinutes * 60000,
+          ),
+        ),
+        end: interval.end,
+      }
+    : {
+        start: interval.start,
+        end: Math.max(
+          interval.start + minimum,
+          Math.min(
+            interval.start + maximum,
+            interval.end + deltaMinutes * 60000,
+          ),
+        ),
+      };
 }
 export function calendarHours(
   day: string,

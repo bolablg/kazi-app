@@ -15,6 +15,7 @@ import { internal } from "./_generated/api";
 import { authorized, loadState, persist, newId } from "./store";
 import {
   evaluateRisks,
+  deliverCalendarReminder,
   activateSprintBacklogs,
   taskFor,
   projectFor,
@@ -22,6 +23,25 @@ import {
 } from "../shared/domain";
 import { deadlineAt, addDays, dateInZone } from "../shared/scheduler";
 import { accessToken } from "./calendar";
+export const calendarReminder = internalMutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    sessionId: v.string(),
+    revision: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (!(await ctx.db.get(args.workspaceId))) return;
+    const before = await loadState(ctx, args.workspaceId),
+      after = deliverCalendarReminder(
+        before,
+        args.sessionId,
+        args.revision,
+        Date.now(),
+        newId,
+      );
+    await persist(ctx, args.workspaceId, before, after);
+  },
+});
 export const activateSprint = internalMutation({
   args: { workspaceId: v.id("workspaces"), sprintId: v.string() },
   handler: async (ctx, { workspaceId, sprintId }) => {

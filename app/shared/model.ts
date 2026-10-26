@@ -89,6 +89,7 @@ export interface Workspace {
   ownerId: string;
 }
 export interface Project {
+  revision?: number;
   id: string;
   title: string;
   description: string;
@@ -216,6 +217,34 @@ export interface Session {
   updatedAt?: number;
   error?: string;
 }
+/** Mutable calendar reservations, separate from immutable accepted plan snapshots. */
+export interface CalendarSession {
+  id: string;
+  taskId: string;
+  assigneeId: string;
+  start: number;
+  end: number;
+  status: "scheduled" | "released";
+  revision: number;
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+  timezone: string;
+  seriesId?: string;
+  origin?: "plan";
+  originalStart: number;
+  originalEnd: number;
+  reminderMinutes?: number;
+  history: {
+    at: number;
+    actorId: string;
+    action: "scheduled" | "rescheduled" | "released";
+    fromStart?: number;
+    fromEnd?: number;
+    toStart?: number;
+    toEnd?: number;
+  }[];
+}
 export interface Allocation {
   sessions: Session[];
   unscheduled: { taskId: string; minutes: number; reason: string }[];
@@ -271,6 +300,7 @@ export interface Version {
   inputs?: PlanningInputs;
 }
 export interface PlanningInputs {
+  confirmedSessions?: Session[];
   sprintObjectives?: SprintObjective[];
   sprintObjectiveAssignments?: Record<string, string>;
   sprintFocus?: string;
@@ -358,6 +388,8 @@ export interface CalendarStatus {
   destinationId?: string;
   shareAvailability?: boolean;
   lastSync?: number;
+  availabilityFrom?: number;
+  availabilityUntil?: number;
   error?: string;
 }
 /** Immutable facts, recorded by commands rather than inferred from task edits. */
@@ -430,6 +462,7 @@ export interface State {
   /** Authorized projection of due instants, without exposing others' preferences. */
   taskDueAt?: Record<string, number>;
   invitations: Invitation[];
+  calendarSessions?: CalendarSession[];
   calendars: CalendarStatus[];
   busy: Busy[];
 }
@@ -468,7 +501,67 @@ export const sprintObjectiveSchema = z.object({
   leadId: id.optional(),
 });
 const objectiveAssignmentsSchema = z.record(id, id);
+const calendarScope = z.enum(["occurrence", "following", "series"]).optional();
+const calendarReminder = z
+  .number()
+  .int()
+  .refine(
+    (n) => [0, 5, 10, 15, 30, 60].includes(n),
+    "Choose a supported reminder interval.",
+  )
+  .optional();
 export const commandSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("restore_calendar_sessions"),
+    sessions: z
+      .array(
+        z.object({
+          sessionId: id,
+          revision: z.number().int().min(1),
+          start: z.number().int().nonnegative(),
+          end: z.number().int().positive(),
+          status: z.enum(["scheduled", "released"]),
+          reminderMinutes: calendarReminder.nullable(),
+        }),
+      )
+      .min(1)
+      .max(26)
+      .refine(
+        (rows) =>
+          new Set(rows.map((row) => row.sessionId)).size === rows.length,
+        "Choose each session once.",
+      ),
+  }),
+  z.object({
+    type: z.literal("schedule_calendar_session"),
+    taskId: id,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    recurrence: z
+      .object({
+        frequency: z.enum(["daily", "weekly"]),
+        count: z.number().int().min(2).max(26),
+        timezone: z.string().min(1).max(100),
+      })
+      .optional(),
+    reminderMinutes: calendarReminder,
+  }),
+  z.object({
+    type: z.literal("update_calendar_session"),
+    sessionId: id,
+    revision: z.number().int().min(1),
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    scope: calendarScope,
+    restore: z.boolean().optional(),
+    reminderMinutes: calendarReminder.nullable(),
+  }),
+  z.object({
+    type: z.literal("cancel_calendar_session"),
+    sessionId: id,
+    revision: z.number().int().min(1),
+    scope: calendarScope,
+  }),
   z.object({
     type: z.literal("create_sprint"),
     title: text

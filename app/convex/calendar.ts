@@ -539,15 +539,45 @@ export const refresh = action({
   },
 });
 export const refreshFor = internalAction({
-  args: { workspaceId: v.id("workspaces"), subject: v.string() },
+  args: {
+    workspaceId: v.id("workspaces"),
+    subject: v.string(),
+    timeFrom: v.optional(v.number()),
+    timeUntil: v.optional(v.number()),
+  },
   handler: async (ctx, args): Promise<void> => {
-    const s = await ctx.runQuery(internal.commands.stateForActor, args);
-    const cal = s.calendars.find((x) => x.ownerId === args.subject);
+    const base = { workspaceId: args.workspaceId, subject: args.subject },
+      now = Date.now();
+    const from = Math.min(args.timeFrom ?? now, now),
+      until = Math.max(
+        args.timeUntil ?? now + 29 * 86400000,
+        now + 29 * 86400000,
+      );
+    if (
+      (args.timeFrom !== undefined && !Number.isSafeInteger(args.timeFrom)) ||
+      (args.timeUntil !== undefined && !Number.isSafeInteger(args.timeUntil)) ||
+      (args.timeFrom !== undefined &&
+        args.timeUntil !== undefined &&
+        args.timeUntil <= args.timeFrom) ||
+      !Number.isSafeInteger(from) ||
+      !Number.isSafeInteger(until) ||
+      until <= from ||
+      from < now - 86400000 ||
+      until > now + 184 * 86400000 ||
+      until - from > 184 * 86400000
+    )
+      throw new ConvexError(
+        "Choose an availability range within the next six months.",
+      );
+    const s = await ctx.runQuery(internal.commands.stateForActor, base),
+      cal = s.calendars.find((x) => x.ownerId === args.subject);
     if (cal?.destinationId === "kazi" && !cal.selectedIds.length) {
       await ctx.runMutation(internal.calendar.saveAvailability, {
-        ...args,
-        busy: await ctx.runQuery(internal.calendar.otherReservations, args),
-        syncedAt: Date.now(),
+        ...base,
+        busy: await ctx.runQuery(internal.calendar.otherReservations, base),
+        syncedAt: now,
+        availabilityFrom: from,
+        availabilityUntil: until,
       });
       return;
     }
@@ -557,51 +587,58 @@ export const refreshFor = internalAction({
       );
     try {
       const token = await accessToken(ctx, args.subject),
-        now = Date.now();
-      const r = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          timeMin: new Date(now).toISOString(),
-          timeMax: new Date(now + 29 * 86400000).toISOString(),
-          items: cal.selectedIds.map((id) => ({ id })),
-        }),
-      });
-      if (!r.ok)
+        response = await fetch(
+          "https://www.googleapis.com/calendar/v3/freeBusy",
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + token,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              timeMin: new Date(from).toISOString(),
+              timeMax: new Date(until).toISOString(),
+              items: cal.selectedIds.map((id) => ({ id })),
+            }),
+          },
+        );
+      if (!response.ok)
         throw new Error(
-          r.status === 429
+          response.status === 429
             ? "Google Calendar is rate limited. Try again shortly."
             : "Calendar availability could not be confirmed. Reconnect or try again.",
         );
-      const body = await r.json();
-      const busy: import("../shared/model").Busy[] = await ctx.runQuery(
-        internal.calendar.otherReservations,
-        args,
-      );
+      const body = await response.json(),
+        busy: import("../shared/model").Busy[] = await ctx.runQuery(
+          internal.calendar.otherReservations,
+          base,
+        );
       for (const id of cal.selectedIds) {
         const calendar = body.calendars?.[id];
         if (!calendar || calendar.errors?.length)
           throw new Error(
             "An availability calendar is unavailable. Review your selected calendars.",
           );
-        for (const b of calendar.busy ?? [])
-          busy.push({
-            start: Date.parse(b.start),
-            end: Date.parse(b.end),
-            ownerId: args.subject,
-          });
+        for (const interval of calendar.busy ?? []) {
+          const start = Date.parse(interval.start),
+            end = Date.parse(interval.end);
+          if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start)
+            throw new Error(
+              "Calendar availability returned an invalid interval. Try again shortly.",
+            );
+          busy.push({ start, end, ownerId: args.subject });
+        }
       }
       await ctx.runMutation(internal.calendar.saveAvailability, {
-        ...args,
+        ...base,
         busy,
         syncedAt: now,
+        availabilityFrom: from,
+        availabilityUntil: until,
       });
     } catch (e) {
       await ctx.runMutation(internal.calendar.saveAvailability, {
-        ...args,
+        ...base,
         busy: [],
         error: e instanceof Error ? e.message : "Calendar connection failed.",
       });
@@ -706,6 +743,8 @@ export const saveAvailability = internalMutation({
       }),
     ),
     syncedAt: v.optional(v.number()),
+    availabilityFrom: v.optional(v.number()),
+    availabilityUntil: v.optional(v.number()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -721,6 +760,8 @@ export const saveAvailability = internalMutation({
       cal.status = cal.destinationId === "kazi" ? "native" : "connected";
       delete cal.error;
       cal.lastSync = args.syncedAt;
+      cal.availabilityFrom = args.availabilityFrom;
+      cal.availabilityUntil = args.availabilityUntil;
       after.busy = [
         ...after.busy.filter((x) => x.ownerId !== args.subject),
         ...args.busy,

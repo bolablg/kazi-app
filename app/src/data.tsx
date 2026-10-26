@@ -1,3 +1,4 @@
+import { calendarSessions as currentCalendarSessions } from "../shared/calendarPlanning";
 import { mergeTeamStates } from "../shared/teams";
 import { buildIcal } from "../shared/ical";
 import { migrateDemoIds } from "../shared/demoIds";
@@ -404,6 +405,7 @@ export function LiveProvider({
     mint = useAction(api.tokens.mint),
     revoke = useMutation(api.tokens.revoke);
   const release = useAction(api.commands.release);
+  const calendarCommand = useAction(api.commands.calendar);
   const prepareFile = useAction(api.files.prepare);
   const convex = useConvex(),
     createFeed = useAction(api.calendar.createFeed),
@@ -468,8 +470,21 @@ export function LiveProvider({
   const dispatch = async (command: Command, options?: { teamId?: string }) => {
     if (!online)
       throw new Error("Reconnect to save changes or approve a plan.");
+    const calendarTaskId =
+      command.type === "restore_calendar_sessions"
+        ? currentCalendarSessions(state).find(
+            (session) => session.id === command.sessions[0]?.sessionId,
+          )?.taskId
+        : "taskId" in command
+          ? command.taskId
+          : "sessionId" in command
+            ? currentCalendarSessions(state).find(
+                (session) => session.id === command.sessionId,
+              )?.taskId
+            : undefined;
     const resourceId =
-      "sprintId" in command && command.sprintId
+      calendarTaskId ??
+      ("sprintId" in command && command.sprintId
         ? command.sprintId
         : "projectId" in command && command.projectId
           ? command.projectId
@@ -477,7 +492,7 @@ export function LiveProvider({
             ? command.id
             : "versionId" in command
               ? command.versionId
-              : undefined;
+              : undefined);
     const target =
       options?.teamId ??
       (resourceId && state.resourceTeams?.[resourceId]) ??
@@ -492,6 +507,15 @@ export function LiveProvider({
       setInviteUrl(result.url);
       return result.url;
     }
+    if (
+      [
+        "schedule_calendar_session",
+        "update_calendar_session",
+        "cancel_calendar_session",
+        "restore_calendar_sessions",
+      ].includes(command.type)
+    )
+      return calendarCommand(args);
     if (command.type === "release_sessions") return release(args);
     return ["propose", "approve"].includes(command.type)
       ? plan(args)

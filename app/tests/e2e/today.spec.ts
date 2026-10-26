@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("Overview is the daily dashboard and Calendar tabs preserve range, keyboard navigation, and history", async ({
+test("Overview is the daily dashboard and Calendar views preserve range, keyboard navigation, and history", async ({
   page,
 }) => {
   const nav = page.getByRole("navigation", { name: "Main navigation" });
@@ -15,49 +15,68 @@ test("Overview is the daily dashboard and Calendar tabs preserve range, keyboard
     page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("tablist")).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Calendar range" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Calendar view", exact: true }),
+  ).toHaveCount(0);
   await nav.getByRole("link", { name: "Calendar", exact: true }).click();
   await expect(page).toHaveURL(/\/calendar$/);
-  const calendar = page.getByRole("tab", { name: "Calendar", exact: true });
-  const schedule = page.getByRole("tab", { name: "Schedule", exact: true });
-  await expect(calendar).toHaveAttribute("aria-selected", "true");
+  const view = page.getByRole("combobox", {
+    name: "Calendar view",
+    exact: true,
+  });
+  await expect(view).toHaveValue("workweek");
   await expect(
-    page.getByRole("tablist", { name: "Calendar views" }).getByRole("tab"),
-  ).toHaveCount(2);
-  await expect(
-    page.getByRole("table", { name: "Monthly work calendar" }),
+    page.getByRole("region", { name: "Workweek calendar", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("group", { name: "Calendar range" })
-    .getByRole("button", { name: "Week", exact: true })
-    .click();
   await expect(
-    page.getByRole("region", { name: "Weekly work calendar" }),
+    page.getByRole("tablist", { name: "Calendar views" }),
+  ).toHaveCount(0);
+  await view.selectOption("week");
+  await expect(
+    page.getByRole("region", { name: "Weekly work calendar", exact: true }),
   ).toBeVisible();
-  await calendar.press("ArrowRight");
-  await expect(schedule).toBeFocused();
-  await expect(page).toHaveURL(/\/calendar\?view=schedule&range=week$/);
+  await view.focus();
+  await expect(view).toBeFocused();
+  await view.press("Tab");
+  await expect(view).not.toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(view).toBeFocused();
+  await view.selectOption("schedule");
+  await expect(view).toHaveValue("schedule");
+  expect(new URL(page.url()).searchParams.get("view")).toBe("schedule");
+  expect(new URL(page.url()).searchParams.get("range")).toBe("week");
   await page.reload();
-  await expect(schedule).toHaveAttribute("aria-selected", "true");
-  await schedule.press("Home");
-  await expect(calendar).toBeFocused();
+  await expect(view).toHaveValue("schedule");
+  expect(new URL(page.url()).searchParams.get("range")).toBe("week");
+  await view.focus();
+  await expect(view).toBeFocused();
+  await view.selectOption("day");
+  await expect(view).toHaveValue("day");
+  await expect(view).toBeFocused();
   await expect(
-    page.getByRole("region", { name: "Weekly work calendar" }),
+    page.getByRole("region", { name: "Daily work calendar", exact: true }),
   ).toBeVisible();
-  await calendar.press("End");
-  await expect(schedule).toBeFocused();
-  await schedule.press("ArrowRight");
-  await expect(calendar).toBeFocused();
+  await view.selectOption("schedule");
+  await expect(view).toHaveValue("schedule");
+  await view.selectOption("month");
+  await expect(view).toHaveValue("month");
+  await expect(
+    page.getByRole("table", { name: "Monthly work calendar", exact: true }),
+  ).toBeVisible();
+  await view.selectOption("week");
+  await expect(view).toHaveValue("week");
+  await expect(
+    page.getByRole("region", { name: "Weekly work calendar", exact: true }),
+  ).toBeVisible();
   await nav.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("tablist")).toHaveCount(0);
   await page.goBack();
+  await expect(view).toHaveValue("week");
   await expect(
-    page.getByRole("region", { name: "Weekly work calendar" }),
+    page.getByRole("region", { name: "Weekly work calendar", exact: true }),
   ).toBeVisible();
 });
 
@@ -71,12 +90,15 @@ test("old calendar and reports bookmarks redirect without dropping views, filter
       new RegExp(`/calendar\\?view=${view}&range=week&person=all#agenda$`),
     );
     await expect(
-      page.getByRole("tab", {
-        name: view === "calendar" ? "Calendar" : "Schedule",
-        exact: true,
-      }),
-    ).toHaveAttribute("aria-selected", "true");
+      page.getByRole("combobox", { name: "Calendar view", exact: true }),
+    ).toHaveValue(view === "calendar" ? "week" : "schedule");
+    await page.locator(".calendar-options > summary").click();
+    await expect(
+      page.getByLabel("Calendar assignee", { exact: true }),
+    ).toBeVisible();
+
     await expect(page.getByLabel("Calendar assignee")).toHaveValue("all");
+    await page.locator(".calendar-options > summary").click();
     await page.goBack();
     await expect(
       page.getByRole("heading", { name: "Overview", exact: true }),

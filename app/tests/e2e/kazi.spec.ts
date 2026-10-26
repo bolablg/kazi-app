@@ -466,17 +466,27 @@ test("Overview opens the daily dashboard and Calendar owns both date views", asy
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
   await expect(
+    page.getByRole("combobox", { name: "Calendar view", exact: true }),
+  ).toHaveValue("workweek");
+  await page
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("month");
+  await expect(
     page.getByRole("table", { name: "Monthly work calendar" }),
   ).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "List", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("tab", { name: "Schedule", exact: true }).click();
-  await expect(page.getByRole("tabpanel")).toContainText(
+  await page
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("schedule");
+  await expect(page.locator(".calendar-schedule-view")).toContainText(
     "Private calendar event",
   );
-  await expect(page.getByRole("tabpanel")).toContainText("Due");
-  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
+  await expect(page.locator(".calendar-schedule-view")).toContainText("Due");
+  await page
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("month");
   await page.getByRole("button", { name: "Next month", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "November 2026", exact: true }),
@@ -496,7 +506,7 @@ test("phone calendar opens the consolidated Plans workflow with persistent tabs"
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/calendar?view=calendar");
+  await page.goto("/calendar?view=calendar&range=month");
   await page.getByRole("button", { name: /Monday, Oct 26, \d+ items/ }).click();
   await expect(page.locator(".selected-day-agenda")).toContainText(
     "Refine the homepage direction",
@@ -534,8 +544,8 @@ test("phone calendar opens the consolidated Plans workflow with persistent tabs"
   await page.getByRole("link", { name: "Open calendar", exact: true }).click();
   await expect(page).toHaveURL(/view=calendar&range=week/);
   await expect(
-    page.getByRole("button", { name: "Week", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("combobox", { name: "Calendar view", exact: true }),
+  ).toHaveValue("week");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -622,55 +632,64 @@ for (const width of [360, 390, 768, 1024, 1440, 1920]) {
 test("calendar switches month, week, and day with matching navigation and task details", async ({
   page,
 }) => {
-  await page.goto("/calendar?view=calendar");
+  await page.goto("/calendar?view=calendar&range=month");
   const before = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!),
   );
-  const range = page.getByRole("group", { name: "Calendar range" });
-  await expect(
-    range.getByRole("button", { name: "Month", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await range.getByRole("button", { name: "Week", exact: true }).click();
+  const range = page.getByRole("combobox", {
+    name: "Calendar view",
+    exact: true,
+  });
+  await expect(range).toHaveValue("month");
+  await range.selectOption("week");
   await expect(
     page.getByRole("region", { name: "Weekly work calendar" }),
   ).toBeVisible();
   await expect(page.locator(".time-calendar-day")).toHaveCount(7);
   await expect(
-    page.getByRole("heading", { name: "Oct 26 – Nov 1, 2026", exact: true }),
+    page.getByRole("heading", { name: "Oct 26 – Nov 1", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Next week", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Nov 2 – Nov 8, 2026", exact: true }),
+    page.getByRole("heading", { name: "Nov 2 – 8", exact: true }),
   ).toBeVisible();
-  await range.getByRole("button", { name: "Day", exact: true }).click();
+  await expect(page).toHaveURL(/date=2026-11-02/);
+  await range.selectOption("day");
   await expect(
     page.getByRole("region", { name: "Daily work calendar" }),
   ).toBeVisible();
   await expect(page.locator(".time-calendar-day")).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { name: "Monday, Nov 2, 2026", exact: true }),
+    page.getByRole("heading", { name: "Mon, Nov 2", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Next day", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Tuesday, Nov 3, 2026", exact: true }),
+    page.getByRole("heading", { name: "Tue, Nov 3", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Previous day", exact: true }).click();
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Monday, Oct 26, 2026", exact: true }),
+    page.getByRole("heading", { name: "Mon, Oct 26", exact: true }),
   ).toBeVisible();
+  await page.locator(".calendar-options > summary").click();
   await page.getByLabel("Include proposals").check();
+  await page.locator(".calendar-options > summary").click();
   const calendarUrl = page.url();
-  await page.locator(".time-calendar-event.proposed").first().click();
+  await page
+    .locator(".time-calendar-event.proposed .calendar-event-open")
+    .first()
+    .click();
   await expect(page.getByRole("textbox", { name: "Task title" })).toBeVisible();
   await page.getByRole("button", { name: "Close task", exact: true }).click();
   await expect(page).toHaveURL(/\/tasks/);
   await page.goto(calendarUrl);
-  await page.getByRole("tab", { name: "Schedule", exact: true }).click();
-  await page.getByRole("tab", { name: "Calendar", exact: true }).click();
-  await expect(
-    range.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("schedule");
+  await page
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("day");
+  await expect(range).toHaveValue("day");
   await page.reload();
   await expect(
     page.getByRole("region", { name: "Daily work calendar" }),
@@ -687,8 +706,11 @@ test("phone calendars contain readable week scrolling and retain the selected cr
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/calendar?view=calendar");
-  const range = page.getByRole("group", { name: "Calendar range" });
-  await range.getByRole("button", { name: "Week", exact: true }).click();
+  const range = page.getByRole("combobox", {
+    name: "Calendar view",
+    exact: true,
+  });
+  await range.selectOption("week");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -708,9 +730,9 @@ test("phone calendars contain readable week scrolling and retain the selected cr
   await page
     .getByRole("button", { name: "View Sunday, Nov 1", exact: true })
     .click();
-  await range.getByRole("button", { name: "Day", exact: true }).click();
+  await range.selectOption("day");
   await expect(
-    page.getByRole("heading", { name: "Sunday, Nov 1, 2026", exact: true }),
+    page.getByRole("heading", { name: "Sun, Nov 1", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".time-calendar-day")).toHaveCount(1);
   expect(
@@ -718,9 +740,18 @@ test("phone calendars contain readable week scrolling and retain the selected cr
       .locator(".overview-time-calendar")
       .evaluate((e) => e.scrollWidth <= e.clientWidth + 1),
   ).toBe(true);
-  await expect(page.locator(".day-due-items")).toContainText(
+  await expect(
+    page
+      .locator(".day-due-items")
+      .getByRole("button", { name: "Book a dentist appointment", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "View Sunday, Nov 1", exact: true })
+    .click();
+  await expect(page.locator("#selected-day-agenda")).toContainText(
     "Book a dentist appointment",
   );
+  await expect(page).toHaveURL(/date=2026-11-01/);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
