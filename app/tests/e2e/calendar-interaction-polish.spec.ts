@@ -32,7 +32,7 @@ async function savedViewerHours(page: Page) {
 for (const width of [390, 768, 1440]) {
   test(`calendar hides scrollbar chrome while wheel and keyboard scrolling work at ${width}px`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await savedViewerHours(page);
     await page.goto("/calendar?range=week&date=2026-10-26");
@@ -104,7 +104,7 @@ for (const width of [390, 768, 1440]) {
       element.scrollTop = 0;
     });
     await page.screenshot({
-      path: `/private/tmp/kazi-calendar-interaction-${width}.png`,
+      path: testInfo.outputPath(`calendar-interaction-${width}.png`),
       animations: "disabled",
     });
   });
