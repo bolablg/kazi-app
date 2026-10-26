@@ -101,6 +101,11 @@ test("project colors agree between calendar labels and reports", async ({
     .evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(color).toBe("rgb(250, 210, 207)");
   await page.goto("/calendar?view=calendar&range=day");
+  await page.locator(".calendar-options > summary").click();
+  await page
+    .getByLabel("Calendar project", { exact: true })
+    .selectOption({ label: "Brand handbook" });
+  await page.locator(".calendar-options > summary").click();
   await expect(
     page
       .locator(".day-due-items button")

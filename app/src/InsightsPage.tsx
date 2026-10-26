@@ -1,3 +1,4 @@
+import { CalendarInsights } from "./CalendarInsights";
 import { WorkflowReport } from "./WorkflowReport";
 import { ScrollTable } from "./ScrollTable";
 import { InfoTip, PageTitle } from "./InfoTip";
@@ -41,7 +42,14 @@ const dateTime = (at: number, zone: string) =>
     minute: "2-digit",
     timeZone: zone,
   }).format(at);
-const tabs = ["Summary", "Workload", "Performance", "Workflow", "Goals"];
+const tabs = [
+  "Summary",
+  "Workload",
+  "Calendar",
+  "Performance",
+  "Workflow",
+  "Goals",
+];
 
 export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
   const { state, actorId, demo } = useData();
@@ -261,6 +269,8 @@ export function InsightsPage({ openTask }: { openTask: (id: string) => void }) {
         <p role="alert" className="overview-empty">
           Choose a date range of up to one year, ending today or earlier.
         </p>
+      ) : tab === "Calendar" ? (
+        <CalendarInsights filter={filter} openTask={openTask} />
       ) : tab === "Workflow" ? (
         <WorkflowReport filter={filter} openTask={openTask} />
       ) : demo ? (

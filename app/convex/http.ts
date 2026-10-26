@@ -26,10 +26,13 @@ import {
 import { commandScopes, tokenScopes } from "../shared/capabilities";
 import { overviewEvents } from "../shared/overview";
 import { buildTodayOverview } from "../shared/today";
+import { buildCalendarInsights } from "../shared/calendarInsights";
+import { calendarDayCapacity } from "../shared/calendarPlanning";
 import { buildReport, reportBounds, reportCsv } from "../shared/reports";
 import { invitationToken } from "./crypto";
 import { MAX_FILE_BYTES } from "../shared/artifacts";
 import {
+  addDays,
   workingIntervals,
   subtractIntervals,
   dateInZone,
@@ -301,6 +304,7 @@ const mcp = httpAction(async (ctx, request) => {
           "get_plan_history",
           "get_report",
           "get_workflow_report",
+          "get_calendar_insights",
           "export_data",
         ].includes(operation)
       ) {
@@ -352,6 +356,8 @@ const mcp = httpAction(async (ctx, request) => {
         "calendar_list",
         "list_lifecycle_events",
         "get_workflow_report",
+        "get_calendar_insights",
+        "get_calendar_capacity",
       ];
       if (reads.includes(operation) && !principal.scopes.includes("read"))
         throw new Error("This token needs read scope.");
@@ -479,6 +485,14 @@ const mcp = httpAction(async (ctx, request) => {
             null
           );
         case "get_agenda": {
+          if (input.projectId && input.projectId !== "all")
+            projectFor(state, String(input.projectId), principal.subject);
+          const person = String(input.person ?? principal.subject);
+          if (
+            person !== "all" &&
+            !state.members.some((member) => member.id === person)
+          )
+            throw new Error("Select an available person.");
           reportBounds(
             String(input.from),
             String(input.to),
@@ -488,7 +502,7 @@ const mcp = httpAction(async (ctx, request) => {
           return page(
             overviewEvents(state, {
               actorId: principal.subject,
-              assigneeId: principal.subject,
+              assigneeId: person,
               projectId: String(input.projectId ?? "all"),
               zone: state.members.find((m) => m.id === principal.subject)!
                 .preferences.timezone,
@@ -540,6 +554,62 @@ const mcp = httpAction(async (ctx, request) => {
               numItems: Number(input.limit ?? 100),
             },
           });
+        case "get_calendar_capacity": {
+          const member = state.members.find(
+            (item) => item.id === principal.subject,
+          )!;
+          const zone = member.preferences.timezone;
+          const from = String(input.from),
+            to = String(input.to);
+          reportBounds(from, to, zone);
+          const days: string[] = [];
+          for (
+            let day = from;
+            day <= to && days.length < 32;
+            day = addDays(day, 1)
+          )
+            days.push(day);
+          if (days.length > 31)
+            throw new Error("Choose at most 31 dates for calendar capacity.");
+          const now = Date.now(),
+            calendar = state.calendars.find(
+              (item) => item.ownerId === principal.subject,
+            );
+          return {
+            timezone: zone,
+            asOf: now,
+            availabilityMode: calendar?.selectedIds.length
+              ? "external"
+              : "kazi_only",
+            externalLastSync: calendar?.lastSync ?? null,
+            days: days.map((date) => ({
+              date,
+              ...calendarDayCapacity(state, principal.subject, date, now),
+            })),
+          };
+        }
+        case "get_calendar_insights": {
+          const zone = state.members.find(
+            (member) => member.id === principal.subject,
+          )!.preferences.timezone;
+          if (input.project && input.project !== "all")
+            projectFor(state, String(input.project), principal.subject);
+          const person = String(input.person ?? "all");
+          if (
+            person !== "all" &&
+            !state.members.some((member) => member.id === person)
+          )
+            throw new Error("Select an available person.");
+          return buildCalendarInsights(state, {
+            from: String(input.from),
+            to: String(input.to),
+            zone,
+            actorId: principal.subject,
+            person,
+            project: String(input.project ?? "all"),
+            now: Date.now(),
+          });
+        }
         case "get_report": {
           const zone = state.members.find((m) => m.id === principal.subject)!
             .preferences.timezone;
@@ -856,6 +926,17 @@ const mcp = httpAction(async (ctx, request) => {
             timezone: prefs.timezone,
             busy: [
               ...current.busy,
+              ...(current.calendarSessions ?? [])
+                .filter(
+                  (session) =>
+                    session.assigneeId === principal.subject &&
+                    session.status === "scheduled",
+                )
+                .map((session) => ({
+                  start: session.start,
+                  end: session.end,
+                  ownerId: session.assigneeId,
+                })),
               ...current.proposals
                 .filter((p) =>
                   ["applying", "applied", "partial"].includes(p.status),
@@ -930,6 +1011,15 @@ const mcp = httpAction(async (ctx, request) => {
         command: JSON.stringify(command),
         requestId: String(requestId),
       };
+      if (
+        [
+          "schedule_calendar_session",
+          "update_calendar_session",
+          "cancel_calendar_session",
+          "restore_calendar_sessions",
+        ].includes(command.type)
+      )
+        return ctx.runAction(internal.commands.calendarFor, args);
       if (command.type === "release_sessions")
         return ctx.runMutation(internal.commands.queueRelease, args);
       if (command.type === "invite")

@@ -5,6 +5,7 @@ import {
   isCommittedTask,
 } from "./workflow";
 import { Temporal } from "@js-temporal/polyfill";
+import { calendarSessionIsNative } from "./calendarPlanning";
 import type { State, Task } from "./model";
 import { addDays, dateInZone } from "./scheduler";
 export interface OverviewEvent {
@@ -16,6 +17,10 @@ export interface OverviewEvent {
   end?: number;
   taskId?: string;
   proposalId?: string;
+  sessionId?: string;
+  sessionRevision?: number;
+  seriesId?: string;
+  source?: "calendar" | "plan";
   projectId?: string;
   ownerId?: string;
 }
@@ -122,6 +127,35 @@ export function overviewEvents(
     }
   };
   const seen = new Set<string>();
+  const overlays = new Set(
+    (state.calendarSessions ?? []).map((session) => session.id),
+  );
+  for (const session of state.calendarSessions ?? []) {
+    const task = tasksById.get(session.taskId);
+    if (
+      !task ||
+      session.status !== "scheduled" ||
+      (assigneeId !== "all" && session.assigneeId !== assigneeId)
+    )
+      continue;
+    span(
+      {
+        id: "session:" + session.id,
+        title: task.title,
+        kind: "scheduled",
+        taskId: task.id,
+        projectId: task.projectId,
+        ownerId: session.assigneeId,
+        sessionId: session.id,
+        sessionRevision: session.revision,
+        seriesId: session.seriesId,
+        source: session.origin === "plan" ? "plan" : "calendar",
+      },
+      session.start,
+      session.end,
+    );
+    seen.add(session.id);
+  }
   for (const proposal of state.proposals) {
     const draft = proposal.status === "awaiting_review";
     if (
@@ -133,6 +167,7 @@ export function overviewEvents(
       const task = tasksById.get(session.taskId);
       if (
         !task ||
+        overlays.has(session.id) ||
         (assigneeId !== "all" && session.assigneeId !== assigneeId) ||
         ["released", "failed"].includes(session.status) ||
         (!showProposed && session.status === "proposed")
@@ -153,6 +188,10 @@ export function overviewEvents(
                 : "pending",
           taskId: task.id,
           proposalId: proposal.id,
+          ...(calendarSessionIsNative(state, session.id)
+            ? { sessionId: session.id, sessionRevision: 1 }
+            : {}),
+          source: "plan",
           projectId: task.projectId,
           ownerId: session.assigneeId,
         },
@@ -171,6 +210,7 @@ export function overviewEvents(
         key = session.eventId ?? session.id;
       if (
         !task ||
+        overlays.has(session.id) ||
         (assigneeId !== "all" && session.assigneeId !== assigneeId) ||
         session.status !== "scheduled" ||
         seen.has(key)
@@ -183,6 +223,10 @@ export function overviewEvents(
           title: task.title,
           kind: "scheduled",
           taskId: task.id,
+          ...(calendarSessionIsNative(state, session.id)
+            ? { sessionId: session.id, sessionRevision: 1 }
+            : {}),
+          source: "plan",
           projectId: task.projectId,
           ownerId: session.assigneeId,
         },

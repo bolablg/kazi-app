@@ -27,6 +27,12 @@ import {
 } from "../shared/model";
 import { sha256, invitationToken } from "./crypto";
 import { localInstant } from "../shared/scheduler";
+import {
+  calendarSessions,
+  calendarOccurrences,
+  shiftedCalendarSessions,
+} from "../shared/calendarPlanning";
+import { taskFor } from "../shared/domain";
 export const bootstrap = mutation({
   args: {},
   handler: async (ctx) => {
@@ -332,9 +338,16 @@ export const execute = mutation({
     const user = await authorized(ctx, args.workspaceId);
     const command = commandSchema.parse(JSON.parse(args.command));
     if (
-      ["approve", "propose", "invite", "release_sessions"].includes(
-        command.type,
-      )
+      [
+        "approve",
+        "propose",
+        "invite",
+        "release_sessions",
+        "schedule_calendar_session",
+        "update_calendar_session",
+        "cancel_calendar_session",
+        "restore_calendar_sessions",
+      ].includes(command.type)
     )
       throw new ConvexError({
         code: "ACTION_REQUIRED",
@@ -356,6 +369,7 @@ async function run(
 ): Promise<string> {
   await authorized(ctx, workspaceId, subject);
   if (requestId.length > 180) throw new ConvexError("Request key is too long.");
+  const commandHash = await sha256(JSON.stringify(command));
   const key = subject + ":" + requestId,
     previous = await ctx.db
       .query("idempotency")
@@ -363,6 +377,10 @@ async function run(
         q.eq("workspaceId", workspaceId).eq("key", key),
       )
       .unique();
+  if (previous?.commandHash && previous.commandHash !== commandHash)
+    throw new ConvexError(
+      "This request key already belongs to a different action.",
+    );
   if (previous) return previous.result;
   if (command.type === "propose") {
     const windowAt = Math.floor(Date.now() / 900000) * 900000;
@@ -393,7 +411,13 @@ async function run(
   }
   const before = await loadState(ctx, workspaceId);
   const input = structuredClone(before);
-  if (command.type === "propose" || command.type === "approve") {
+  if (
+    command.type === "propose" ||
+    command.type === "approve" ||
+    command.type === "schedule_calendar_session" ||
+    command.type === "update_calendar_session" ||
+    command.type === "restore_calendar_sessions"
+  ) {
     const owners =
       command.type === "approve"
         ? [
@@ -405,29 +429,33 @@ async function run(
                 ) ?? [],
             ),
           ]
-        : command.sprintId
-          ? [
-              ...new Set(
-                input.tasks
-                  .filter((task) =>
-                    input.sprints
-                      ?.find((sprint) => sprint.id === command.sprintId)
-                      ?.taskIds.includes(task.id),
-                  )
-                  .flatMap((task) =>
-                    task.assigneeId ? [task.assigneeId] : [],
-                  ),
-              ),
-            ]
-          : command.projectId
+        : command.type === "schedule_calendar_session" ||
+            command.type === "update_calendar_session" ||
+            command.type === "restore_calendar_sessions"
+          ? [subject]
+          : command.sprintId
             ? [
                 ...new Set(
                   input.tasks
-                    .filter((t) => t.projectId === command.projectId)
-                    .flatMap((t) => (t.assigneeId ? [t.assigneeId] : [])),
+                    .filter((task) =>
+                      input.sprints
+                        ?.find((sprint) => sprint.id === command.sprintId)
+                        ?.taskIds.includes(task.id),
+                    )
+                    .flatMap((task) =>
+                      task.assigneeId ? [task.assigneeId] : [],
+                    ),
                 ),
               ]
-            : [subject];
+            : command.projectId
+              ? [
+                  ...new Set(
+                    input.tasks
+                      .filter((t) => t.projectId === command.projectId)
+                      .flatMap((t) => (t.assigneeId ? [t.assigneeId] : [])),
+                  ),
+                ]
+              : [subject];
     input.busy = input.busy.filter((span) => span.source !== "kazi");
     for (const owner of owners)
       input.busy.push(
@@ -452,11 +480,37 @@ async function run(
         { workspaceId, sprintId: sprint.id },
       );
   }
+  if (
+    [
+      "schedule_calendar_session",
+      "update_calendar_session",
+      "restore_calendar_sessions",
+    ].includes(command.type)
+  ) {
+    for (const session of state.calendarSessions ?? []) {
+      if (
+        session.status !== "scheduled" ||
+        session.reminderMinutes === undefined ||
+        session.start < Date.now() ||
+        before.calendarSessions?.some(
+          (prior) =>
+            prior.id === session.id && prior.revision === session.revision,
+        )
+      )
+        continue;
+      await ctx.scheduler.runAt(
+        Math.max(Date.now(), session.start - session.reminderMinutes * 60000),
+        internal.jobs.calendarReminder,
+        { workspaceId, sessionId: session.id, revision: session.revision },
+      );
+    }
+  }
   await ctx.db.insert("idempotency", {
     workspaceId,
     key,
     actorId: subject,
     result,
+    commandHash,
     createdAt: Date.now(),
   });
   if (command.type === "approve") {
@@ -519,6 +573,187 @@ export const stateForActor = internalQuery({
   handler: async (ctx, args): Promise<State> => {
     await authorized(ctx, args.workspaceId, args.subject);
     return loadState(ctx, args.workspaceId);
+  },
+});
+export const calendarCommandResult = internalQuery({
+  args: {
+    workspaceId: v.id("workspaces"),
+    subject: v.string(),
+    requestId: v.string(),
+    commandHash: v.string(),
+  },
+  handler: async (ctx, args): Promise<string | null> => {
+    await authorized(ctx, args.workspaceId, args.subject);
+    if (args.requestId.length > 180)
+      throw new ConvexError("Request key is too long.");
+    const prior = await ctx.db
+      .query("idempotency")
+      .withIndex("by_key", (q) =>
+        q
+          .eq("workspaceId", args.workspaceId)
+          .eq("key", args.subject + ":" + args.requestId),
+      )
+      .unique();
+    if (prior?.commandHash && prior.commandHash !== args.commandHash)
+      throw new ConvexError(
+        "This request key already belongs to a different action.",
+      );
+    return prior?.result ?? null;
+  },
+});
+export const calendar = action({
+  args: {
+    workspaceId: v.id("workspaces"),
+    command: v.string(),
+    requestId: v.string(),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new ConvexError("Sign in first.");
+    return ctx.runAction(internal.commands.calendarFor, {
+      ...args,
+      subject: user.subject,
+    });
+  },
+});
+export const calendarFor = internalAction({
+  args: {
+    workspaceId: v.id("workspaces"),
+    subject: v.string(),
+    command: v.string(),
+    requestId: v.string(),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    const command = commandSchema.parse(JSON.parse(args.command));
+    if (
+      ![
+        "schedule_calendar_session",
+        "update_calendar_session",
+        "cancel_calendar_session",
+        "restore_calendar_sessions",
+      ].includes(command.type)
+    )
+      throw new ConvexError("Unsupported calendar action.");
+    const completed = await ctx.runQuery(
+      internal.commands.calendarCommandResult,
+      {
+        workspaceId: args.workspaceId,
+        subject: args.subject,
+        requestId: args.requestId,
+        commandHash: await sha256(JSON.stringify(command)),
+      },
+    );
+    if (completed !== null) return completed;
+    const state = await ctx.runQuery(internal.commands.stateForActor, {
+        workspaceId: args.workspaceId,
+        subject: args.subject,
+      }),
+      member = state.members.find((m) => m.id === args.subject)!;
+    let from = Date.now(),
+      until = from + 86400000;
+    if (command.type === "schedule_calendar_session") {
+      const task = taskFor(state, command.taskId, args.subject);
+      if (task.assigneeId !== args.subject)
+        throw new ConvexError(
+          "Only the worker can reserve time on their calendar.",
+        );
+      if (
+        command.recurrence &&
+        command.recurrence.timezone !== member.preferences.timezone
+      )
+        throw new ConvexError(
+          "Use your saved calendar time zone for repeat sessions.",
+        );
+      const spans = calendarOccurrences(
+        command.start,
+        command.end,
+        command.recurrence,
+        member.preferences.workingDays,
+      );
+      from = Math.min(...spans.map((s) => s.start));
+      until = Math.max(...spans.map((s) => s.end));
+    } else if (
+      command.type === "update_calendar_session" ||
+      command.type === "cancel_calendar_session"
+    ) {
+      const session = calendarSessions(state).find(
+        (s) => s.id === command.sessionId,
+      );
+      if (
+        !session ||
+        session.assigneeId !== args.subject ||
+        taskFor(state, session.taskId, args.subject).assigneeId !== args.subject
+      )
+        throw new ConvexError("This calendar session is unavailable.");
+      if (session.revision !== command.revision)
+        throw new ConvexError("This session changed. Reload before saving.");
+      if (command.type === "update_calendar_session") {
+        const spans = shiftedCalendarSessions(
+          state,
+          session,
+          command.start,
+          command.end,
+          command.scope,
+          Date.now(),
+        );
+        from = Math.min(...spans.map((s) => s.start));
+        until = Math.max(...spans.map((s) => s.end));
+      }
+    }
+    if (command.type === "restore_calendar_sessions") {
+      for (const desired of command.sessions) {
+        const current = calendarSessions(state).find(
+          (row) => row.id === desired.sessionId,
+        );
+        if (
+          !current ||
+          current.assigneeId !== args.subject ||
+          taskFor(state, current.taskId, args.subject).assigneeId !==
+            args.subject
+        )
+          throw new ConvexError("This calendar session is unavailable.");
+        if (current.revision !== desired.revision)
+          throw new ConvexError("This session changed. Reload before saving.");
+      }
+      const scheduled = command.sessions.filter(
+        (row) => row.status === "scheduled",
+      );
+      if (scheduled.length) {
+        from = Math.min(...scheduled.map((row) => row.start));
+        until = Math.max(...scheduled.map((row) => row.end));
+      }
+    }
+    if (
+      command.type !== "cancel_calendar_session" &&
+      !(
+        command.type === "restore_calendar_sessions" &&
+        command.sessions.every((row) => row.status === "released")
+      )
+    ) {
+      const now = Date.now();
+      if (
+        !Number.isSafeInteger(from) ||
+        !Number.isSafeInteger(until) ||
+        until <= from ||
+        until > now + 184 * 86400000 ||
+        from < now - 3600000
+      )
+        throw new ConvexError(
+          "Choose future sessions within the next six months.",
+        );
+      await ctx.runAction(internal.calendar.refreshFor, {
+        workspaceId: args.workspaceId,
+        subject: args.subject,
+        timeFrom: Math.max(now, from),
+        timeUntil: until,
+      });
+    }
+    return ctx.runMutation(internal.commands.verified, {
+      workspaceId: args.workspaceId,
+      subject: args.subject,
+      command: args.command,
+      requestId: args.requestId,
+    });
   },
 });
 export const plan = action({

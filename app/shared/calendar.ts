@@ -1,12 +1,12 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { dayBounds, type OverviewEvent } from "./overview";
-export type CalendarScale = "month" | "week" | "day";
+export type CalendarScale = "month" | "week" | "workweek" | "day" | "3day";
 export function calendarPeriod(anchor: string, scale: CalendarScale) {
   const date = Temporal.PlainDate.from(anchor);
   const start =
     scale === "month"
       ? date.with({ day: 1 })
-      : scale === "week"
+      : scale === "week" || scale === "workweek"
         ? date.subtract({ days: date.dayOfWeek - 1 })
         : date;
   const end =
@@ -14,7 +14,11 @@ export function calendarPeriod(anchor: string, scale: CalendarScale) {
       ? start.with({ day: start.daysInMonth })
       : scale === "week"
         ? start.add({ days: 6 })
-        : start;
+        : scale === "workweek"
+          ? start.add({ days: 4 })
+          : scale === "3day"
+            ? start.add({ days: 2 })
+            : start;
   const gridStart =
     scale === "month" ? start.subtract({ days: start.dayOfWeek - 1 }) : start;
   const count =
@@ -22,7 +26,11 @@ export function calendarPeriod(anchor: string, scale: CalendarScale) {
       ? Math.ceil((start.dayOfWeek - 1 + start.daysInMonth) / 7) * 7
       : scale === "week"
         ? 7
-        : 1;
+        : scale === "workweek"
+          ? 5
+          : scale === "3day"
+            ? 3
+            : 1;
   return {
     start: start.toString(),
     end: end.toString(),
@@ -40,7 +48,15 @@ export function moveCalendarDate(
     .add(
       scale === "month"
         ? { months: direction }
-        : { days: direction * (scale === "week" ? 7 : 1) },
+        : {
+            days:
+              direction *
+              (["week", "workweek"].includes(scale)
+                ? 7
+                : scale === "3day"
+                  ? 3
+                  : 1),
+          },
     )
     .toString();
 }

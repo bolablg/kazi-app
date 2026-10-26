@@ -15,6 +15,24 @@ describe("calendar date windows", () => {
     expect(week.days).toHaveLength(7);
     expect(calendarPeriod("2026-11-01", "week").start).toBe("2026-10-26");
   });
+  it("uses five workdays and three-day windows across the year boundary", () => {
+    const workweek = calendarPeriod("2027-01-01", "workweek");
+    expect(workweek.days).toEqual([
+      "2026-12-28",
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31",
+      "2027-01-01",
+    ]);
+    expect(workweek.end).toBe("2027-01-01");
+    expect(moveCalendarDate("2027-01-01", "workweek", 1)).toBe("2027-01-08");
+    expect(calendarPeriod("2026-12-31", "3day").days).toEqual([
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+    ]);
+    expect(moveCalendarDate("2026-12-31", "3day", 1)).toBe("2027-01-03");
+  });
   it("clamps month navigation and moves weeks/days by calendar dates", () => {
     expect(moveCalendarDate("2027-01-31", "month", 1)).toBe("2027-02-28");
     expect(moveCalendarDate("2026-12-28", "week", 1)).toBe("2027-01-04");

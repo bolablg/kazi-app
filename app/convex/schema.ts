@@ -12,6 +12,7 @@ import {
   activityV,
   invitationV,
   calendarV,
+  calendarSessionV,
   reportEventV,
   artifactV,
   sprintV,
@@ -144,6 +145,9 @@ export default defineSchema({
     .index("by_workspace", ["workspaceId"])
     .index("by_key", ["workspaceId", "key"])
     .index("by_token", ["tokenHash"]),
+  calendarSessions: defineTable({ ...scoped, data: calendarSessionV })
+    .index("by_workspace", ["workspaceId"])
+    .index("by_key", ["workspaceId", "key"]),
   calendarStatuses: defineTable({ ...scoped, data: calendarV })
     .index("by_workspace", ["workspaceId"])
     .index("by_key", ["workspaceId", "key"]),
@@ -175,6 +179,7 @@ export default defineSchema({
     ...scoped,
     actorId: v.string(),
     result: v.string(),
+    commandHash: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_workspace", ["workspaceId"])

@@ -4,11 +4,13 @@ test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
 });
 
-test("whole month cells and timed day backgrounds select the complete agenda without intercepting task clicks", async ({
+test("whole month cells and day headers select the complete agenda without intercepting task clicks", async ({
   page,
 }) => {
-  await page.goto("/calendar");
+  await page.goto("/calendar?range=month");
+  await page.locator(".calendar-options > summary").click();
   await page.getByLabel("Include proposals").check();
+  await page.locator(".calendar-options > summary").click();
   const date = page.getByRole("button", {
     name: /^Monday, Oct 26, \d+ items$/,
   });
@@ -28,15 +30,14 @@ test("whole month cells and timed day backgrounds select the complete agenda wit
   ).toBeVisible();
   await page.goBack();
   await page
-    .getByRole("group", { name: "Calendar range" })
-    .getByRole("button", { name: "Week", exact: true })
-    .click();
+    .getByRole("combobox", { name: "Calendar view", exact: true })
+    .selectOption("week");
   await page
     .getByRole("button", {
-      name: "Show details for Wednesday, Oct 28",
+      name: "View Wednesday, Oct 28",
       exact: true,
     })
-    .click({ position: { x: 10, y: 100 } });
+    .click();
   await expect(agenda.getByRole("heading")).toHaveText("Wednesday, Oct 28");
   const thursday = page.getByRole("button", {
     name: "View Thursday, Oct 29",
@@ -53,12 +54,13 @@ for (const width of [390, 768, 1440]) {
   }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });
     await page.goto("/calendar?range=week");
+    await page.locator(".calendar-options > summary").click();
     await page.getByLabel("Include proposals").check();
+    await page.locator(".calendar-options > summary").click();
     for (const range of ["Week", "Day"]) {
       await page
-        .getByRole("group", { name: "Calendar range" })
-        .getByRole("button", { name: range, exact: true })
-        .click();
+        .getByRole("combobox", { name: "Calendar view", exact: true })
+        .selectOption(range.toLowerCase());
       const short = page.locator(
         '.time-calendar-event.proposed[data-density="compact"]',
       );

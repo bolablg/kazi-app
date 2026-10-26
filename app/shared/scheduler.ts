@@ -11,6 +11,7 @@ import {
   type Busy,
   type Preferences,
   type Task,
+  type Session,
   fail,
 } from "./model";
 export const MINUTE = 60000;
@@ -94,6 +95,7 @@ export function workingIntervals(
 export function allocate(input: {
   tasks: Task[];
   allTasks?: Task[];
+  confirmedSessions?: Session[];
   busy: Busy[];
   preferences: Record<string, Preferences>;
   startDate: string;
@@ -181,8 +183,81 @@ export function allocate(input: {
         }))
         .filter((s) => s.end > s.start);
   }
+  const held = (input.confirmedSessions ?? []).filter(
+    (session) => session.status === "scheduled" && session.end > now,
+  );
+  const heldFor = (task: Task) =>
+    held.filter(
+      (session) =>
+        session.taskId === task.id && session.assigneeId === task.assigneeId,
+    );
+  const heldMinutes = (task: Task) => {
+    let until = -Infinity,
+      minutes = 0;
+    for (const span of heldFor(task).sort((a, b) => a.start - b.start)) {
+      const start = Math.max(now, span.start);
+      minutes += Math.max(0, span.end - Math.max(until, start)) / MINUTE;
+      until = Math.max(until, span.end);
+    }
+    return minutes;
+  };
   const used: Record<string, number> = {},
     finish: Record<string, number> = {};
+  for (const task of all) {
+    const effort = task.remainingMinutes ?? task.estimatedMinutes;
+    if (
+      effort !== undefined &&
+      heldMinutes(task) >= effort &&
+      heldFor(task).length
+    )
+      finish[task.id] = Math.max(
+        ...heldFor(task).map((session) => session.end),
+      );
+  }
+  const focusByDay = new Map<string, { start: number; end: number }[]>();
+  for (const focus of [
+    ...(input.confirmedSessions ?? [])
+      .filter((session) => session.status === "scheduled")
+      .map((session) => ({
+        ownerId: session.assigneeId,
+        start: session.start,
+        end: session.end,
+      })),
+    ...busy.filter((interval) => interval.source === "kazi"),
+  ]) {
+    const pref = preferences[focus.ownerId];
+    if (!pref) continue;
+    for (
+      let day = dateInZone(focus.start, pref.timezone);
+      day <= dateInZone(focus.end - 1, pref.timezone);
+      day = addDays(day, 1)
+    ) {
+      const at = Number(
+          Temporal.PlainDate.from(day).toZonedDateTime(pref.timezone)
+            .epochMilliseconds,
+        ),
+        until = Number(
+          Temporal.PlainDate.from(day)
+            .add({ days: 1 })
+            .toZonedDateTime(pref.timezone).epochMilliseconds,
+        ),
+        key = focus.ownerId + day;
+      focusByDay.set(key, [
+        ...(focusByDay.get(key) ?? []),
+        { start: Math.max(focus.start, at), end: Math.min(focus.end, until) },
+      ]);
+    }
+  }
+  for (const [key, spans] of focusByDay) {
+    let until = -Infinity;
+    for (const span of spans.sort((a, b) => a.start - b.start)) {
+      used[key] =
+        (used[key] ?? 0) +
+        Math.max(0, span.end - Math.max(span.start, until)) / MINUTE;
+      until = Math.max(until, span.end);
+    }
+  }
+
   const sessions: Allocation["sessions"] = [],
     unscheduled: Allocation["unscheduled"] = [];
   for (const task of ordered) {
@@ -195,6 +270,7 @@ export function allocate(input: {
       });
       continue;
     }
+    left = Math.max(0, left - heldMinutes(task));
     if (left === 0) continue;
     const p = task.assigneeId ? preferences[task.assigneeId] : undefined;
     const missingDependency = task.dependencies.some((id) => {
@@ -272,6 +348,7 @@ export function allocate(input: {
     else
       finish[task.id] = Math.max(
         now,
+        ...heldFor(task).map((session) => session.end),
         ...sessions.filter((s) => s.taskId === task.id).map((s) => s.end),
       );
   }

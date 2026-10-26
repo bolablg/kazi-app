@@ -52,11 +52,16 @@ export function buildIcal(
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",
   ];
+  const previouslyAssigned = new Set(
+    (state.calendarSessions ?? [])
+      .filter((session) => session.assigneeId === subject)
+      .map((session) => session.taskId),
+  );
   const tasks = new Map(
     state.tasks
       .filter(
         (t) =>
-          t.assigneeId === subject &&
+          (t.assigneeId === subject || previouslyAssigned.has(t.id)) &&
           (!options.projectId || t.projectId === options.projectId),
       )
       .map((t) => [t.id, t]),
@@ -64,6 +69,7 @@ export function buildIcal(
   const projects = new Map(state.projects.map((p) => [p.id, p]));
   const seen = new Set<string>();
   const receipts = [
+    { createdAt: 0, sessions: state.calendarSessions ?? [] },
     ...state.proposals
       .filter((p) => ["applied", "partial", "applying"].includes(p.status))
       .map((p) => ({
@@ -90,23 +96,30 @@ export function buildIcal(
       )
         continue;
       seen.add(session.id);
+      const project = projects.get(task.projectId),
+        modifiedAt = Math.max(
+          session.updatedAt ?? receipt.createdAt,
+          task.updatedAt,
+          project?.updatedAt ?? 0,
+        );
       const canceled =
         session.status === "released" ||
+        task.assigneeId !== subject ||
         isArchivedTask(task) ||
         task.status === "done" ||
         projects.get(task.projectId)?.archived;
       lines.push(
         "BEGIN:VEVENT",
         `UID:${session.id}@agenda.kazi`,
-        `DTSTAMP:${utc(session.updatedAt ?? receipt.createdAt)}`,
-        `LAST-MODIFIED:${utc(Math.max(session.updatedAt ?? receipt.createdAt, task.updatedAt))}`,
+        `DTSTAMP:${utc(modifiedAt)}`,
+        `LAST-MODIFIED:${utc(modifiedAt)}`,
         `DTSTART:${utc(session.start)}`,
         `DTEND:${utc(session.end)}`,
         `SUMMARY:${icalText(task.title)}`,
         `DESCRIPTION:${icalText("Focus session · " + (projects.get(task.projectId)?.title ?? "Kazi"))}`,
         `STATUS:${canceled ? "CANCELLED" : "CONFIRMED"}`,
         `TRANSP:${canceled ? "TRANSPARENT" : "OPAQUE"}`,
-        `SEQUENCE:${Math.max(0, task.revision * 2 + (canceled ? 1 : 0))}`,
+        `SEQUENCE:${2 * (task.revision + (project?.revision ?? 0) + ("revision" in session ? Number(session.revision) : 1)) + (canceled ? 1 : 0)}`,
       );
       if (options.appOrigin)
         lines.push(
@@ -127,17 +140,19 @@ export function buildIcal(
         state.members.find((m) => m.id === subject)?.preferences.timezone ??
           "UTC",
       )!;
+      const project = projects.get(task.projectId),
+        modifiedAt = Math.max(task.updatedAt, project?.updatedAt ?? 0);
       lines.push(
         "BEGIN:VEVENT",
         `UID:deadline-${task.id}@agenda.kazi`,
-        `DTSTAMP:${utc(task.updatedAt)}`,
-        `LAST-MODIFIED:${utc(task.updatedAt)}`,
+        `DTSTAMP:${utc(modifiedAt)}`,
+        `LAST-MODIFIED:${utc(modifiedAt)}`,
         `DTSTART;VALUE=DATE:${date(due)}`,
         `DTEND;VALUE=DATE:${date(Temporal.PlainDate.from(due).add({ days: 1 }).toString())}`,
         `SUMMARY:${icalText("Due: " + task.title)}`,
         `STATUS:${canceled ? "CANCELLED" : "CONFIRMED"}`,
         "TRANSP:TRANSPARENT",
-        `SEQUENCE:${task.revision}`,
+        `SEQUENCE:${2 * (task.revision + (project?.revision ?? 0)) + (canceled ? 1 : 0)}`,
         "END:VEVENT",
       );
     }

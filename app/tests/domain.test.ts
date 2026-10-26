@@ -481,6 +481,23 @@ describe("review, recovery and immutable history", () => {
       ctx(),
     ).state;
     s = completeDemoWrites(s);
+    // Recovery replaces explicitly released work; existing reservations no longer
+    // cause the same remaining estimate to be allocated a second time.
+    const accepted = s.versions.at(-1)!;
+    s = execute(
+      s,
+      {
+        type: "release_sessions",
+        versionId: accepted.id,
+        sessionIds: accepted.sessions
+          .filter(
+            (session) =>
+              session.assigneeId === DEMO_USER && session.start > now,
+          )
+          .map((session) => session.id),
+      },
+      ctx(),
+    ).state;
     const count = s.tasks.length;
     s = execute(
       s,

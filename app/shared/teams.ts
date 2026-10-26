@@ -34,13 +34,14 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
       "projects",
       "tasks",
       "proposals",
+      "calendarSessions",
       "versions",
       "notifications",
       "invitations",
       "iterations",
       "attempts",
     ] as const)
-      for (const entity of state[field]) resourceTeams[entity.id] = id;
+      for (const entity of state[field] ?? []) resourceTeams[entity.id] = id;
   }
   const collect = <
     K extends
@@ -67,6 +68,9 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
     tasks: collect("tasks"),
     sprints: entries.flatMap(({ state }) => state.sprints ?? []),
     proposals: collect("proposals"),
+    calendarSessions: entries.flatMap(
+      ({ state }) => state.calendarSessions ?? [],
+    ),
     versions: collect("versions"),
     attempts: collect("attempts"),
     iterations: collect("iterations"),

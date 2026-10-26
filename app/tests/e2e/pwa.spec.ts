@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test.use({ baseURL: "http://127.0.0.1:4173" });
+test.use({ baseURL: process.env.KAZI_PREVIEW_URL ?? "http://127.0.0.1:4173" });
 test("production PWA precaches its shell and reloads into a read-only offline view", async ({
   page,
   context,
