@@ -375,7 +375,7 @@ export function GroupedTasks({
               <span className="group-count">{rows.length}</span>
             </div>
             <TaskRows tasks={rows} onOpen={onOpen} />
-            {status === "todo" && (
+            {status === "backlog" && (
               <button
                 className="add-table-task"
                 aria-label="Add task"

@@ -9,7 +9,15 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
   page,
 }) => {
   const title = "Validate the release workflow";
-  await page.getByRole("button", { name: "New task", exact: true }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "To do tasks", exact: true })
+      .getByRole("button", { name: "Add task", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("region", { name: "Backlog tasks", exact: true })
+    .getByRole("button", { name: "Add task", exact: true })
+    .click();
   const form = page.getByRole("dialog");
   await form.getByLabel("What needs to get done?").fill(title);
   await form
@@ -20,6 +28,16 @@ test("Tasks and project boards share the full workflow, collapse archives, and p
   await form.getByLabel(/^Deadline/).fill("2026-10-30");
   await form.getByRole("button", { name: "Create task", exact: true }).click();
   await page.getByRole("tab", { name: "Board", exact: true }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "Backlog column", exact: true })
+      .getByRole("button", { name: "Add task", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "To do column", exact: true })
+      .getByRole("button", { name: "Add task", exact: true }),
+  ).toHaveCount(0);
   await expect(
     page
       .getByRole("region", { name: "Backlog column", exact: true })

@@ -191,7 +191,7 @@ export function TaskBoard({
                     />
                   ))}
               </div>
-              {status === "todo" && !readOnly && addTask && (
+              {status === "backlog" && !readOnly && addTask && (
                 <button className="add-inline" onClick={addTask}>
                   <Plus size={15} />
                   {addTaskLabel}
