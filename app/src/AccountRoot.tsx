@@ -1,18 +1,45 @@
 import { useEffect, useMemo } from "react";
 import { SignIn, useAuth } from "@clerk/react";
-import { ConvexReactClient, useConvexAuth } from "convex/react";
+import { ConvexReactClient, useConvexAuth, useQuery } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { useLocation } from "react-router-dom";
 import { LiveProvider } from "./data";
 import App from "./App";
 import { LoadingScreen } from "./LoadingScreen";
 import { Brand } from "./Brand";
+import { BrandAttribution } from "./BrandAttribution";
+import { identityApi } from "./identityApi";
+import {
+  centralAccountUrl,
+  identityConfig,
+  identityPaths,
+  rememberReturn,
+} from "./identityConfig";
+import type { IdentityConfig } from "./identityConfig";
+import {
+  AccountIdentityProvider,
+  CentralLink,
+  CentralSignIn,
+  IdentityConfigurationError,
+  LegacyLink,
+  LegacyLinkSignIn,
+  ReturnToKazi,
+  UnlinkedAccount,
+} from "./IdentityScreens";
 
 const pendingClose = new WeakMap<
   ConvexReactClient,
   ReturnType<typeof setTimeout>
 >();
-export function AccountRoot({ url }: { url: string }) {
+export function AccountRoot({
+  url,
+  config = identityConfig,
+}: {
+  url: string;
+  config?: IdentityConfig;
+}) {
   const { isLoaded, isSignedIn, userId } = useAuth();
+  const route = useLocation();
   useEffect(() => {
     localStorage.removeItem("kazi.private");
     return () => {
@@ -20,6 +47,11 @@ export function AccountRoot({ url }: { url: string }) {
     };
   }, [userId]);
   if (!isLoaded) return <LoadingScreen />;
+  if (config.error) return <IdentityConfigurationError />;
+  if ((!isSignedIn || !userId) && config.provider === "central")
+    return <CentralSignIn config={config} />;
+  if ((!isSignedIn || !userId) && route.pathname === identityPaths.legacyLink)
+    return <LegacyLinkSignIn config={config} />;
   if (!isSignedIn || !userId)
     return (
       <div className="auth-page">
@@ -29,10 +61,42 @@ export function AccountRoot({ url }: { url: string }) {
           </span>
           <h1>Welcome to Kazi</h1>
           <p>Manage your tasks, projects, and connected tools.</p>
+          <a className="auth-privacy-link" href="/privacy">
+            Privacy policy
+          </a>
+          {config.central && (
+            <a
+              href={centralAccountUrl(config, location.origin, true)}
+              onClick={() =>
+                rememberReturn(sessionStorage, route.pathname, route.search)
+              }
+            >
+              Create an iYANJU account
+            </a>
+          )}
         </div>
         <SignIn
           routing="hash"
-          withSignUp
+          withSignUp={!config.central}
+          transferable={config.central ? false : undefined}
+          signUpUrl={
+            config.central
+              ? centralAccountUrl(config, location.origin, true)
+              : undefined
+          }
+          appearance={
+            config.central
+              ? {
+                  elements: {
+                    socialButtons: { display: "none" },
+                    dividerRow: { display: "none" },
+                    footerAction: { display: "none" },
+                    card: { boxShadow: "none" },
+                    cardBox: { boxShadow: "none" },
+                  },
+                }
+              : undefined
+          }
           fallbackRedirectUrl={location.origin}
           signUpFallbackRedirectUrl={location.origin}
           forceRedirectUrl={
@@ -46,11 +110,27 @@ export function AccountRoot({ url }: { url: string }) {
               : undefined
           }
         />
+        <BrandAttribution />
       </div>
     );
-  return <ConnectedAccount key={userId} url={url} actorId={userId} />;
+  return (
+    <ConnectedAccount
+      key={userId}
+      url={url}
+      config={config}
+      legacyActorId={userId}
+    />
+  );
 }
-function ConnectedAccount({ url, actorId }: { url: string; actorId: string }) {
+function ConnectedAccount({
+  url,
+  config,
+  legacyActorId,
+}: {
+  url: string;
+  config: IdentityConfig;
+  legacyActorId: string;
+}) {
   // Mount only after Clerk loads. Every identity gets a fresh private query cache.
   const client = useMemo(() => new ConvexReactClient(url), [url]);
   useEffect(() => {
@@ -67,11 +147,23 @@ function ConnectedAccount({ url, actorId }: { url: string; actorId: string }) {
   }, [client]);
   return (
     <ConvexProviderWithClerk client={client} useAuth={useAuth}>
-      <VerifiedAccount actorId={actorId} />
+      <VerifiedAccount
+        url={url}
+        config={config}
+        legacyActorId={legacyActorId}
+      />
     </ConvexProviderWithClerk>
   );
 }
-function VerifiedAccount({ actorId }: { actorId: string }) {
+function VerifiedAccount({
+  url,
+  config,
+  legacyActorId,
+}: {
+  url: string;
+  config: IdentityConfig;
+  legacyActorId: string;
+}) {
   const auth = useConvexAuth();
   if (auth.isLoading) return <LoadingScreen />;
   if (!auth.isAuthenticated)
@@ -82,9 +174,52 @@ function VerifiedAccount({ actorId }: { actorId: string }) {
         <button onClick={() => location.reload()}>Reconnect</button>
       </div>
     );
-  return (
-    <LiveProvider key={actorId} actorId={actorId}>
-      <App />
-    </LiveProvider>
-  );
+  // Feature-off compatibility: the released legacy backend has no identity API.
+  // Optional migration/shared mode must always resolve the canonical actor server-side.
+  if (config.mode === "legacy" && !config.central)
+    return (
+      <LiveProvider key={legacyActorId} actorId={legacyActorId}>
+        <App />
+      </LiveProvider>
+    );
+  return <ResolvedAccount url={url} config={config} />;
+}
+function ResolvedAccount({
+  url,
+  config,
+}: {
+  url: string;
+  config: IdentityConfig;
+}) {
+  const status = useQuery(identityApi.status, {});
+  const route = useLocation();
+  if (!status) return <LoadingScreen />;
+  // Optional central configuration enables a rehearsal while legacy remains
+  // the default UI provider. Both rehearsal and shared UI need the dual-issuer
+  // backend resolver; the frontend mode never relaxes server identity checks.
+  if (status.mode !== "shared" || status.provider !== config.provider)
+    return <IdentityConfigurationError />;
+  if (route.pathname === identityPaths.legacyLink)
+    return <LegacyLink config={config} status={status} url={url} />;
+  // Even a ready central account must validate a pending link request. It may
+  // belong to a different Kazi account; never silently discard that conflict.
+  if (route.pathname === identityPaths.centralLink)
+    return (
+      <CentralLink
+        url={url}
+        ready={status.state === "ready" && !!status.actorId}
+      />
+    );
+  if (status.state === "ready" && status.actorId) {
+    if (route.pathname === identityPaths.returned) return <ReturnToKazi />;
+    return (
+      <AccountIdentityProvider value={{ config, status }}>
+        <LiveProvider key={status.actorId} actorId={status.actorId}>
+          <App />
+        </LiveProvider>
+      </AccountIdentityProvider>
+    );
+  }
+  if (config.provider !== "central") return <IdentityConfigurationError />;
+  return <UnlinkedAccount config={config} url={url} />;
 }

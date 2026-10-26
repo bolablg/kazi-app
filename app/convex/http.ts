@@ -541,6 +541,9 @@ const mcp = httpAction(async (ctx, request) => {
           return {
             format: "kazi-export/1",
             exportedAt: Date.now(),
+            accountIdentity: await ctx.runQuery(internal.identity.exportFor, {
+              actorId: principal.subject,
+            }),
             data: state,
           };
         case "list_report_events":

@@ -12,7 +12,6 @@ import {
   Bell,
   Check,
   Clock3,
-  Download,
   ListChecks,
   LocateFixed,
   Plug,
@@ -24,6 +23,10 @@ import { useData } from "./data";
 import { cx, useUI } from "./components";
 import { InfoTip, PageTitle } from "./InfoTip";
 import { AccountSettings } from "./AccountPages";
+import {
+  AccountDataExportButton,
+  type AccountIdentityExport,
+} from "./AccountDataExport";
 import { availableTimeZones, deviceTimeZone } from "../shared/timezones";
 import { AgendaSettings } from "./AgendaSettings";
 import {
@@ -161,7 +164,7 @@ export function SettingsPage({
   const update = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
   const dirty = JSON.stringify(prefs) !== JSON.stringify(preferences);
-  const exportData = () => {
+  const exportData = (accountIdentity?: AccountIdentityExport) => {
     const url = URL.createObjectURL(
       new Blob(
         [
@@ -170,6 +173,7 @@ export function SettingsPage({
               format: "kazi-export/1",
               exportedAt: Date.now(),
               synthetic: demo,
+              ...(accountIdentity ? { accountIdentity } : {}),
               data: state,
             },
             null,
@@ -214,14 +218,20 @@ export function SettingsPage({
         </div>
         {!connections && (
           <div className="settings-export">
-            <button className="button secondary" onClick={exportData}>
-              <Download size={16} />
-              Export my data
-            </button>
+            <AccountDataExportButton
+              onExport={exportData}
+              onError={() =>
+                notify(
+                  "We could not complete your export. Please try again.",
+                  true,
+                )
+              }
+            />
             <InfoTip label="About data export">
               Download the projects, tasks, activity, and plan history you can
               access. Authentication secrets and integration credentials are
-              excluded.
+              excluded. Your own shared-account mapping and service-use dates
+              are included when shared sign-in is enabled.
             </InfoTip>
           </div>
         )}

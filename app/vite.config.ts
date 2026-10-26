@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
           "import.meta.env.VITE_CONVEX_URL": JSON.stringify(""),
           "import.meta.env.VITE_KAZI_LOCAL_DEV": JSON.stringify("false"),
           "import.meta.env.VITE_KAZI_MCP_URL": JSON.stringify(""),
+          "import.meta.env.VITE_KAZI_IDENTITY_MODE": JSON.stringify("legacy"),
+          "import.meta.env.VITE_IYANJU_CLERK_PUBLISHABLE_KEY":
+            JSON.stringify(""),
+          "import.meta.env.VITE_IYANJU_ACCOUNT_ORIGIN": JSON.stringify(""),
         }
       : mode === "development"
         ? { "import.meta.env.VITE_KAZI_MCP_URL": JSON.stringify("") }

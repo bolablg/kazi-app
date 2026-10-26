@@ -17,6 +17,104 @@ const production = {
   VITE_CLERK_PUBLISHABLE_KEY: "pk_live_fixture",
   CONVEX_DEPLOY_KEY: "prod:fixture|not-a-real-key",
 };
+const key = (environment, host) =>
+  `pk_${environment}_${Buffer.from(host + "$", "utf8")
+    .toString("base64")
+    .replace(/=+$/, "")}`;
+const sharedProduction = {
+  ...production,
+  VITE_CLERK_PUBLISHABLE_KEY: key("live", "clerk.kazi.iyanju.com"),
+  VITE_IYANJU_CLERK_PUBLISHABLE_KEY: key("live", "clerk.iyanju.com"),
+  VITE_IYANJU_ACCOUNT_ORIGIN: "https://iyanju.com",
+  VITE_KAZI_IDENTITY_MODE: "shared",
+};
+
+test("production supports additive account linking before changing the default provider", () => {
+  assert.doesNotThrow(() => validateHostedEnvironment(sharedProduction));
+  assert.doesNotThrow(() =>
+    validateHostedEnvironment({
+      ...sharedProduction,
+      VITE_KAZI_IDENTITY_MODE: "legacy",
+    }),
+  );
+});
+
+test("partial, spoofed, and cross-environment shared identity configuration fails closed", () => {
+  for (const change of [
+    { VITE_IYANJU_CLERK_PUBLISHABLE_KEY: "" },
+    { VITE_IYANJU_ACCOUNT_ORIGIN: "" },
+    { VITE_KAZI_IDENTITY_MODE: "unknown" },
+    {
+      VITE_IYANJU_CLERK_PUBLISHABLE_KEY: key(
+        "test",
+        "central-fixture.clerk.accounts.dev",
+      ),
+    },
+    {
+      VITE_IYANJU_CLERK_PUBLISHABLE_KEY: key(
+        "live",
+        "central-fixture.clerk.accounts.dev",
+      ),
+    },
+    {
+      VITE_IYANJU_CLERK_PUBLISHABLE_KEY:
+        sharedProduction.VITE_CLERK_PUBLISHABLE_KEY,
+    },
+    { VITE_IYANJU_CLERK_PUBLISHABLE_KEY: "pk_live_not_a_valid_host" },
+    { VITE_CLERK_PUBLISHABLE_KEY: key("live", "other.example") },
+  ])
+    assert.throws(() =>
+      validateHostedEnvironment({ ...sharedProduction, ...change }),
+    );
+  assert.throws(() =>
+    validateHostedEnvironment({
+      ...production,
+      VITE_IYANJU_CLERK_PUBLISHABLE_KEY:
+        sharedProduction.VITE_IYANJU_CLERK_PUBLISHABLE_KEY,
+    }),
+  );
+});
+
+test("account redirects reject alternate hosts, embedded credentials and private payloads", () => {
+  for (const VITE_IYANJU_ACCOUNT_ORIGIN of [
+    "http://iyanju.com",
+    "https://accounts.iyanju.com",
+    "https://attacker.example",
+    "https://user@iyanju.com",
+    "https://iyanju.com:8443",
+    "https://iyanju.com/account",
+    "https://iyanju.com?redirect_url=https://attacker.example",
+    "https://iyanju.com#private-token",
+    "https://*.iyanju.com",
+  ])
+    assert.throws(() =>
+      validateHostedEnvironment({
+        ...sharedProduction,
+        VITE_IYANJU_ACCOUNT_ORIGIN,
+      }),
+    );
+});
+
+test("unreviewed hosted preview sign-in cannot enable central trust through frontend settings", () => {
+  assert.throws(
+    () =>
+      validateHostedEnvironment({
+        ...preview,
+        VITE_CLERK_PUBLISHABLE_KEY: key(
+          "test",
+          "legacy-fixture.clerk.accounts.dev",
+        ),
+        VITE_IYANJU_CLERK_PUBLISHABLE_KEY: key(
+          "test",
+          "central-fixture.clerk.accounts.dev",
+        ),
+        VITE_IYANJU_ACCOUNT_ORIGIN:
+          "https://identity-preview-fixture.vercel.app",
+        VITE_KAZI_IDENTITY_MODE: "shared",
+      }),
+    /separately verified exact return-origin/,
+  );
+});
 test("development and staging use isolated preview backends", () => {
   assert.doesNotThrow(() => validateHostedEnvironment(preview));
   assert.doesNotThrow(() =>

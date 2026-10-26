@@ -1,0 +1,447 @@
+.privacy-page {
+  --privacy-line: #e3e5e9;
+  min-height: 100svh;
+  background: #fff;
+  color: #172027;
+}
+.privacy-page *,
+.privacy-page *::before,
+.privacy-page *::after {
+  box-sizing: border-box;
+}
+.privacy-page a {
+  color: var(--brand-ink, #8a3c0c);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.auth-story .auth-privacy-link,
+.identity-panel .identity-privacy-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--brand-ink, #8a3c0c);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.identity-panel .identity-privacy-link {
+  margin-top: 20px;
+}
+.privacy-page :is(a, button, summary):focus-visible {
+  outline: 2px solid #8a3c0c;
+  outline-offset: 3px;
+}
+.privacy-skip {
+  position: absolute;
+  inset: 12px auto auto 16px;
+  transform: translateY(-160%);
+  z-index: 20;
+  padding: 10px 14px;
+  background: #fff;
+}
+.privacy-skip:focus {
+  transform: none;
+}
+.privacy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 40px;
+  border-bottom: 1px solid var(--privacy-line);
+}
+.privacy-header .kazi-logo {
+  width: 112px;
+  height: auto;
+}
+.privacy-page .privacy-open-app {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #d2b7a4;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.privacy-open-app:hover {
+  background: #fff2e8;
+}
+.privacy-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 40px 32px;
+}
+.privacy-intro {
+  max-width: 760px;
+}
+.privacy-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #8a3c0c;
+  font-size: 13px;
+  font-weight: 600;
+}
+.privacy-intro h1 {
+  margin: 16px 0;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-weight: 650;
+}
+.privacy-lead {
+  max-width: 60ch;
+  font-size: 18px;
+  line-height: 1.65;
+  color: #555d65;
+  margin: 0;
+}
+.privacy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: 24px;
+  font-size: 13px;
+  color: #626973;
+}
+.privacy-draft-label {
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: #fff3dd;
+  color: #78510b;
+  font-weight: 600;
+}
+.privacy-meta button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  color: #555d65;
+  cursor: pointer;
+}
+.privacy-draft-notice {
+  margin-top: 32px;
+  padding: 18px 20px;
+  border: 1px solid #ead8b3;
+  border-radius: 8px;
+  background: #fffbf3;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.privacy-draft-notice strong {
+  font-weight: 600;
+}
+.privacy-draft-notice p {
+  margin: 4px 0 0;
+  color: #695b40;
+}
+.privacy-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 32px 0 48px;
+  padding: 28px 0;
+  border-block: 1px solid var(--privacy-line);
+}
+.privacy-summary > div {
+  min-width: 0;
+}
+.privacy-summary strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.privacy-summary p,
+.privacy-summary a {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.privacy-summary p {
+  margin: 7px 0 0;
+  color: #626973;
+}
+.privacy-summary a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.privacy-layout {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 64px;
+  align-items: start;
+}
+.privacy-contents {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100svh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.privacy-contents > strong {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.privacy-contents ol,
+.privacy-mobile-contents ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.privacy-page .privacy-contents a,
+.privacy-page .privacy-mobile-contents nav a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 4px;
+  color: #626973;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.privacy-contents a:hover,
+.privacy-mobile-contents nav a:hover {
+  color: #8a3c0c;
+  background: #fff7f0;
+}
+.privacy-contents a > span,
+.privacy-mobile-contents nav a > span {
+  flex: 0 0 2ch;
+  white-space: nowrap;
+  color: #9298a1;
+  font-variant-numeric: tabular-nums;
+}
+.privacy-article {
+  min-width: 0;
+  max-width: 74ch;
+}
+.privacy-section {
+  margin-bottom: 48px;
+  scroll-margin-top: 28px;
+}
+.privacy-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 20px;
+  font-size: 23px;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.privacy-section h2 > span {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: #9298a1;
+  font-variant-numeric: tabular-nums;
+}
+.privacy-section p,
+.privacy-section li,
+.privacy-section dd {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #444d56;
+  overflow-wrap: anywhere;
+}
+.privacy-section p {
+  margin: 0 0 16px;
+}
+.privacy-section ul {
+  padding-left: 22px;
+  margin: 0 0 20px;
+}
+.privacy-section li {
+  padding-left: 4px;
+  margin-bottom: 12px;
+}
+.privacy-definitions {
+  margin: 0 0 24px;
+}
+.privacy-definitions > div {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--privacy-line);
+}
+.privacy-definitions > div:first-child {
+  padding-top: 0;
+}
+.privacy-definitions dt {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 5px;
+}
+.privacy-definitions dd {
+  margin: 0;
+}
+.privacy-resource-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  line-height: 1.6;
+}
+.privacy-section .privacy-resource-links li {
+  margin-bottom: 4px;
+}
+.privacy-mobile-contents {
+  display: none;
+}
+.privacy-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--privacy-line);
+  font-size: 12px;
+  line-height: 1.6;
+  color: #626973;
+}
+.privacy-footer > span {
+  flex: 1;
+}
+.privacy-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (max-width: 1000px) {
+  .privacy-main {
+    padding-top: 40px;
+  }
+  .privacy-layout {
+    grid-template-columns: 204px minmax(0, 1fr);
+    gap: 32px;
+  }
+  .privacy-summary {
+    gap: 20px;
+  }
+}
+@media (max-width: 800px) {
+  .privacy-header {
+    padding: 16px 24px;
+  }
+  .privacy-main {
+    padding: 36px 24px 24px;
+  }
+  .privacy-layout {
+    display: block;
+  }
+  .privacy-contents {
+    display: none;
+  }
+  .privacy-mobile-contents {
+    display: block;
+    margin-bottom: 32px;
+    padding: 0 16px;
+    border: 1px solid var(--privacy-line);
+    border-radius: 6px;
+  }
+  .privacy-mobile-contents summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    list-style: none;
+  }
+  .privacy-mobile-contents summary::-webkit-details-marker {
+    display: none;
+  }
+  .privacy-mobile-contents nav {
+    padding: 0 0 12px;
+  }
+  .privacy-mobile-contents nav a {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .privacy-section p,
+  .privacy-section li,
+  .privacy-section dd {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+}
+@media (max-width: 540px) {
+  .privacy-header {
+    padding-inline: 20px;
+  }
+  .privacy-header .kazi-logo {
+    width: 96px;
+  }
+  .privacy-main {
+    padding-inline: 20px;
+  }
+  .privacy-lead {
+    font-size: 16px;
+  }
+  .privacy-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    margin-bottom: 28px;
+  }
+  .privacy-summary strong,
+  .privacy-summary p,
+  .privacy-summary a {
+    font-size: 14px;
+  }
+  .privacy-section h2 {
+    gap: 8px;
+    font-size: 21px;
+  }
+  .privacy-meta {
+    gap: 8px 12px;
+    font-size: 12px;
+  }
+  .privacy-draft-notice {
+    padding: 16px;
+  }
+  .privacy-footer > span {
+    flex-basis: 100%;
+  }
+}
+@media print {
+  .privacy-header,
+  .privacy-contents,
+  .privacy-mobile-contents,
+  .privacy-meta button,
+  .privacy-footer,
+  .privacy-skip {
+    display: none;
+  }
+  .privacy-main {
+    max-width: none;
+    padding: 0;
+  }
+  .privacy-layout {
+    display: block;
+  }
+  .privacy-article {
+    max-width: none;
+  }
+  .privacy-section h2 {
+    break-after: avoid;
+  }
+  .privacy-section p,
+  .privacy-section li {
+    orphans: 3;
+    widows: 3;
+  }
+}

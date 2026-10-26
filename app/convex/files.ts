@@ -1,3 +1,4 @@
+import { actionIdentity } from "./identityCore";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import {
@@ -113,8 +114,7 @@ type PreparedTransfer = {
 export const prepare = action({
   args: transferArgs,
   handler: async (ctx, args): Promise<PreparedTransfer> => {
-    const user = await ctx.auth.getUserIdentity();
-    if (!user) throw new ConvexError("Sign in first.");
+    const user = await actionIdentity(ctx);
     return ctx.runAction(internal.files.prepareFor, {
       ...args,
       subject: user.subject,
