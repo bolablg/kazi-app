@@ -254,3 +254,49 @@ test("personal sprint names follow the start ISO week across year boundaries", a
     status: "planned",
   });
 });
+
+test("starting a sprint promotes selected Backlog work in the shared Tasks board", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const key = "kazi.synthetic-demo.v2";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    state.tasks[0].status = "backlog";
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "New sprint", exact: true }).click();
+  await page
+    .getByLabel("Objective 1", { exact: true })
+    .fill("Commit the selected backlog work");
+  await page.getByRole("checkbox", { name: /Invite a colleague/ }).check();
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(page).toHaveURL(/\/sprints\/[^/]+\/edit$/);
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!).tasks[0]
+          .status,
+    ),
+  ).toBe("backlog");
+  await page.getByRole("button", { name: "Start sprint", exact: true }).click();
+  await expect(page).toHaveURL(/\/sprints\/[^/]+$/);
+  await page.getByRole("link", { name: "Tasks", exact: true }).click();
+  await page.getByRole("tab", { name: "Board", exact: true }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "To do column", exact: true })
+      .getByRole("button", { name: "Invite a colleague", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Backlog column", exact: true })
+      .getByRole("button", { name: "Invite a colleague", exact: true }),
+  ).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page
+      .getByRole("region", { name: "To do column", exact: true })
+      .getByRole("button", { name: "Invite a colleague", exact: true }),
+  ).toBeVisible();
+});

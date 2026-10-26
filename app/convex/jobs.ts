@@ -15,12 +15,44 @@ import { internal } from "./_generated/api";
 import { authorized, loadState, persist, newId } from "./store";
 import {
   evaluateRisks,
+  activateSprintBacklogs,
   taskFor,
   projectFor,
   nextRiskEvaluation,
 } from "../shared/domain";
 import { deadlineAt, addDays, dateInZone } from "../shared/scheduler";
 import { accessToken } from "./calendar";
+export const activateSprint = internalMutation({
+  args: { workspaceId: v.id("workspaces"), sprintId: v.string() },
+  handler: async (ctx, { workspaceId, sprintId }) => {
+    const workspace = await ctx.db.get(workspaceId);
+    if (!workspace) return;
+    const before = await loadState(ctx, workspaceId);
+    const sprint = before.sprints?.find((item) => item.id === sprintId);
+    if (
+      !sprint ||
+      sprint.status !== "active" ||
+      sprint.backlogPromotedAt !== undefined
+    )
+      return;
+    const now = Date.now();
+    const after = activateSprintBacklogs(before, {
+      actorId: workspace.ownerId,
+      now,
+      id: newId,
+    });
+    if (
+      after.sprints?.find((item) => item.id === sprintId)?.backlogPromotedAt ===
+      undefined
+    )
+      return;
+    await persist(ctx, workspaceId, before, after);
+    await ctx.db.patch(workspaceId, {
+      nextEvaluationAt: nextRiskEvaluation(after, now),
+    });
+  },
+});
+
 export const tick = internalMutation({
   args: {},
   handler: async (ctx) => {

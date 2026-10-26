@@ -209,15 +209,44 @@ it("uses MCP sprint capabilities with read and write scope boundaries, including
     (await call("list_tasks", { sprintId: sprint.id })).structuredContent.result
       .items,
   ).toHaveLength(1);
+  const startDenied = await call("start_sprint", {
+    id: sprint.id,
+    revision: 1,
+    requestId: "mcp-start-without-task-scope",
+  });
+  expect(startDenied.isError).toBe(true);
+  expect(JSON.stringify(startDenied)).toContain("tasks:write");
+  const taskToken = "kazi_sprint_and_task_test";
+  await t.mutation(internal.tokens.save, {
+    subject: user.subject,
+    hash: await sha256(taskToken),
+    label: "Sprint and task access",
+    scopes: ["read", "sprints:write", "tasks:write"],
+  });
   expect(
     (
-      await call("start_sprint", {
-        id: sprint.id,
-        revision: 1,
-        requestId: "mcp-sprint-start",
-      })
+      await call(
+        "start_sprint",
+        {
+          id: sprint.id,
+          revision: 1,
+          requestId: "mcp-sprint-start",
+        },
+        taskToken,
+      )
     ).isError,
   ).not.toBe(true);
+  expect(
+    (await owner.query(api.commands.snapshot, { workspaceId })).tasks[0].status,
+  ).toBe("todo");
+  const selectionDenied = await call("update_sprint", {
+    id: sprint.id,
+    revision: 2,
+    patch: { taskIds: [taskId] },
+    requestId: "mcp-selection-without-task-scope",
+  });
+  expect(selectionDenied.isError).toBe(true);
+  expect(JSON.stringify(selectionDenied)).toContain("tasks:write");
   const denied = await call("close_sprint", {
     id: sprint.id,
     revision: 2,
@@ -410,4 +439,98 @@ it("round-trips automatic names, objective assignments, calendar snapshots, and 
       await persist(ctx, workspaceId, before, after);
     }),
   ).rejects.toThrow("Closed sprint history");
+});
+
+it("promotes future sprint Backlog work through the background job without an open browser", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-26T13:00:00Z"));
+  const t = convexTest(schema, modules),
+    owner = t.withIdentity(user);
+  const workspaceId = (await owner.mutation(api.commands.bootstrap, {}))!;
+  let request = 0;
+  const execute = (
+    command: Command,
+    requestId = `automatic-sprint-${++request}`,
+  ) =>
+    owner.mutation(api.commands.execute, {
+      workspaceId,
+      command: JSON.stringify(command),
+      requestId,
+    });
+  const taskId = await execute({
+    type: "create_task",
+    title: "Commit this backlog item",
+    description: "",
+    priority: "medium",
+    dependencies: [],
+    labels: [],
+  });
+  const sprintId = await execute({
+    ...create,
+    startDate: "2026-10-27",
+    taskIds: [taskId],
+  });
+  const startCommand: Command = {
+    type: "start_sprint",
+    id: sprintId,
+    revision: 1,
+  };
+  await execute(startCommand, "schedule-start-once");
+  await execute(startCommand, "schedule-start-once");
+  const startAt = Date.parse("2026-10-27T05:00:00Z");
+  const scheduled = await t.run(async (ctx) =>
+    ctx.db.system.query("_scheduled_functions").collect(),
+  );
+  expect(
+    scheduled.filter(
+      (job) =>
+        job.name.includes("jobs:activateSprint") &&
+        job.scheduledTime === startAt,
+    ),
+  ).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(startAt - Date.now() - 60000);
+  await t.mutation(internal.jobs.tick, {});
+  let state = await owner.query(api.commands.snapshot, { workspaceId });
+  expect(state.tasks[0].status).toBe("backlog");
+  expect(
+    await t.run(
+      async (ctx) => (await ctx.db.get(workspaceId))!.nextEvaluationAt,
+    ),
+  ).toBe(startAt);
+  await vi.advanceTimersByTimeAsync(60000);
+  await t.finishInProgressScheduledFunctions();
+  state = await owner.query(api.commands.snapshot, { workspaceId });
+  expect(state.tasks[0]).toMatchObject({
+    status: "todo",
+    statusChangedAt: startAt,
+    revision: 2,
+  });
+  expect(state.sprints![0]).toMatchObject({
+    backlogPromotedAt: startAt,
+    revision: 3,
+  });
+  const events = await t.run(async (ctx) =>
+    (await ctx.db.query("lifecycleEvents").collect()).filter(
+      (event) =>
+        event.workspaceId === workspaceId &&
+        event.data.action === "sprint_activation",
+    ),
+  );
+  expect(events).toHaveLength(1);
+  expect(events[0].data).toMatchObject({
+    entityId: taskId,
+    fromStatus: "backlog",
+    toStatus: "todo",
+    at: startAt,
+  });
+  expect(
+    state.activities.find(
+      (event) => event.taskId === taskId && event.toStatus === "todo",
+    ),
+  ).toBeDefined();
+  await t.mutation(internal.jobs.tick, {});
+  expect(
+    (await owner.query(api.commands.snapshot, { workspaceId })).tasks[0]
+      .revision,
+  ).toBe(2);
 });

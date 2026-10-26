@@ -185,6 +185,8 @@ export const sprintV = v.object({
   createdAt: v.number(),
   updatedAt: v.number(),
   startedAt: v.optional(v.number()),
+  backlogPromotedAt: v.optional(v.number()),
+  backlogPromotionActorId: v.optional(v.string()),
   initialTasks: v.optional(v.array(sprintTaskV)),
   initialObjectives: v.optional(v.array(sprintObjectiveV)),
   initialObjectiveAssignments: v.optional(v.record(v.string(), v.string())),
