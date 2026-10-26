@@ -548,8 +548,8 @@ function SprintPlannerForm({
             <div>
               <h2 id="sprint-work-heading">Select existing work</h2>
               <p>
-                Tasks keep their project, stage, and deadline. Each task is
-                selected once.
+                Tasks keep their project and deadline. Backlog work moves to To
+                do when the sprint starts.
               </p>
             </div>
           </div>

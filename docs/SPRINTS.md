@@ -6,13 +6,13 @@ Names are automatic: **Platform - Sprint - W44** for a team named Platform, or *
 
 Each objective has an outcome, optional success criterion, and one accountable lead. An optional overall focus can connect them. Assign each selected task to one primary objective or **Other work** for support work. The sprint keeps one authoritative task selection, so objective groups do not duplicate cards or calendar effort.
 
-Sprints are optional. Tasks retain their projects, deadlines, responsibilities, and workflow stages. Tasks can belong to one open sprint at a time; past participation remains in history. Select individual subtasks rather than their parent so effort is counted once. Remove a selected parent from its sprint before adding subtasks.
+Sprints are optional. Tasks retain their projects, deadlines, and responsibilities. Tasks can belong to one open sprint at a time; past participation remains in history. Select individual subtasks rather than their parent so effort is counted once. Remove a selected parent from its sprint before adding subtasks.
 
 ## Start and carry out the work
 
 **Save draft** stores a Planned sprint and opens its resumable planning page. Incomplete objectives can be saved. **Start sprint** saves first, then starts only when every objective has a clear outcome and at least one selected task. There is one Active sprint per personal or team workspace. Starting records the original objective definitions, assignments, and task selection. Active sprint names and dates stay fixed; its owner or a team manager can edit objectives and selection, with changes recorded in history.
 
-The sprint's Board and List show the same canonical tasks as Tasks and project pages, with a filter for each objective and Other work. Dragging a card uses the existing stage and validation rules. Selecting a task does not promote it to To do. Overview links to relevant active sprints, and Tasks has a sprint filter.
+The sprint's Board and List show the same canonical tasks as Tasks and project pages, with a filter for each objective and Other work. Dragging a card uses the existing stage and validation rules. Selecting work in a draft keeps its stage. Starting a sprint promotes selected Backlog tasks to To do when its start date arrives in the sprint timezone; if that date has already arrived, promotion is immediate. Backlog work added to an active sprint after its start date also moves to To do. A durable server job is scheduled for the start date even when the app is closed. The periodic reconciliation job remains a recovery fallback. Other stages are preserved, each transition records activity and lifecycle timestamps, and a later manual return to Backlog is respected. Closed, canceled, and expired sprints do not trigger promotions. Overview links to relevant active sprints, and Tasks has a sprint filter.
 
 ## Plan calendar sessions
 
@@ -38,11 +38,11 @@ History preserves original objective definitions and task assignments, later obj
 
 ## Access and agent support
 
-Sprints belong to one existing personal or team workspace and may reference several projects in it. Creating a sprint requires a non-guest membership. The sprint owner or a team manager controls its lifecycle; changing selected work also requires existing task edit authority. Proposing sessions for other people retains the existing project-manager permission checks.
+Sprints belong to one existing personal or team workspace and may reference several projects in it. Creating a sprint requires a non-guest membership. Scheduled activation runs on behalf of the person who started or last changed the active task selection, and rechecks that person’s current project and task access. The sprint owner or a team manager controls its lifecycle; changing selected work also requires existing task edit authority. Proposing sessions for other people retains the existing project-manager permission checks.
 
 A sprint and its calendar plans are visible only to people with access to every project linked in its current or historical selection. Removing a restricted task does not remove that history's access boundary. Task moves and later project restrictions also affect visibility. An empty sprint is visible to its owner, objective leads, and team managers. An objective lead must be a member with access to every project linked by the sprint. Sprint selection and objective leadership never grant project access or sprint-management rights.
 
-Agents use `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `cancel_sprint`, and `close_sprint`. Sprint writes require the new explicit `sprints:write` credential scope. Closeout decisions that return work to Backlog additionally require `tasks:write`. Existing credentials do not acquire the new write scope automatically. `propose_plan` accepts `sprintId` using the existing planning scopes; approval stays separately scoped. Lifecycle edits require the current sprint `revision`, and mutations use stable request IDs for retries.
+Agents use `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `cancel_sprint`, and `close_sprint`. Sprint writes require the new explicit `sprints:write` credential scope. Starting a sprint, updating task selection, and closeout decisions that return work to Backlog additionally require `tasks:write`. Existing credentials do not acquire the new write scope automatically. `propose_plan` accepts `sprintId` using the existing planning scopes; approval stays separately scoped. Lifecycle edits require the current sprint `revision`, and mutations use stable request IDs for retries.
 
 ## Local verification and deployment
 
