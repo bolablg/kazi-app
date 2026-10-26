@@ -4,6 +4,8 @@ import {
   boundAuthenticatedClaims,
   hasFreshVerification,
   normalizeIdentity,
+  reverificationReason,
+  verifiedPrincipal,
 } from "../convex/identityCore";
 
 const issuer = "https://legacy.clerk.example.test";
@@ -38,7 +40,10 @@ const token = (claims: unknown) =>
     .replace(/\//g, "_")
     .replace(/=+$/, "") +
   ".signature";
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe("gated identity provider configuration", () => {
   it("keeps a single legacy provider unless explicitly enabled", () => {
@@ -141,6 +146,58 @@ describe("gated identity provider configuration", () => {
 });
 
 describe("claims bound to the authenticated Convex token", () => {
+  it("classifies fresh-verification failures without returning token or claim details", () => {
+    expect(reverificationReason(false, { ...payload, fva: [0, -1] }, now)).toBe(
+      "auth_metadata_unavailable",
+    );
+    expect(reverificationReason(true, payload, now)).toBe("factor_age_missing");
+    for (const fva of [null, [10, -1], [0, 10], [0], [0, "0"]])
+      expect(reverificationReason(true, { ...payload, fva }, now)).toBe(
+        "factor_age_stale_or_invalid",
+      );
+    expect(
+      reverificationReason(true, { ...payload, fva: [0, -1] }, now),
+    ).toBeNull();
+  });
+  it.each([
+    [null, "auth_metadata_unavailable"],
+    [{}, "factor_age_missing"],
+    [{ fva: [10, -1] }, "factor_age_stale_or_invalid"],
+    [{ fva: [0, "0"] }, "factor_age_stale_or_invalid"],
+  ] as const)(
+    "includes only a nonsecret reason in reverification errors",
+    async (extra, reason) => {
+      for (const [key, value] of Object.entries(shared)) vi.stubEnv(key, value);
+      vi.stubEnv("KAZI_LEGACY_AUTH_ENABLED", "true");
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const ctx = {
+        auth: {
+          getUserIdentity: async () => ({
+            ...identity,
+            azp: origin,
+            fva: [0, -1],
+          }),
+        },
+        meta: {
+          getRequestMetadata: async () => ({
+            authToken:
+              extra === null
+                ? null
+                : token({ ...payload, azp: origin, ...extra }),
+          }),
+        },
+      } as unknown as Parameters<typeof verifiedPrincipal>[0];
+      await expect(
+        verifiedPrincipal(ctx, { fresh: true }),
+      ).rejects.toMatchObject({
+        data: {
+          code: "REVERIFICATION_REQUIRED",
+          message: "Verify your account again before linking identities.",
+          reason,
+        },
+      });
+    },
+  );
   it("accepts only the verified issuer and subject in metadata", () => {
     expect(boundAuthenticatedClaims(token(payload), identity, now)).toEqual(
       payload,

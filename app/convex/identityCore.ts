@@ -113,6 +113,23 @@ export function hasFreshVerification(
   );
 }
 
+export type ReverificationReason =
+  | "auth_metadata_unavailable"
+  | "factor_age_missing"
+  | "factor_age_stale_or_invalid";
+
+export function reverificationReason(
+  authenticatedToken: boolean,
+  claims: Record<string, unknown>,
+  now = Date.now(),
+): ReverificationReason | null {
+  if (!authenticatedToken) return "auth_metadata_unavailable";
+  if (claims.fva === undefined) return "factor_age_missing";
+  return hasFreshVerification(claims, now)
+    ? null
+    : "factor_age_stale_or_invalid";
+}
+
 export function normalizeIdentity(
   identity: UserIdentity,
   claims: Record<string, unknown> = identity,
@@ -177,11 +194,15 @@ export async function verifiedPrincipal(
   if (typeof claims.azp !== "string" || !config.origins.includes(claims.azp))
     identityFailure("AUTH_ORIGIN", "This session is not authorized for Kazi.");
   assertActiveSession(claims);
-  if (options.fresh && (!authenticatedToken || !hasFreshVerification(claims)))
-    identityFailure(
-      "REVERIFICATION_REQUIRED",
-      "Verify your account again before linking identities.",
-    );
+  if (options.fresh) {
+    const reason = reverificationReason(authenticatedToken, claims);
+    if (reason)
+      throw new ConvexError({
+        code: "REVERIFICATION_REQUIRED",
+        message: "Verify your account again before linking identities.",
+        reason,
+      });
+  }
   return {
     config,
     provider,
