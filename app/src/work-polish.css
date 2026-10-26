@@ -132,10 +132,169 @@
   background: #f7f8fc;
 }
 .project-timeline .gantt-today {
-  border-left-color: #4263eb;
+  border-left-color: var(--brand-ink, #8a3c0c);
 }
 .project-timeline .timeline-heading p {
   line-height: 1.5;
+}
+.project-timeline .timeline-heading {
+  flex-wrap: wrap;
+}
+.gantt-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gantt-controls .button,
+.gantt-controls select {
+  min-height: 36px;
+  font-size: 12px;
+}
+.gantt-controls .button {
+  padding: 6px 10px;
+}
+.gantt-controls .button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.gantt-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 0 18px 16px;
+  font-size: 11px;
+  color: #555;
+}
+.gantt-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.gantt-key > span:first-child {
+  color: #222;
+}
+.gantt-today-key {
+  height: 12px;
+  border-left: 2px dashed var(--brand-ink, #8a3c0c);
+}
+.gantt-body {
+  position: relative;
+}
+.project-timeline .gantt-head {
+  min-height: 54px;
+}
+.project-timeline .gantt-dates > span {
+  top: 6px;
+}
+.gantt-day-ticks {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+}
+.gantt-day-ticks time {
+  position: absolute;
+  text-align: center;
+  border-left: 1px solid var(--ui-line, #e5e8ee);
+  line-height: 22px;
+  font-size: 10px;
+  color: #555;
+}
+.gantt-day-ticks time[data-weekend="true"] {
+  background: #eaeef4;
+}
+.project-timeline .gantt-row {
+  height: 64px;
+  min-height: 64px;
+}
+.project-timeline .gantt-name {
+  min-width: 0;
+  overflow: hidden;
+  gap: 2px;
+  padding: 8px 12px;
+}
+.project-timeline .gantt-name small {
+  font-size: 11px;
+  line-height: 14px;
+}
+.project-timeline .gantt-name:hover {
+  background: #f7f8fa;
+}
+.project-timeline .gantt-bar {
+  z-index: 2;
+}
+.gantt-dependencies {
+  position: absolute;
+  top: 0;
+  left: var(--gantt-label-width, 220px);
+  z-index: 1;
+  pointer-events: none;
+  fill: none;
+  stroke: #727a86;
+  stroke-width: 1.5;
+}
+.gantt-dependencies .conflict {
+  stroke: #b32b2b;
+  stroke-dasharray: 4 3;
+}
+.project-timeline .gantt-conflict-text,
+.gantt-key .gantt-conflict-key {
+  color: #a12727;
+}
+.project-timeline .gantt-bar.deadline-marker {
+  font-size: 22px;
+  line-height: 22px;
+}
+.gantt-undated {
+  margin: 16px 18px;
+  border: 1px solid var(--ui-line, #e5e8ee);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.gantt-undated summary {
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.gantt-undated p {
+  padding: 0 12px;
+  color: #555;
+}
+.gantt-undated > div {
+  display: grid;
+}
+.gantt-undated button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--ui-line, #e5e8ee);
+  background: #fff;
+  color: #111;
+}
+.gantt-undated button:hover {
+  background: #f7f8fa;
+}
+.gantt-undated button span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gantt-undated small {
+  color: #555;
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .gantt-controls .button,
+  .gantt-controls select {
+    min-height: 44px;
+  }
 }
 .task-activity .comment-compose-body {
   border-color: #d5dae3;

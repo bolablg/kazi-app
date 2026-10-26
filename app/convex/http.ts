@@ -16,7 +16,7 @@ import { sha256, encrypt } from "./crypto";
 import { createKaziServer } from "../mcp/server";
 import { prefersMcpEventStream } from "../shared/mcpTransport";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { visibleState, taskFor, projectFor } from "../shared/domain";
+import { visibleState, taskFor, projectFor, sprintFor } from "../shared/domain";
 import {
   commandSchema,
   type Command,
@@ -287,6 +287,7 @@ const mcp = httpAction(async (ctx, request) => {
         Array.isArray(input.teamIds) &&
         [
           "list_projects",
+          "list_sprints",
           "list_tasks",
           "get_agenda",
           "get_today_overview",
@@ -317,6 +318,8 @@ const mcp = httpAction(async (ctx, request) => {
         "list_members",
         "list_projects",
         "get_project",
+        "list_sprints",
+        "get_sprint",
         "list_tasks",
         "get_task",
         "get_proposal",
@@ -717,12 +720,31 @@ const mcp = httpAction(async (ctx, request) => {
           );
         case "get_project":
           return projectFor(state, String(input.id), principal.subject);
+        case "list_sprints":
+          return page(
+            (state.sprints ?? [])
+              .filter(
+                (sprint) => !input.status || sprint.status === input.status,
+              )
+              .map((sprint) => ({
+                ...sprint,
+                teamId: state.resourceTeams?.[sprint.id] ?? String(workspaceId),
+              })),
+          );
+        case "get_sprint":
+          return sprintFor(state, String(input.id), principal.subject);
         case "list_tasks":
           return page(
             state.tasks
               .filter(
                 (t) =>
                   (!input.projectId || t.projectId === input.projectId) &&
+                  (!input.sprintId ||
+                    sprintFor(
+                      state,
+                      String(input.sprintId),
+                      principal.subject,
+                    ).taskIds.includes(t.id)) &&
                   isArchivedTask(t) === Boolean(input.archived) &&
                   (!input.status || t.status === input.status) &&
                   (!input.assigneeId ||
@@ -887,6 +909,11 @@ const mcp = httpAction(async (ctx, request) => {
         candidate = { ...fields, type: "propose", trigger: "recovery" };
       const command = commandSchema.parse(candidate);
       requireScope(commandScopes[command.type]);
+      if (
+        command.type === "close_sprint" &&
+        command.decisions.some((decision) => decision.action === "backlog")
+      )
+        requireScope("tasks:write");
       const args = {
         workspaceId,
         subject: principal.subject,
@@ -903,6 +930,9 @@ const mcp = httpAction(async (ctx, request) => {
           subject: principal.subject,
           ...(command.type === "propose" && command.projectId
             ? { projectId: command.projectId }
+            : {}),
+          ...(command.type === "propose" && command.sprintId
+            ? { sprintId: command.sprintId }
             : {}),
           ...(command.type === "approve" ? { proposalId: command.id } : {}),
         });

@@ -100,6 +100,8 @@ export function allocate(input: {
   days: number;
   now: number;
   recoveryTarget?: string;
+  windowStart?: number;
+  windowEnd?: number;
   strategy?: "early" | "focus" | "compact";
 }): Allocation {
   const { tasks, busy, preferences, startDate, days, now, recoveryTarget } =
@@ -141,8 +143,30 @@ export function allocate(input: {
     .forEach(visit);
   const slots: Record<string, Interval[]> = {};
   for (const [owner, p] of Object.entries(preferences)) {
+    const firstDate =
+      input.windowStart !== undefined
+        ? dateInZone(Math.max(now, input.windowStart), p.timezone)
+        : startDate;
+    const periodDays =
+      input.windowEnd !== undefined
+        ? Math.max(
+            0,
+            Temporal.PlainDate.from(firstDate).until(
+              Temporal.PlainDate.from(
+                dateInZone(input.windowEnd - 1, p.timezone),
+              ),
+            ).days + 1,
+          )
+        : days;
     slots[owner] = subtractIntervals(
-      workingIntervals(startDate, days, p, now),
+      // A sprint can cross two local working dates even when it lasts one day
+      // in its own timezone. Each owner's saved horizon still bounds the slots.
+      workingIntervals(firstDate, periodDays, p, now)
+        .map((interval) => ({
+          start: Math.max(interval.start, input.windowStart ?? -Infinity),
+          end: Math.min(interval.end, input.windowEnd ?? Infinity),
+        }))
+        .filter((interval) => interval.end > interval.start),
       busy.filter((b) => b.ownerId === owner),
       p.bufferMinutes * MINUTE,
     );

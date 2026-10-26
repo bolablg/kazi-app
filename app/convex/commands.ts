@@ -404,15 +404,29 @@ async function run(
                 ) ?? [],
             ),
           ]
-        : command.projectId
+        : command.sprintId
           ? [
               ...new Set(
                 input.tasks
-                  .filter((t) => t.projectId === command.projectId)
-                  .flatMap((t) => (t.assigneeId ? [t.assigneeId] : [])),
+                  .filter((task) =>
+                    input.sprints
+                      ?.find((sprint) => sprint.id === command.sprintId)
+                      ?.taskIds.includes(task.id),
+                  )
+                  .flatMap((task) =>
+                    task.assigneeId ? [task.assigneeId] : [],
+                  ),
               ),
             ]
-          : [subject];
+          : command.projectId
+            ? [
+                ...new Set(
+                  input.tasks
+                    .filter((t) => t.projectId === command.projectId)
+                    .flatMap((t) => (t.assigneeId ? [t.assigneeId] : [])),
+                ),
+              ]
+            : [subject];
     input.busy = input.busy.filter((span) => span.source !== "kazi");
     for (const owner of owners)
       input.busy.push(
@@ -518,6 +532,9 @@ export const plan = action({
       subject: user.subject,
       ...(command.type === "propose" && command.projectId
         ? { projectId: command.projectId }
+        : {}),
+      ...(command.type === "propose" && command.sprintId
+        ? { sprintId: command.sprintId }
         : {}),
       ...(command.type === "approve" ? { proposalId: command.id } : {}),
     });

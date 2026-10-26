@@ -9,6 +9,7 @@ export const tables = {
   members: "memberships",
   projects: "projects",
   tasks: "tasks",
+  sprints: "sprints",
   proposals: "proposals",
   versions: "versions",
   iterations: "iterations",
@@ -118,6 +119,14 @@ export async function persist(
         JSON.stringify(existing.data) !== JSON.stringify(clean(row))
       )
         fail("IMMUTABLE", "Accepted plan history cannot be rewritten.");
+      if (
+        field === "sprints" &&
+        existing &&
+        ["closed", "canceled"].includes(
+          String((existing.data as { status?: string }).status),
+        )
+      )
+        fail("IMMUTABLE", "Closed sprint history cannot be rewritten.");
       const extra: Record<string, unknown> = {};
       if (field === "members") extra.subject = row.id;
       if (field === "notifications") extra.recipientId = row.recipientId;
@@ -169,7 +178,13 @@ export async function persist(
       const k = keyFor(row);
       if (!nextKeys.has(k)) {
         if (
-          ["versions", "attempts", "iterations", "activities"].includes(field)
+          [
+            "versions",
+            "attempts",
+            "iterations",
+            "activities",
+            "sprints",
+          ].includes(field)
         )
           fail("IMMUTABLE", "Historical records cannot be deleted.");
         const existing = await ctx.db

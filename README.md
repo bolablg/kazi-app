@@ -9,8 +9,6 @@ Kazi brings tasks, projects, planning, and performance insights into one place. 
 
 **[Open Kazi](https://kazi.iyanju.com)** · [Connect an agent](docs/MCP.md) · [Product guide](docs/PRODUCT.md)
 
-![Overview in Kazi](docs/screenshots/momentum-1440.png)
-
 ## Manage the work
 
 Use lists and drag-and-drop boards to move tasks through **Backlog → To do → In progress → To validate → Completed**. Keep rejected or discontinued work in Archive, and save ideas for a later review with **To Brainstorm**.
@@ -26,6 +24,8 @@ Choose Personal or a team when capturing work. Find owners, workers, and collabo
 Create teams, invite people, and control access to projects. If you belong to several teams, use the team filter to focus on the work you need to see.
 
 ## Plan your day, week, and month
+
+Use optional **Sprints** to plan a shared period with several objectives. The full-page planner generates the sprint name from the team and start week, saves resumable drafts, groups existing tasks, and previews calendar sessions. Close each objective with an assessment and decide what happens to unfinished work. Original scope and closeout results stay in history. See the [sprint guide](docs/SPRINTS.md).
 
 **Overview** opens directly on your daily priorities, work ready to start, favorite and recent projects, and recent task activity. **Calendar** has Calendar and Schedule views for seeing when work happens. **Plans** keeps proposals and accepted plan history together.
 

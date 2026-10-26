@@ -29,6 +29,7 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
     teamMemberships: Record<string, Member[]> = {};
   for (const { id, state } of entries) {
     teamMemberships[id] = state.members;
+    for (const sprint of state.sprints ?? []) resourceTeams[sprint.id] = id;
     for (const field of [
       "projects",
       "tasks",
@@ -64,6 +65,7 @@ export function mergeTeamStates(entries: TeamState[], actorId: string): State {
     members: [...members.values()],
     projects: collect("projects"),
     tasks: collect("tasks"),
+    sprints: entries.flatMap(({ state }) => state.sprints ?? []),
     proposals: collect("proposals"),
     versions: collect("versions"),
     attempts: collect("attempts"),

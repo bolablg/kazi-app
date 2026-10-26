@@ -136,6 +136,71 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
 }
+export interface SprintTaskSnapshot {
+  id: string;
+  projectId: string;
+  title: string;
+  status: Task["status"];
+}
+export interface SprintObjective {
+  id: string;
+  title: string;
+  successCriteria: string;
+  leadId?: string;
+}
+export interface SprintObjectiveResult extends SprintObjective {
+  outcome: "achieved" | "partial" | "missed";
+  note?: string;
+}
+export interface Sprint {
+  id: string;
+  title: string;
+  objective: string;
+  successCriteria: string;
+  focus?: string;
+  automaticName?: boolean;
+  objectives?: SprintObjective[];
+  /** Primary objective for a selected task; an absent key means Other work. */
+  objectiveAssignments?: Record<string, string>;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  ownerId: string;
+  status: "planned" | "active" | "closed" | "canceled";
+  taskIds: string[];
+  /** All projects ever included; historical scope must retain its access boundary. */
+  projectIds: string[];
+  revision: number;
+  createdAt: number;
+  updatedAt: number;
+  startedAt?: number;
+  initialTasks?: SprintTaskSnapshot[];
+  initialObjectives?: SprintObjective[];
+  initialObjectiveAssignments?: Record<string, string>;
+  changes: {
+    at: number;
+    actorId: string;
+    added: string[];
+    removed: string[];
+    objectives?: SprintObjective[];
+    objectiveAssignments?: Record<string, string>;
+  }[];
+  closeout?: {
+    at: number;
+    actorId: string;
+    outcome?: "achieved" | "partial" | "missed";
+    objectives?: SprintObjectiveResult[];
+    objectiveAssignments?: Record<string, string>;
+    note: string;
+    tasks: SprintTaskSnapshot[];
+    originalTasks: SprintTaskSnapshot[];
+    decisions: {
+      taskId: string;
+      action: "backlog" | "outside" | "sprint";
+      sprintId?: string;
+    }[];
+  };
+}
 export interface Session {
   id: string;
   taskId: string;
@@ -158,6 +223,8 @@ export interface Allocation {
 export interface Proposal {
   id: string;
   projectId?: string;
+  sprintId?: string;
+  sprintRevision?: number;
   title: string;
   revision: number;
   status:
@@ -187,6 +254,7 @@ export interface Version {
   lineageId: string;
   number: number;
   projectId?: string;
+  sprintId?: string;
   parentId?: string;
   proposalId: string;
   trigger: string;
@@ -199,6 +267,11 @@ export interface Version {
   inputs?: PlanningInputs;
 }
 export interface PlanningInputs {
+  sprintObjectives?: SprintObjective[];
+  sprintObjectiveAssignments?: Record<string, string>;
+  sprintFocus?: string;
+  windowStart?: number;
+  windowEnd?: number;
   calendarDestinations?: Record<string, string>;
   tasks: Task[];
   preferences: Record<string, Preferences>;
@@ -334,6 +407,7 @@ export interface State {
   members: Member[];
   projects: Project[];
   tasks: Task[];
+  sprints?: Sprint[];
   proposals: Proposal[];
   versions: Version[];
   attempts: Attempt[];
@@ -383,7 +457,84 @@ const taskFields = {
   labels: z.array(text).max(20).describe("Colored task tags."),
   parentId: id.optional(),
 };
+export const sprintObjectiveSchema = z.object({
+  id,
+  title: z.string().trim().max(2000),
+  successCriteria: z.string().trim().max(2000).default(""),
+  leadId: id.optional(),
+});
+const objectiveAssignmentsSchema = z.record(id, id);
 export const commandSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("create_sprint"),
+    title: text
+      .optional()
+      .describe(
+        "Omit for an automatic team/personal name based on the start week's ISO number.",
+      ),
+    objective: z.string().trim().max(2000).default(""),
+    successCriteria: z.string().trim().max(2000).default(""),
+    focus: z.string().trim().max(2000).optional(),
+    objectives: z.array(sprintObjectiveSchema).max(20).optional(),
+    objectiveAssignments: objectiveAssignmentsSchema.optional(),
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
+    timezone: z.string().min(1).max(100),
+    taskIds: z.array(id).max(100).default([]),
+  }),
+  z.object({
+    type: z.literal("update_sprint"),
+    id,
+    revision: z.number().int().min(1),
+    patch: z.object({
+      title: text.optional(),
+      objective: z.string().trim().max(2000).optional(),
+      successCriteria: z.string().trim().max(2000).optional(),
+      startDate: z.iso.date().optional(),
+      endDate: z.iso.date().optional(),
+      taskIds: z.array(id).max(100).optional(),
+      focus: z.string().trim().max(2000).optional(),
+      automaticName: z.boolean().optional(),
+      objectives: z.array(sprintObjectiveSchema).max(20).optional(),
+      objectiveAssignments: objectiveAssignmentsSchema.optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal("start_sprint"),
+    id,
+    revision: z.number().int().min(1),
+  }),
+  z.object({
+    type: z.literal("cancel_sprint"),
+    id,
+    revision: z.number().int().min(1),
+  }),
+  z.object({
+    type: z.literal("close_sprint"),
+    id,
+    revision: z.number().int().min(1),
+    outcome: z.enum(["achieved", "partial", "missed"]).optional(),
+    objectiveOutcomes: z
+      .array(
+        z.object({
+          objectiveId: id,
+          outcome: z.enum(["achieved", "partial", "missed"]),
+          note: z.string().trim().max(2000).optional(),
+        }),
+      )
+      .max(20)
+      .optional(),
+    note: z.string().trim().max(5000).default(""),
+    decisions: z
+      .array(
+        z.object({
+          taskId: id,
+          action: z.enum(["backlog", "outside", "sprint"]),
+          sprintId: id.optional(),
+        }),
+      )
+      .max(100),
+  }),
   z.object({
     type: z.literal("use_kazi_agenda"),
     shareAvailability: z.boolean().optional(),
@@ -475,6 +626,7 @@ export const commandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("propose"),
     projectId: id.optional(),
+    sprintId: id.optional(),
     startDate: z.string(),
     days: z.number().int().min(1).max(28).default(7),
     recoveryTarget: z.string().optional(),

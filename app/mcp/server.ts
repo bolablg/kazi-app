@@ -125,11 +125,28 @@ export function createKaziServer(
     id: z.string(),
   });
   register(
+    "list_sprints",
+    "List visible sprints with objectives, dates, selected task IDs, and preserved closeout history. A sprint is visible only with access to every linked project.",
+    {
+      ...page,
+      status: z.enum(["planned", "active", "closed", "canceled"]).optional(),
+    },
+  );
+  register(
+    "get_sprint",
+    "Read a sprint, its original selection, scope changes, and closeout. Requires access to all linked projects.",
+    {
+      ...workspace,
+      id: z.string(),
+    },
+  );
+  register(
     "list_tasks",
     "List authorized tasks, optionally within a project.",
     {
       ...page,
       projectId: z.string().optional(),
+      sprintId: z.string().optional(),
       status: statusSchema.optional(),
       archived: z.boolean().default(false),
       assigneeId: z.string().optional(),
@@ -193,6 +210,16 @@ export function createKaziServer(
     invite: "invite_person",
   };
   const descriptions: Partial<Record<string, string>> = {
+    create_sprint:
+      "Create a resumable planned sprint. Omit title for TeamName - Sprint - W{ISO start week}, or Perso for a personal workspace. Define up to 20 objectives with stable IDs, outcomes, optional criteria, and team lead IDs. taskIds is the canonical selection (up to 100 existing leaf tasks); objectiveAssignments maps selected task IDs to one objective ID, with absent keys representing Other work. Optional focus describes the overall team focus. Legacy objective/successCriteria and explicit custom titles remain supported. Dates are inclusive, at most 28 days. Does not schedule sessions.",
+    update_sprint:
+      "Edit sprint objectives, leads, focus, objectiveAssignments, and selected taskIds at the exact revision. Only the owner or team manager may edit, with task edit access. Set automaticName:true on a planned sprint to use its workspace and ISO start week; draft date changes refresh automatic names. Active sprint names and dates stay fixed. Pending previews become stale; original objective and task scope is preserved.",
+    start_sprint:
+      "Start a planned sprint at its exact revision. Every objective requires a defined outcome and at least one selected task. Only one active sprint per workspace. Records initial objectives and assignments. Does not promote backlog tasks or schedule sessions.",
+    close_sprint:
+      "Close an active sprint with objectiveOutcomes containing one achieved/partial/missed assessment per objective (objectiveId, outcome, optional note), plus one decision for each unfinished unarchived task: backlog, outside (keep stage), or sprint (planned destination sprintId). A single-objective sprint also accepts the legacy outcome field. No aggregate outcome is inferred. Backlog decisions additionally need tasks:write. Transferred tasks enter Other work in a modern destination until assigned to an objective. Preserves closeout and calendar history.",
+    cancel_sprint:
+      "Cancel a planned sprint, preserving its record and leaving selected tasks in their current stages. Active sprints require closeout.",
     set_member_role:
       "Change an existing team member's role. Owner only; cannot change the owner's role. admin means Manager in the app, member means Member, guest keeps project-restricted access. Records timestamped activity. Requires explicit user intent to change team access.",
     review_task:
@@ -220,7 +247,7 @@ export function createKaziServer(
     invite:
       "Create an invitation and private signup link. Sends an invitation email when Resend is configured; otherwise the app reports link-only delivery. The recipient completes verified-email acceptance in the browser.",
     propose:
-      "Generate a preview for To do and In progress work. Backlog, review, and archived work are not allocated. Does not reserve time until approved.",
+      "Generate a preview for To do and In progress work. Optionally pass sprintId to select its tasks within its inclusive dates and timezone; omit projectId for sprint plans. Backlog, review, and archived work are not allocated. Does not reserve time until approved.",
   };
   for (const option of commandSchema.options) {
     const type = option.shape.type.value;

@@ -256,8 +256,18 @@ export const authorizeWrite = internalQuery({
         (!p.approvedBy.includes(owner.id) && !p.automatic) ||
         (p.automatic &&
           (owner?.preferences.reviewRequired ||
-            s.projects.find((project) => project.id === p.projectId)
-              ?.reviewRequired === true)))
+            s.projects.some(
+              (project) =>
+                project.reviewRequired === true &&
+                (project.id === p.projectId ||
+                  (p.sprintId &&
+                    Object.keys(p.taskRevisions).some((id) =>
+                      s.tasks.some(
+                        (task) =>
+                          task.id === id && task.projectId === project.id,
+                      ),
+                    ))),
+            ))))
     )
       throw new Error("Calendar owner approval is required.");
     const task = taskFor(s, session.taskId, outbox.actorId);
