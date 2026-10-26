@@ -337,7 +337,7 @@ function activateDueSprintBacklogs(s: State, c: Context) {
       s,
       sprint,
       sprint.taskIds,
-      { ...c, actorId: sprint.ownerId },
+      { ...c, actorId: sprint.backlogPromotionActorId ?? sprint.ownerId },
       true,
     );
     sprint.backlogPromotedAt = sprint.updatedAt = c.now;
@@ -877,6 +877,8 @@ export function execute(
             ...entry,
           });
       }
+      if (taskIds && sprint.status === "active")
+        sprint.backlogPromotionActorId = c.actorId;
       if (taskIds && sprintHasBegun(sprint, c.now)) {
         promoteSprintBacklog(
           s,
@@ -912,6 +914,7 @@ export function execute(
       sprint.status = "active";
       validateSprint(s, sprint);
       sprint.startedAt = c.now;
+      sprint.backlogPromotionActorId = c.actorId;
       sprint.initialTasks = sprintSnapshot(
         s.tasks.filter((task) => sprint.taskIds.includes(task.id)),
       );

@@ -176,6 +176,8 @@ export interface Sprint {
   startedAt?: number;
   /** Backlog activation was reconciled once at or after the sprint start. */
   backlogPromotedAt?: number;
+  /** Actor who authorized the started sprint’s current task selection. */
+  backlogPromotionActorId?: string;
   initialTasks?: SprintTaskSnapshot[];
   initialObjectives?: SprintObjective[];
   initialObjectiveAssignments?: Record<string, string>;

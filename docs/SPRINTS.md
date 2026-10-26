@@ -38,7 +38,7 @@ History preserves original objective definitions and task assignments, later obj
 
 ## Access and agent support
 
-Sprints belong to one existing personal or team workspace and may reference several projects in it. Creating a sprint requires a non-guest membership. The sprint owner or a team manager controls its lifecycle; changing selected work also requires existing task edit authority. Proposing sessions for other people retains the existing project-manager permission checks.
+Sprints belong to one existing personal or team workspace and may reference several projects in it. Creating a sprint requires a non-guest membership. Scheduled activation runs on behalf of the person who started or last changed the active task selection, and rechecks that person’s current project and task access. The sprint owner or a team manager controls its lifecycle; changing selected work also requires existing task edit authority. Proposing sessions for other people retains the existing project-manager permission checks.
 
 A sprint and its calendar plans are visible only to people with access to every project linked in its current or historical selection. Removing a restricted task does not remove that history's access boundary. Task moves and later project restrictions also affect visibility. An empty sprint is visible to its owner, objective leads, and team managers. An objective lead must be a member with access to every project linked by the sprint. Sprint selection and objective leadership never grant project access or sprint-management rights.
 

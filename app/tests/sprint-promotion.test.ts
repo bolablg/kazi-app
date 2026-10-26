@@ -195,6 +195,37 @@ describe("sprint Backlog activation", () => {
     );
   });
 
+  it("retains a manager’s authorization when starting work owned by other team members", () => {
+    let state = draft("2026-11-01");
+    state.members.find((member) => member.id === DEMO_USER)!.role = "member";
+    state.members.find((member) => member.id === "demo-amira")!.role = "admin";
+    state.projects.find((project) => project.id === "website")!.ownerId =
+      "demo-amira";
+    state.tasks[0].ownerId = state.tasks[0].assigneeId = "demo-amira";
+    const sprint = state.sprints![0];
+    state = execute(
+      state,
+      { type: "start_sprint", id: sprint.id, revision: sprint.revision },
+      { ...context(), actorId: "demo-amira" },
+    ).state;
+    expect(state.sprints![0].backlogPromotionActorId).toBe("demo-amira");
+    const atStart = localInstant("2026-11-01", 0, "America/Chicago");
+    const revoked = structuredClone(state);
+    revoked.members = revoked.members.filter(
+      (member) => member.id !== "demo-amira",
+    );
+    expect(evaluateRisks(revoked, context(atStart)).tasks[0].status).toBe(
+      "backlog",
+    );
+    state = evaluateRisks(state, context(atStart));
+    expect(state.tasks[0].status).toBe("todo");
+    expect(
+      state.lifecycleEvents!.find(
+        (event) => event.action === "sprint_activation",
+      )!.actorId,
+    ).toBe("demo-amira");
+  });
+
   it("rechecks membership and task editing authority before a scheduled promotion", () => {
     let restricted = start(draft("2026-11-01"));
     restricted.members.find((member) => member.id === DEMO_USER)!.role =
