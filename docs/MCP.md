@@ -22,6 +22,7 @@ In Kazi Connections → MCP & agents → Add connection, create a labeled creden
 | `people:manage`      | Enable collaboration, invitation links, revoke invitation/remove member              |
 | `connections:manage` | External availability consent/selection/refresh/disconnection                        |
 | `agenda:write`       | Native agenda configuration, private calendar link creation/revocation               |
+| `calendar:write`     | Reserve, move, resize, cancel and atomically undo your own calendar reservations       |
 | `credentials:manage` | Credential delegation/revocation; child scopes and expiry cannot exceed the caller   |
 
 Existing task-edit credentials do not gain administration or approval access. Each domain service still checks the actor’s underlying role/project/calendar permissions. A scope permits an operation; it does not elevate the account’s role. OAuth credentials and calendar URL secrets never appear in read metadata. Delegated credentials are independently revocable and expire no later than their parent’s expiry.
@@ -42,6 +43,16 @@ claude mcp add --transport http kazi \
 ```
 
 For a client that only supports stdio, use `app/mcp/stdio.ts`, a thin SDK bridge to the same authenticated remote service. Set `KAZI_MCP_URL` and `KAZI_MCP_TOKEN` in that subprocess’s protected environment and launch `npm run mcp:stdio` with `app/` as its working directory. The bridge does not introduce another database or bypass permissions. OAuth discovery and dynamic client registration are not currently supported; clients must support configured bearer headers or the stdio bridge.
+
+## Calendar scheduling
+
+Use `get_agenda` to read authorized reservations, deadlines, and optional proposals. Direct or editable native reservations expose `sessionId` and `sessionRevision`. An optional `person` selects an accessible teammate or `all`; other people's calendar reservations remain read-only, and private outside event text is never returned.
+
+`get_calendar_capacity` returns your working capacity for up to 31 inclusive dates, including freshness and whether it accounts for outside availability. `get_calendar_insights` returns the same authorized allocation analysis as Insights → Calendar. Both require `read`; planned minutes are not measured work.
+
+`schedule_calendar_session`, `update_calendar_session`, `cancel_calendar_session` and `restore_calendar_sessions` require the separate `calendar:write` permission, explicit user intent, and a stable retry request ID. Existing task-edit, agenda-link or plan-approval credentials do not silently acquire this permission. Updates/cancellations require the exact session revision; batch Undo checks every affected revision before changing anything. The same fresh-availability, working-hours, capacity, task access and calendar-owner checks apply in the app and MCP.
+
+Daily/weekly recurrence is finite (2–26 occurrences in the saved time zone). Repeat edits support occurrence/following/series; reminders are optional in-app notifications. Direct scheduling does not change task deadlines or stages. Accepted plan snapshots are preserved when native sessions are adjusted.
 
 ## Hosting and environment routing
 

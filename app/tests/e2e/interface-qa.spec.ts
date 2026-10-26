@@ -60,6 +60,8 @@ const routes = [
   "/task/t1",
   "/calendar?range=month",
   "/calendar?range=week",
+  "/calendar?range=workweek",
+  "/calendar?range=3day",
   "/calendar?range=day",
   "/calendar?view=schedule",
   "/calendar/subscriptions",
@@ -115,6 +117,14 @@ for (const width of [390, 768, 1440]) {
         );
       expect(clipped, route).toEqual([]);
       await assertFlatSurfaces(page);
+      if (route === "/calendar?range=day") {
+        await page.locator(".calendar-options > summary").click();
+        await expect(
+          page.getByLabel("Calendar color by", { exact: true }),
+        ).toBeVisible();
+        await assertFlatSurfaces(page);
+        await page.locator(".calendar-options > summary").click();
+      }
       const heading = page.locator(".page-heading");
       if (await heading.count())
         await expect(heading).toHaveCSS("border-bottom-width", "0px");

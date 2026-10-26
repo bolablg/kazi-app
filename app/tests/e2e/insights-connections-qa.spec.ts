@@ -88,10 +88,14 @@ test("MCP setup uses available desktop width and keeps demo credentials safe", a
   ).toBeVisible();
 });
 
-test("Kazi's native agenda does not claim Google availability is connected", async ({
+test("Kazi agenda preserves availability and does not claim a live Google connection in demo", async ({
   page,
 }) => {
   await page.goto("/calendar/subscriptions");
+  const availability = await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!);
+    return { selectedIds: state.calendars[0].selectedIds, busy: state.busy };
+  });
   await page
     .getByRole("button", { name: "Use Kazi agenda", exact: true })
     .click();
@@ -101,7 +105,13 @@ test("Kazi's native agenda does not claim Google availability is connected", asy
   await page.goto("/connections");
   await expect(
     page.getByRole("link", { name: /Calendar availability Optional Google/ }),
-  ).toContainText("Not connected");
+  ).toContainText("Demo calendar");
+  expect(
+    await page.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem("kazi.synthetic-demo.v2")!);
+      return { selectedIds: state.calendars[0].selectedIds, busy: state.busy };
+    }),
+  ).toEqual(availability);
 });
 
 test("connection empty-state icons retain readable size and active tabs stay visible", async ({

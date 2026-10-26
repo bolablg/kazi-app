@@ -107,13 +107,19 @@ test("colored task tags persist across lists, boards, details, and calendar agen
     await expect(
       page.getByLabel("Project colors", { exact: true }),
     ).toHaveCount(0);
+    await page.locator(".calendar-options > summary").click();
     await expect(
       page.getByLabel("Calendar project", { exact: true }),
     ).toBeVisible();
+    await page.locator(".calendar-options > summary").click();
   }
+  await page
+    .getByRole("button", { name: "View Monday, Oct 26", exact: true })
+    .click();
   await expect(
     page.locator(".selected-day-agenda .task-label", { hasText: "Research" }),
   ).toHaveCSS("background-color", "rgb(210, 227, 252)");
+  await page.locator(".calendar-options > summary").click();
   await page
     .getByLabel("Calendar project", { exact: true })
     .selectOption({ label: "Cloud certification" });
@@ -122,6 +128,7 @@ test("colored task tags persist across lists, boards, details, and calendar agen
     .getByLabel("Calendar project", { exact: true })
     .selectOption({ label: "Website launch" });
   await expect(page.locator(".selected-day-agenda")).toContainText(title);
+  await page.locator(".calendar-options > summary").click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

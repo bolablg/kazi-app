@@ -262,14 +262,6 @@ export function TasksPage(props: WorkProps) {
             Tasks
           </PageTitle>
         </div>
-        <button
-          className="button primary"
-          aria-label="Add task to this view"
-          onClick={add}
-        >
-          <Plus size={16} />
-          New task
-        </button>
       </div>
       <div
         className="overview-tabs section-tabs"

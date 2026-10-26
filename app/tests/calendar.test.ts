@@ -5,6 +5,7 @@ import {
   calendarHours,
   layoutCalendarEvents,
   timedCalendarBounds,
+  resizeCalendarInterval,
 } from "../shared/calendar";
 import { dayBounds, type OverviewEvent } from "../shared/overview";
 describe("calendar date windows", () => {
@@ -14,6 +15,24 @@ describe("calendar date windows", () => {
     expect(week.end).toBe("2027-01-03");
     expect(week.days).toHaveLength(7);
     expect(calendarPeriod("2026-11-01", "week").start).toBe("2026-10-26");
+  });
+  it("uses five workdays and three-day windows across the year boundary", () => {
+    const workweek = calendarPeriod("2027-01-01", "workweek");
+    expect(workweek.days).toEqual([
+      "2026-12-28",
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31",
+      "2027-01-01",
+    ]);
+    expect(workweek.end).toBe("2027-01-01");
+    expect(moveCalendarDate("2027-01-01", "workweek", 1)).toBe("2027-01-08");
+    expect(calendarPeriod("2026-12-31", "3day").days).toEqual([
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+    ]);
+    expect(moveCalendarDate("2026-12-31", "3day", 1)).toBe("2027-01-03");
   });
   it("clamps month navigation and moves weeks/days by calendar dates", () => {
     expect(moveCalendarDate("2027-01-31", "month", 1)).toBe("2027-02-28");
@@ -38,6 +57,48 @@ const event = (id: string, start: string, end: string): OverviewEvent => ({
   end: Date.parse(end),
 });
 describe("timed calendar layout", () => {
+  it("pads saved working hours by one hour and unions authorized daily windows", () => {
+    expect(
+      timedCalendarBounds([], "America/Chicago", [
+        { startHour: 8, endHour: 17 },
+      ]),
+    ).toEqual({ startHour: 7, endHour: 18 });
+    expect(
+      timedCalendarBounds([], "America/Chicago", [
+        { startHour: 8, endHour: 17 },
+        { startHour: 10, endHour: 19 },
+      ]),
+    ).toEqual({ startHour: 7, endHour: 20 });
+    expect(
+      timedCalendarBounds([], "America/Chicago", [
+        { startHour: 1, endHour: 23 },
+      ]),
+    ).toEqual({ startHour: 0, endHour: 24 });
+  });
+  it("preserves outside working-hour bookings and clamps midnight context to the day", () => {
+    const events = [
+      event("early", "2026-10-26T05:15:00Z", "2026-10-26T06:00:00Z"),
+      event("late", "2026-10-27T04:00:00Z", "2026-10-27T06:00:00Z"),
+    ];
+    expect(
+      timedCalendarBounds(events, "America/Chicago", [
+        { startHour: 8, endHour: 17 },
+      ]),
+    ).toEqual({ startHour: 0, endHour: 24 });
+    const bounds = timedCalendarBounds(events, "America/Chicago", [
+      { startHour: 8, endHour: 17 },
+    ]);
+    expect(
+      layoutCalendarEvents(
+        events,
+        "2026-10-26",
+        "America/Chicago",
+        bounds.startHour,
+        bounds.endHour,
+      ),
+    ).toHaveLength(2);
+  });
+
   it("places overlapping events in separate lanes and restores full width after a gap", () => {
     const events = [
       event("one", "2026-10-26T14:00:00Z", "2026-10-26T15:00:00Z"),
@@ -67,8 +128,8 @@ describe("timed calendar layout", () => {
       },
     ];
     expect(timedCalendarBounds(events, "America/Chicago")).toEqual({
-      startHour: 5,
-      endHour: 23,
+      startHour: 4,
+      endHour: 24,
     });
     expect(
       layoutCalendarEvents(events, "2026-10-26", "America/Chicago", 5, 23),
@@ -94,5 +155,37 @@ describe("timed calendar layout", () => {
     expect(layout[1].top - layout[0].top).toBe(1);
     expect(calendarHours("2026-03-08", zone, 0, 24).hours).toBe(23);
     expect(hours.end).toBe(dayBounds(day, zone).end);
+  });
+});
+
+describe("calendar resize previews", () => {
+  const session = {
+    start: Date.parse("2026-10-26T14:30:00Z"),
+    end: Date.parse("2026-10-26T15:30:00Z"),
+  };
+  const limits = { minMinutes: 30, maxMinutes: 90 };
+  it("extends either boundary while keeping the other boundary fixed", () => {
+    expect(resizeCalendarInterval(session, "start", -15, limits)).toEqual({
+      start: Date.parse("2026-10-26T14:15:00Z"),
+      end: session.end,
+    });
+    expect(resizeCalendarInterval(session, "end", 15, limits)).toEqual({
+      start: session.start,
+      end: Date.parse("2026-10-26T15:45:00Z"),
+    });
+  });
+  it("clamps shortening and extension to saved session limits", () => {
+    expect(resizeCalendarInterval(session, "start", 120, limits).start).toBe(
+      session.end - 30 * 60000,
+    );
+    expect(resizeCalendarInterval(session, "start", -120, limits).start).toBe(
+      session.end - 90 * 60000,
+    );
+    expect(resizeCalendarInterval(session, "end", -120, limits).end).toBe(
+      session.start + 30 * 60000,
+    );
+    expect(resizeCalendarInterval(session, "end", 120, limits).end).toBe(
+      session.start + 90 * 60000,
+    );
   });
 });

@@ -11,6 +11,7 @@ export const tokenScopes = [
   "people:manage",
   "connections:manage",
   "agenda:write",
+  "calendar:write",
   "credentials:manage",
 ] as const;
 export const scopeLabels: Record<(typeof tokenScopes)[number], string> = {
@@ -27,6 +28,8 @@ export const scopeLabels: Record<(typeof tokenScopes)[number], string> = {
   "connections:manage": "Connect or disconnect external calendar availability",
   "agenda:write":
     "Configure Kazi agenda and create or revoke private calendar links",
+  "calendar:write":
+    "Reserve, move, resize, and cancel your own calendar sessions",
   "credentials:manage":
     "Manage MCP credentials, limited to this token’s scopes and expiry",
 };
@@ -34,6 +37,10 @@ export const commandScopes: Record<
   Command["type"],
   (typeof tokenScopes)[number]
 > = {
+  restore_calendar_sessions: "calendar:write",
+  schedule_calendar_session: "calendar:write",
+  update_calendar_session: "calendar:write",
+  cancel_calendar_session: "calendar:write",
   create_sprint: "sprints:write",
   update_sprint: "sprints:write",
   start_sprint: "sprints:write",

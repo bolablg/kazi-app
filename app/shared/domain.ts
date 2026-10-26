@@ -5,6 +5,14 @@ import {
   isCommittedTask,
 } from "./workflow";
 import { Temporal } from "@js-temporal/polyfill";
+import {
+  calendarSessions,
+  calendarReservations,
+  calendarOccurrences,
+  calendarSessionIssues,
+  shiftedCalendarSessions,
+  calendarSessionIsNative,
+} from "./calendarPlanning";
 import { stableId } from "./ids";
 import {
   type State,
@@ -13,6 +21,7 @@ import {
   type Task,
   type TaskArtifact,
   type Session,
+  type CalendarSession,
   type Project,
   type Member,
   type Mention,
@@ -412,6 +421,9 @@ export function visibleState(s: State, userId: string): State {
     ),
     proposals,
     versions,
+    calendarSessions: (s.calendarSessions ?? []).filter((session) =>
+      taskIds.has(session.taskId),
+    ),
     attempts: s.attempts.filter((a) =>
       versions.some((v) => v.id === a.versionId),
     ),
@@ -509,6 +521,153 @@ function audit(
   };
   s.activities.unshift(event);
   return event.id;
+}
+function editableCalendarSession(
+  s: State,
+  id: string,
+  revision: number,
+  c: Context,
+) {
+  const session = calendarSessions(s).find((item) => item.id === id);
+  if (!session) fail("FORBIDDEN", "This calendar session is unavailable.");
+  if (!calendarSessionIsNative(s, id))
+    fail(
+      "CALENDAR",
+      "This event was published to an external calendar. Manage its original plan or calendar; changing the Kazi destination does not move it.",
+    );
+  const task = taskFor(s, session.taskId, c.actorId);
+  if (session.assigneeId !== c.actorId || task.assigneeId !== c.actorId)
+    fail(
+      "FORBIDDEN",
+      "Only the worker can change their own calendar reservations.",
+    );
+  if (session.revision !== revision)
+    fail(
+      "REVISION",
+      "This session changed. Reload the calendar before saving.",
+    );
+  if (session.start < c.now)
+    fail(
+      "PAST",
+      "Past calendar reservations are preserved. Choose a future session.",
+    );
+  if (
+    s.calendars.find((cal) => cal.ownerId === c.actorId)?.destinationId !==
+    "kazi"
+  )
+    fail("CALENDAR", "Use the Kazi agenda before changing its reservations.");
+  return { session, task };
+}
+function calendarTargets(
+  s: State,
+  session: CalendarSession,
+  scope: "occurrence" | "following" | "series" | undefined,
+  now: number,
+) {
+  if (!session.seriesId || !scope || scope === "occurrence") return [session];
+  return calendarSessions(s).filter(
+    (item) =>
+      item.seriesId === session.seriesId &&
+      item.start >= now &&
+      (scope === "series" || item.originalStart >= session.originalStart),
+  );
+}
+function saveCalendarHistory(
+  s: State,
+  sessions: CalendarSession[],
+  task: Task,
+  c: Context,
+  action: "scheduled" | "rescheduled" | "released" | "updated",
+) {
+  const text = `${action === "scheduled" ? "Reserved" : action === "rescheduled" ? "Rescheduled" : action === "updated" ? "Updated" : "Released"} ${sessions.length === 1 ? "a focus session" : sessions.length + " focus sessions"}`;
+  for (const proposal of s.proposals)
+    if (
+      proposal.status === "awaiting_review" &&
+      proposal.alternatives[proposal.selected]?.sessions.some(
+        (row) => row.assigneeId === c.actorId,
+      )
+    )
+      proposal.status = "stale";
+  const id = audit(s, c, text, task.id, task.projectId);
+  Object.assign(
+    s.activities.find((entry) => entry.id === id)!,
+    { changes: ["calendar"] },
+  );
+  (s.lifecycleEvents ??= []).push({
+    id: c.id(),
+    entityType: "task",
+    entityId: task.id,
+    projectId: task.projectId,
+    actorId: c.actorId,
+    assigneeId: task.assigneeId,
+    ownerId: task.ownerId,
+    at: c.now,
+    revision: task.revision,
+    action: "calendar_" + action,
+    changes: ["calendar"],
+    note: text,
+  });
+  if (task.ownerId && task.ownerId !== c.actorId)
+    notify(
+      s,
+      c,
+      task.ownerId,
+      `calendar:${id}`,
+      text,
+      task.title,
+      "system",
+      task.id,
+    );
+}
+export function deliverCalendarReminder(
+  state: State,
+  sessionId: string,
+  revision: number,
+  now: number,
+  id: () => string,
+): State {
+  const s = structuredClone(state),
+    session = s.calendarSessions?.find((row) => row.id === sessionId);
+  if (
+    !session ||
+    session.status !== "scheduled" ||
+    session.revision !== revision ||
+    session.reminderMinutes === undefined ||
+    now >= session.end ||
+    now > session.start + 15 * MINUTE ||
+    now < session.start - session.reminderMinutes * MINUTE
+  )
+    return s;
+  const task = s.tasks.find((row) => row.id === session.taskId),
+    member = s.members.find((m) => m.id === session.assigneeId);
+  if (
+    !task ||
+    !member ||
+    task.assigneeId !== member.id ||
+    !isSchedulableTask(task)
+  )
+    return s;
+  const project = s.projects.find((p) => p.id === task.projectId);
+  if (!project || project.archived || !canSeeProject(s, project, member.id))
+    return s;
+  notify(
+    s,
+    { actorId: member.id, now, id },
+    member.id,
+    `calendar-reminder:${session.id}:${revision}`,
+    now >= session.start ? "Focus session started" : "Upcoming focus session",
+    task.title,
+    "system",
+    task.id,
+  );
+  const reminder = s.notifications.find(
+    (entry) => entry.key === `calendar-reminder:${session.id}:${revision}`,
+  );
+  if (reminder && reminder.deliveryAt >= session.end)
+    s.notifications = s.notifications.filter(
+      (entry) => entry.id !== reminder.id,
+    );
+  return s;
 }
 export function addTaskArtifact(s: State, artifact: TaskArtifact, c: Context) {
   const task = taskFor(s, artifact.taskId, c.actorId);
@@ -791,6 +950,311 @@ export function execute(
   }
   let result = "Saved";
   switch (command.type) {
+    case "restore_calendar_sessions": {
+      if (!c.verifiedCalendar)
+        fail(
+          "CALENDAR",
+          "Fresh calendar availability must be checked before restoring reservations.",
+        );
+      const targets = command.sessions.map((desired) => ({
+        ...editableCalendarSession(s, desired.sessionId, desired.revision, c),
+        desired,
+      }));
+      const ids = new Set(targets.map(({ session }) => session.id));
+      s.calendarSessions = [
+        ...(s.calendarSessions ?? []).filter((row) => !ids.has(row.id)),
+        ...targets.map(({ session }) => ({
+          ...session,
+          status: "released" as const,
+        })),
+      ];
+      const changed: CalendarSession[] = [];
+      for (const { session, desired } of targets) {
+        if (
+          !Number.isSafeInteger(desired.start) ||
+          !Number.isSafeInteger(desired.end) ||
+          desired.start % MINUTE !== 0 ||
+          desired.end % MINUTE !== 0 ||
+          desired.end <= desired.start ||
+          desired.start < c.now ||
+          desired.end > c.now + 184 * 86400000 ||
+          desired.end - desired.start < 15 * MINUTE ||
+          desired.end - desired.start > 240 * MINUTE
+        )
+          fail(
+            "DATES",
+            "Choose valid future reservation times within the next six months.",
+          );
+        if (desired.status === "scheduled") {
+          const issues = calendarSessionIssues(
+            s,
+            { taskId: session.taskId, start: desired.start, end: desired.end },
+            c.actorId,
+            c.now,
+            [session.id],
+          );
+          if (issues.length) fail("SCHEDULE", issues[0]);
+        }
+        const action =
+          desired.status === "released"
+            ? ("released" as const)
+            : session.status === "released"
+              ? ("scheduled" as const)
+              : ("rescheduled" as const);
+        const history =
+          desired.status !== session.status ||
+          desired.start !== session.start ||
+          desired.end !== session.end
+            ? [
+                ...session.history,
+                {
+                  at: c.now,
+                  actorId: c.actorId,
+                  action,
+                  fromStart: session.start,
+                  fromEnd: session.end,
+                  ...(desired.status === "scheduled"
+                    ? { toStart: desired.start, toEnd: desired.end }
+                    : {}),
+                },
+              ]
+            : session.history;
+        const row: CalendarSession = {
+          ...session,
+          start: desired.start,
+          end: desired.end,
+          status: desired.status,
+          revision: session.revision + 1,
+          updatedAt: c.now,
+          reminderMinutes:
+            desired.reminderMinutes === null
+              ? undefined
+              : desired.reminderMinutes,
+          history,
+        };
+        s.calendarSessions = s.calendarSessions!.map((item) =>
+          item.id === row.id ? row : item,
+        );
+        changed.push(row);
+      }
+      for (const taskId of new Set(changed.map((row) => row.taskId)))
+        saveCalendarHistory(
+          s,
+          changed.filter((row) => row.taskId === taskId),
+          taskFor(s, taskId, c.actorId),
+          c,
+          "updated",
+        );
+      result = changed[0].id;
+      break;
+    }
+    case "schedule_calendar_session": {
+      if (!c.verifiedCalendar)
+        fail(
+          "CALENDAR",
+          "Fresh calendar availability must be checked before scheduling.",
+        );
+      const task = taskFor(s, command.taskId, c.actorId);
+      if (task.assigneeId !== c.actorId)
+        fail(
+          "FORBIDDEN",
+          "Only the worker can reserve time on their own calendar.",
+        );
+      if (
+        s.calendars.find((cal) => cal.ownerId === c.actorId)?.destinationId !==
+        "kazi"
+      )
+        fail("CALENDAR", "Use the Kazi agenda before reserving focus time.");
+      if (
+        command.recurrence &&
+        command.recurrence.timezone !== me.preferences.timezone
+      )
+        fail("TIMEZONE", "Repeat sessions in your saved calendar time zone.");
+      const spans = calendarOccurrences(
+          command.start,
+          command.end,
+          command.recurrence,
+          me.preferences.workingDays,
+        ),
+        seriesId = command.recurrence ? c.id() : undefined;
+      const sessions: CalendarSession[] = [];
+      for (const span of spans) {
+        const issues = calendarSessionIssues(
+          s,
+          { ...span, taskId: task.id },
+          c.actorId,
+          c.now,
+        );
+        if (issues.length) fail("SCHEDULE", issues[0]);
+        const session: CalendarSession = {
+          id: c.id(),
+          taskId: task.id,
+          assigneeId: c.actorId,
+          ...span,
+          status: "scheduled",
+          revision: 1,
+          createdAt: c.now,
+          updatedAt: c.now,
+          createdBy: c.actorId,
+          timezone: me.preferences.timezone,
+          seriesId,
+          originalStart: span.start,
+          originalEnd: span.end,
+          reminderMinutes: command.reminderMinutes,
+          history: [
+            {
+              at: c.now,
+              actorId: c.actorId,
+              action: "scheduled",
+              toStart: span.start,
+              toEnd: span.end,
+            },
+          ],
+        };
+        (s.calendarSessions ??= []).push(session);
+        sessions.push(session);
+      }
+      saveCalendarHistory(s, sessions, task, c, "scheduled");
+      result = sessions[0].id;
+      break;
+    }
+    case "update_calendar_session": {
+      if (!c.verifiedCalendar)
+        fail(
+          "CALENDAR",
+          "Fresh calendar availability must be checked before scheduling.",
+        );
+      const { session, task } = editableCalendarSession(
+        s,
+        command.sessionId,
+        command.revision,
+        c,
+      );
+      if (session.status === "released" && !command.restore)
+        fail(
+          "STATE",
+          "This session was released. Restore it explicitly before reserving time.",
+        );
+      const shifted = shiftedCalendarSessions(
+          s,
+          session,
+          command.start,
+          command.end,
+          command.scope,
+          c.now,
+        ).filter(
+          (item) => command.restore || item.session.status === "scheduled",
+        ),
+        targets = shifted.map((item) => item.session);
+      const targetIds = new Set(targets.map((row) => row.id));
+      s.calendarSessions = [
+        ...(s.calendarSessions ?? []).filter((row) => !targetIds.has(row.id)),
+        ...targets.map((row) => ({ ...row, status: "released" as const })),
+      ];
+      const changed: CalendarSession[] = [];
+      for (const target of targets) {
+        if (target.assigneeId !== c.actorId)
+          fail("FORBIDDEN", "Only the worker can change this calendar series.");
+        const { start, end } = shifted.find(
+            (item) => item.session.id === target.id,
+          )!,
+          issues = calendarSessionIssues(
+            s,
+            { taskId: target.taskId, start, end },
+            c.actorId,
+            c.now,
+            [target.id],
+          );
+        if (issues.length) fail("SCHEDULE", issues[0]);
+        const updated: CalendarSession = {
+          ...target,
+          start,
+          end,
+          status: "scheduled",
+          revision: target.revision + 1,
+          updatedAt: c.now,
+          reminderMinutes:
+            command.reminderMinutes === null
+              ? undefined
+              : (command.reminderMinutes ?? target.reminderMinutes),
+          history: [
+            ...target.history,
+            ...(target.status === "released" ||
+            target.start !== start ||
+            target.end !== end
+              ? [
+                  {
+                    at: c.now,
+                    actorId: c.actorId,
+                    action:
+                      target.status === "released"
+                        ? ("scheduled" as const)
+                        : ("rescheduled" as const),
+                    fromStart: target.start,
+                    fromEnd: target.end,
+                    toStart: start,
+                    toEnd: end,
+                  },
+                ]
+              : []),
+          ],
+        };
+        s.calendarSessions = s.calendarSessions!.map((row) =>
+          row.id === target.id ? updated : row,
+        );
+        changed.push(updated);
+      }
+      saveCalendarHistory(
+        s,
+        changed,
+        task,
+        c,
+        session.status === "released"
+          ? "scheduled"
+          : session.start !== command.start || session.end !== command.end
+            ? "rescheduled"
+            : "updated",
+      );
+      result = session.id;
+      break;
+    }
+    case "cancel_calendar_session": {
+      const { session, task } = editableCalendarSession(
+        s,
+        command.sessionId,
+        command.revision,
+        c,
+      );
+      if (session.status !== "scheduled")
+        fail("STATE", "This session is already released.");
+      const targets = calendarTargets(s, session, command.scope, c.now).filter(
+          (row) => row.status === "scheduled",
+        ),
+        ids = new Set(targets.map((row) => row.id));
+      const changed: CalendarSession[] = targets.map((row) => ({
+        ...row,
+        status: "released",
+        revision: row.revision + 1,
+        updatedAt: c.now,
+        history: [
+          ...row.history,
+          {
+            at: c.now,
+            actorId: c.actorId,
+            action: "released",
+            fromStart: row.start,
+            fromEnd: row.end,
+          },
+        ],
+      }));
+      s.calendarSessions = [
+        ...(s.calendarSessions ?? []).filter((row) => !ids.has(row.id)),
+        ...changed,
+      ];
+      saveCalendarHistory(s, changed, task, c, "released");
+      result = session.id;
+      break;
+    }
     case "create_sprint": {
       if (me.role === "guest")
         fail("FORBIDDEN", "Guests cannot create sprints.");
@@ -1053,22 +1517,29 @@ export function execute(
       break;
     }
     case "use_kazi_agenda": {
-      let cal = s.calendars.find((x) => x.ownerId === c.actorId);
-      const value = {
-        ownerId: c.actorId,
-        status: "native" as const,
-        selectedIds: [],
-        destinationId: "kazi",
-        lastSync: c.now,
-        shareAvailability: command.shareAvailability ?? false,
-      };
-      if (cal) Object.assign(cal, value, { error: undefined });
-      else s.calendars.push(value);
-      s.busy = s.busy.filter((b) => b.ownerId !== c.actorId);
+      const cal = s.calendars.find((row) => row.ownerId === c.actorId);
+      if (cal) {
+        cal.destinationId = "kazi";
+        if (
+          cal.status !== "demo" &&
+          !(cal.status === "error" && cal.selectedIds.length)
+        )
+          cal.status = "native";
+        if (command.shareAvailability !== undefined)
+          cal.shareAvailability = command.shareAvailability;
+      } else
+        s.calendars.push({
+          ownerId: c.actorId,
+          status: "native",
+          selectedIds: [],
+          destinationId: "kazi",
+          lastSync: c.now,
+          shareAvailability: command.shareAvailability ?? false,
+        });
       audit(
         s,
         c,
-        "Enabled Kazi agenda; external availability selection cleared",
+        "Enabled Kazi agenda; existing external availability preserved",
       );
       break;
     }
@@ -1124,6 +1595,7 @@ export function execute(
         priorStatus = p.status;
       Object.assign(p, command.patch);
       p.updatedAt = c.now;
+      p.revision = (p.revision ?? 0) + 1;
       if (priorStatus !== p.status) p.statusChangedAt = c.now;
       if (
         p.startDate &&
@@ -1718,20 +2190,17 @@ export function execute(
         );
       const busy = [
         ...s.busy,
-        ...s.proposals
-          .filter((p) => ["applying", "partial", "applied"].includes(p.status))
-          .flatMap((p) =>
-            p.alternatives[p.selected].sessions
-              .filter((x) => x.status !== "released")
-              .map((x) => ({
-                start: x.start,
-                end: x.end,
-                ownerId: x.assigneeId,
-              })),
-          ),
+        ...calendarReservations(s).map((x) => ({
+          start: x.start,
+          end: x.end,
+          ownerId: x.assigneeId,
+        })),
       ];
       const common = {
         tasks,
+        confirmedSessions: calendarReservations(s).filter(
+          (session) => session.status === "scheduled",
+        ),
         allTasks: s.tasks,
         busy: busy.filter((b) => prefs[b.ownerId] !== undefined),
         preferences: prefs,
@@ -1982,17 +2451,11 @@ export function execute(
             "A calendar owner must reconnect and choose a writable destination.",
           );
         if (
-          s.proposals.some(
-            (other) =>
-              other.id !== p.id &&
-              ["applied", "partial", "applying"].includes(other.status) &&
-              other.alternatives[other.selected].sessions.some(
-                (reserved) =>
-                  ["scheduled", "pending"].includes(reserved.status) &&
-                  reserved.assigneeId === session.assigneeId &&
-                  reserved.start < session.end &&
-                  reserved.end > session.start,
-              ),
+          calendarReservations(s).some(
+            (reserved) =>
+              reserved.assigneeId === session.assigneeId &&
+              reserved.start < session.end &&
+              reserved.end > session.start,
           ) ||
           s.busy.some(
             (b) =>
@@ -2005,6 +2468,40 @@ export function execute(
             "CONFLICT",
             "A new calendar event conflicts with this proposal. Generate a fresh plan.",
           );
+      }
+      // A new manual reservation can consume capacity after a preview was made.
+      // Recheck the complete batch atomically, including working hours, buffers,
+      // dependent tasks, and each owner's shared cross-team focus limit.
+      const checked = structuredClone(s);
+      if (p.recoveryTarget)
+        for (const task of checked.tasks)
+          if (p.taskRevisions[task.id] !== undefined)
+            task.deadline = p.recoveryTarget;
+      for (const session of allocation.sessions) {
+        const issues = calendarSessionIssues(
+          checked,
+          { taskId: session.taskId, start: session.start, end: session.end },
+          session.assigneeId,
+          c.now,
+        );
+        if (issues.length)
+          fail("CONFLICT", "Review a fresh plan: " + issues[0]);
+        (checked.calendarSessions ??= []).push({
+          id: "validation:" + session.id,
+          taskId: session.taskId,
+          assigneeId: session.assigneeId,
+          start: session.start,
+          end: session.end,
+          status: "scheduled",
+          revision: 1,
+          createdAt: c.now,
+          updatedAt: c.now,
+          createdBy: c.actorId,
+          timezone: actor(s, session.assigneeId).preferences.timezone,
+          originalStart: session.start,
+          originalEnd: session.end,
+          history: [],
+        });
       }
       const lineageVersions = s.versions.filter(
         (v) =>
@@ -2206,6 +2703,21 @@ export function execute(
           );
         session.status = "released";
         session.updatedAt = c.now;
+        const overlay = s.calendarSessions?.find(
+          (row) => row.id === session.id,
+        );
+        if (overlay && overlay.status === "scheduled") {
+          overlay.status = "released";
+          overlay.updatedAt = c.now;
+          overlay.revision++;
+          overlay.history.push({
+            at: c.now,
+            actorId: c.actorId,
+            action: "released",
+            fromStart: overlay.start,
+            fromEnd: overlay.end,
+          });
+        }
       }
       proposal.status = "partial";
       audit(
@@ -2230,6 +2742,63 @@ export function execute(
           "TASKS",
           "Remove the parent from its sprint before adding subtasks; select the subtasks individually.",
         );
+  for (const session of calendarSessions(s)) {
+    if (!calendarSessionIsNative(s, session.id)) continue;
+    const task = s.tasks.find((task) => task.id === session.taskId),
+      project =
+        task && s.projects.find((project) => project.id === task.projectId);
+    const previousTask = state.tasks.find((task) => task.id === session.taskId),
+      previousProject =
+        project && state.projects.find((item) => item.id === project.id);
+    if (
+      task?.status === previousTask?.status &&
+      task?.assigneeId === previousTask?.assigneeId &&
+      task?.projectId === previousTask?.projectId &&
+      project?.archived === previousProject?.archived
+    )
+      continue;
+    if (
+      session.status !== "scheduled" ||
+      session.start < c.now ||
+      (task &&
+        isSchedulableTask(task) &&
+        task.assigneeId === session.assigneeId &&
+        project &&
+        !project.archived)
+    )
+      continue;
+    if (!s.calendarSessions?.some((row) => row.id === session.id))
+      (s.calendarSessions ??= []).push(session);
+    session.status = "released";
+    session.updatedAt = c.now;
+    session.revision++;
+    session.history.push({
+      at: c.now,
+      actorId: c.actorId,
+      action: "released",
+      fromStart: session.start,
+      fromEnd: session.end,
+    });
+    if (task) {
+      audit(
+        s,
+        c,
+        "Released future focus time after the task changed",
+        task.id,
+        task.projectId,
+      );
+      notify(
+        s,
+        c,
+        session.assigneeId,
+        `calendar-release:${session.id}:${session.revision}`,
+        "Focus time released",
+        task.title,
+        "system",
+        task.id,
+      );
+    }
+  }
   const priorTasks = new Map(state.tasks.map((task) => [task.id, task]));
   const priorProjects = new Map(
     state.projects.map((project) => [project.id, project]),
@@ -2309,6 +2878,11 @@ export function execute(
       changes: ["comment"],
     });
   }
+  if ((s.calendarSessions?.length ?? 0) > 1000)
+    fail(
+      "CALENDAR_LIMIT",
+      "This team reached its initial calendar history limit. Export your agenda and contact the team owner before adding more reservations.",
+    );
   return { state: s, result };
 }
 
@@ -2420,17 +2994,14 @@ export function evaluateRisks(state: State, c: Context): State {
           connection.lastSync !== undefined &&
           c.now - connection.lastSync < 5 * MINUTE))
     ) {
-      const reservations = s.proposals
-        .filter((p) => ["applying", "partial", "applied"].includes(p.status))
-        .flatMap((p) => p.alternatives[p.selected].sessions)
-        .filter(
-          (session) =>
-            session.status === "scheduled" &&
-            session.taskId === task.id &&
-            session.assigneeId === member.id &&
-            session.start >= c.now &&
-            session.end <= cutoff,
-        );
+      const reservations = calendarReservations(s).filter(
+        (session) =>
+          session.status === "scheduled" &&
+          session.taskId === task.id &&
+          session.assigneeId === member.id &&
+          session.start >= c.now &&
+          session.end <= cutoff,
+      );
       const committed = Math.min(
         task.remainingMinutes,
         reservations.reduce((n, s) => n + (s.end - s.start) / MINUTE, 0),

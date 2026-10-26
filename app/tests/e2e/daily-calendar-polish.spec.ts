@@ -96,7 +96,9 @@ for (const width of [360, 768]) {
   }) => {
     await page.setViewportSize({ width, height: width < 700 ? 844 : 1024 });
     await page.goto("/calendar?range=week");
+    await page.locator(".calendar-options > summary").click();
     await page.getByLabel("Include proposals").check();
+    await page.locator(".calendar-options > summary").click();
     const frame = page.getByLabel("Scrollable work calendar", { exact: true });
     const firstDay = page.locator(".time-calendar-day").first();
     expect((await firstDay.boundingBox())!.width).toBeGreaterThanOrEqual(100);

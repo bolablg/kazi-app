@@ -223,15 +223,17 @@ test("unknown resource IDs show unavailable without exposing or changing task da
 
 test("touch handles move tasks on a tablet and capture an automatic start timestamp", async ({
   browser,
+  baseURL,
 }) => {
   const context = await browser.newContext({
     viewport: { width: 1024, height: 900 },
     hasTouch: true,
     isMobile: true,
+    baseURL,
   });
   const page = await context.newPage();
   await page.clock.install({ time: new Date("2026-10-26T13:00:00Z") });
-  await page.goto("http://127.0.0.1:5175/projects");
+  await page.goto("/projects");
   await page.getByRole("link", { name: "Website launch", exact: true }).click();
   await page.getByRole("button", { name: "Board", exact: true }).click();
   const title = "Review the onboarding flow";

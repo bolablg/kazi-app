@@ -18,6 +18,7 @@ export const tables = {
   activities: "activities",
   artifacts: "taskArtifacts",
   invitations: "invitations",
+  calendarSessions: "calendarSessions",
   calendars: "calendarStatuses",
   busy: "busy",
 } as const;
@@ -93,6 +94,10 @@ export async function persist(
   before: State,
   after: State,
 ) {
+  if ((after.calendarSessions?.length ?? 0) > 1000)
+    throw new ConvexError(
+      "This team reached its initial calendar history limit. Export your agenda and contact the team owner before adding more reservations.",
+    );
   // The only dynamic database boundary: each table's validator checks its data and
   // cross-document references are resolved below in the same transaction.
   for (const field of Object.keys(tables) as EntityField[]) {
@@ -184,6 +189,7 @@ export async function persist(
             "iterations",
             "activities",
             "sprints",
+            "calendarSessions",
           ].includes(field)
         )
           fail("IMMUTABLE", "Historical records cannot be deleted.");
@@ -330,19 +336,82 @@ export async function crossTeamReservations(
   const memberships = await ctx.db
     .query("memberships")
     .withIndex("by_subject", (q) => q.eq("subject", subject))
-    .take(10);
+    .take(11);
+  if (memberships.length > 10)
+    throw new ConvexError(
+      "Calendar availability requires at most ten active team memberships. Review your memberships before planning.",
+    );
   const busy: import("../shared/model").Busy[] = [];
   for (const member of memberships) {
     if (member.workspaceId === exclude) continue;
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", member.workspaceId))
+      .take(1001);
+    if (projects.length > 1000)
+      throw new ConvexError(
+        "Calendar reservation coverage exceeds the supported team limit.",
+      );
+    const activeProjects = new Set(
+      projects
+        .filter(({ data: project }) => !project.archived)
+        .map(({ data: project }) => project.id),
+    );
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", member.workspaceId))
+      .take(1001);
+    if (tasks.length > 1000)
+      throw new ConvexError(
+        "Calendar reservation coverage exceeds the supported team limit.",
+      );
+    const activeTasks = new Set(
+      tasks
+        .filter(
+          ({ data: t }) =>
+            t.assigneeId === subject &&
+            activeProjects.has(t.projectId) &&
+            ["todo", "in_progress"].includes(t.status),
+        )
+        .map(({ data: t }) => t.id),
+    );
+    const direct = await ctx.db
+      .query("calendarSessions")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", member.workspaceId))
+      .take(1001);
+    if (direct.length > 1000)
+      throw new ConvexError(
+        "Calendar reservation coverage exceeds the supported team limit.",
+      );
+    const overlays = new Set(direct.map((row) => row.data.id));
+    for (const { data: session } of direct)
+      if (
+        session.assigneeId === subject &&
+        session.status === "scheduled" &&
+        activeTasks.has(session.taskId) &&
+        session.end > Date.now()
+      )
+        busy.push({
+          ownerId: subject,
+          start: session.start,
+          end: session.end,
+          source: "kazi",
+        });
     const proposals = await ctx.db
       .query("proposals")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", member.workspaceId))
-      .take(1000);
+      .take(1001);
+    if (proposals.length > 1000)
+      throw new ConvexError(
+        "Calendar reservation coverage exceeds the supported team limit.",
+      );
     for (const { data: p } of proposals)
       if (["applying", "applied", "partial"].includes(p.status))
         for (const session of p.alternatives[p.selected].sessions)
           if (
             session.assigneeId === subject &&
+            !overlays.has(session.id) &&
+            activeTasks.has(session.taskId) &&
             ["pending", "scheduled"].includes(session.status) &&
             session.end > Date.now()
           )

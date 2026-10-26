@@ -55,6 +55,10 @@ async function fixture() {
       if (t.projectId === "inbox") t.projectId = before.workspace.inboxId;
     });
     s.calendars[0].status = "connected";
+    // The verified test setup represents a successful bounded free/busy read.
+    s.calendars[0].lastSync = Date.now();
+    s.calendars[0].availabilityFrom = Date.now();
+    s.calendars[0].availabilityUntil = Date.now() + 29 * 86400000;
     proposalId = s.proposals[0].id;
     await persist(ctx, workspaceId, before, s);
     const encrypted = await encrypt("fixture-refresh-token");
