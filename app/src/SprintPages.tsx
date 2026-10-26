@@ -481,9 +481,8 @@ export function SprintDetail(props: WorkProps) {
             <TaskRows tasks={shownTasks} onOpen={props.openTask} />
           )}
           <p className="sprint-hint">
-            Selecting work keeps its current stage. Move ready tasks to To do to
-            include them in a calendar preview. Every calendar owner keeps their
-            approval.
+            Backlog work moves to To do once a started sprint reaches its start
+            date. Every calendar owner keeps their approval.
           </p>
         </>
       )}
