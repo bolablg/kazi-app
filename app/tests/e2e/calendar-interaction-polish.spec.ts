@@ -43,6 +43,40 @@ for (const width of [390, 768, 1440]) {
       "none",
     );
     await expect(frame).toHaveCSS("overflow-y", "auto");
+    await expect(frame).toHaveCSS("overflow-x", "auto");
+    await expect(frame.locator(".time-calendar-day")).toHaveCount(7);
+    const horizontalOverflow = await frame.evaluate(
+      (element) => element.scrollWidth - element.clientWidth,
+    );
+    if (horizontalOverflow > 1) {
+      await frame.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect
+        .poll(() => frame.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThan(0);
+      await frame.evaluate((element) => {
+        element.scrollLeft = 0;
+      });
+      await frame.hover();
+      await page.mouse.wheel(220, 0);
+      await expect
+        .poll(() => frame.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThan(0);
+      // A new document gives the vertical check an independent wheel gesture.
+      // Chrome can latch rapid changes of wheel axis to the first gesture.
+      await page.reload();
+      await expect(frame).toHaveCSS("scrollbar-width", "none");
+    } else {
+      const frameBounds = (await frame.boundingBox())!;
+      const lastDayBounds = (await frame
+        .locator(".time-calendar-day")
+        .last()
+        .boundingBox())!;
+      expect(lastDayBounds.x + lastDayBounds.width).toBeLessThanOrEqual(
+        frameBounds.x + frameBounds.width + 1,
+      );
+      expect(await frame.evaluate((element) => element.scrollLeft)).toBe(0);
+    }
     await frame.focus();
     await page.keyboard.press("PageDown");
     await expect
@@ -64,12 +98,6 @@ for (const width of [390, 768, 1440]) {
     await expect
       .poll(() => frame.evaluate((element) => element.scrollTop))
       .toBeGreaterThan(0);
-    if (width < 1000) {
-      await page.mouse.wheel(220, 0);
-      await expect
-        .poll(() => frame.evaluate((element) => element.scrollLeft))
-        .toBeGreaterThan(0);
-    }
     await expect(page.locator(".time-calendar-select").first()).toHaveCSS(
       "cursor",
       "grab",
