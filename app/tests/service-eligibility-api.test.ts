@@ -2,6 +2,7 @@
 // Authenticated-context fixtures do not establish provider signature or claim propagation.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
+import type { JSONValue } from "convex/values";
 import schema from "../convex/schema";
 import { api } from "../convex/_generated/api";
 import { createWorkspace } from "../convex/store";
@@ -14,7 +15,7 @@ const reviewer = "user_synthetic_wlan_reviewer";
 const actor = "user_original_kazi";
 const origin = "https://kazi.iyanju.com";
 const now = Date.UTC(2026, 9, 27, 12);
-const policy = (subject: string, restriction: unknown = null) => ({
+const policy = (subject: string, restriction: JSONValue = null) => ({
   version: 1,
   subject,
   restriction,
@@ -22,7 +23,7 @@ const policy = (subject: string, restriction: unknown = null) => ({
 const claims = (
   subject = reviewer,
   issuer = central,
-  restriction: unknown = { version: 1, services: ["wlan"] },
+  restriction: JSONValue = { version: 1, services: ["wlan"] },
 ) => ({
   issuer,
   subject,
