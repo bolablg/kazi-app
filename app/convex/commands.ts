@@ -1184,11 +1184,13 @@ export const sendInvitationEmail = internalAction({
           from: intent.from,
           to: [intent.email],
           subject:
-            "Join " + intent.teamName.replace(/[\r\n]/g, " ") + " on Kazi",
+            "Join " +
+            intent.teamName.replace(/[\r\n]/g, " ") +
+            " on Kazi by iYANJU",
           text:
             "You have been invited to " +
             intent.teamName +
-            " on Kazi. Create an account or sign in with this email address, then accept your invitation: " +
+            " on Kazi by iYANJU. Create an account or sign in with this email address, then accept your invitation: " +
             url +
             "\n\nThis invitation expires in seven days. If you were not expecting it, you can ignore this message.",
         }),

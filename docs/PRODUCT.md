@@ -48,3 +48,5 @@ Capacity claims are made only from confirmed fresh availability. Missing data is
 The service worker precaches the application shell, icons and scripts. It does not cache Clerk/Convex responses. A loaded live subscription may retain its in-memory last view after a network drop, marked read-only. A cold offline start cannot perform initial authentication or obtain private server data. Reconnect to mutate, approve, or confirm calendar writes.
 
 Install through the browser’s install action or supported mobile Add to Home Screen flow. Updates are prompted, then activated deliberately. Sign-out/account changes discard the mounted live provider/subscription; no private live browser disk cache exists. Browser Web Push remains unconfigured. Optional Resend delivery is available for invitations; task review and other alerts are in-app and do not require email.
+
+Service notifications use **Kazi by iYANJU** in outward-facing email copy. Shared account verification and security notices use **iYANJU**. Invitation delivery uses the configured verified sender address; its display name can follow the same service branding.
