@@ -13,6 +13,7 @@ import { ArrowRight, Link2 } from "lucide-react";
 import { Brand } from "./Brand";
 import { BrandAttribution } from "./BrandAttribution";
 import { LoadingScreen } from "./LoadingScreen";
+import { WelcomeLayout } from "./WelcomeLayout";
 import { identityApi } from "./identityApi";
 import type { IdentityStatus } from "./identityApi";
 import {
@@ -77,9 +78,9 @@ export function CentralSignIn({ config }: { config: IdentityConfig }) {
   const prepare = () =>
     rememberReturn(sessionStorage, location.pathname, location.search);
   return (
-    <IdentityFrame>
-      <h1>Your day, in motion.</h1>
-      <p>Sign in with your iYANJU account to open Kazi.</p>
+    <WelcomeLayout>
+      <h1>Welcome to Kazi</h1>
+      <p className="welcome-intro">Continue with your iYANJU account.</p>
       <div className="identity-actions">
         <a
           className="button primary"
@@ -96,7 +97,7 @@ export function CentralSignIn({ config }: { config: IdentityConfig }) {
           Create account
         </a>
       </div>
-    </IdentityFrame>
+    </WelcomeLayout>
   );
 }
 
@@ -297,9 +298,9 @@ export function UnlinkedAccount({
     clearPendingLink(sessionStorage);
   };
   return (
-    <IdentityFrame>
+    <WelcomeLayout>
       <h1>Welcome to Kazi</h1>
-      <p>
+      <p className="welcome-intro">
         Already use Kazi? Link your existing account to keep your tasks and
         projects.
       </p>
@@ -327,7 +328,7 @@ export function UnlinkedAccount({
           </button>
         )}
       </div>
-    </IdentityFrame>
+    </WelcomeLayout>
   );
 }
 
