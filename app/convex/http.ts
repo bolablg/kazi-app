@@ -1,4 +1,5 @@
 import { mergeTeamStates } from "../shared/teams";
+import { summary as serviceActivationSummary } from "./serviceActivation";
 import { searchPeople, taskPeople } from "../shared/people";
 import { buildStageReport } from "../shared/lifecycle";
 import {
@@ -39,6 +40,11 @@ import {
   MINUTE,
 } from "../shared/scheduler";
 const http = httpRouter();
+http.route({
+  path: "/account/service-activation",
+  method: "GET",
+  handler: serviceActivationSummary,
+});
 const fileTransfer = httpAction(async (ctx, request) => {
   const origin = request.headers.get("Origin"),
     allowedOrigin = process.env.APP_ORIGIN ?? "";

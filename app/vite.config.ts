@@ -1,5 +1,6 @@
 import { localAuthPlugin } from "./scripts/local-auth.ts";
 import { developmentMcpPlugin } from "./scripts/mcp-development.ts";
+import { developmentServiceActivationPlugin } from "./scripts/service-activation-development.ts";
 import { developmentReload } from "./scripts/development-reload.ts";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
@@ -25,6 +26,10 @@ export default defineConfig(({ mode }) => ({
     developmentReload(mode === "development"),
     react(),
     developmentMcpPlugin(
+      mode === "development",
+      loadEnv(mode, process.cwd(), ""),
+    ),
+    developmentServiceActivationPlugin(
       mode === "development",
       loadEnv(mode, process.cwd(), ""),
     ),
