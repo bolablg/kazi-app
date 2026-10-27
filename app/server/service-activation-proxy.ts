@@ -2,7 +2,7 @@ import {
   boundedJson,
   parseServiceActivation,
   serviceActivationHeaders,
-} from "../shared/serviceActivation";
+} from "../shared/serviceActivation.js";
 
 export function unavailableServiceActivation(status = 503) {
   return Response.json(
