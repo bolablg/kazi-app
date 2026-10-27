@@ -223,3 +223,62 @@
     min-height: 0;
   }
 }
+
+.kazi-account-slot {
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 12px 0 4px;
+}
+.kazi-local-navigation > summary > .iy-summary {
+  flex: 1;
+}
+.kazi-local-role {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.kazi-local-role > span {
+  color: #59616c;
+}
+.kazi-local-navigation nav {
+  display: grid;
+}
+.kazi-local-navigation .account-popover > .iy-summary {
+  padding: 12px;
+}
+.kazi-account-settings {
+  display: grid;
+  gap: 24px;
+  max-width: 760px;
+  min-width: 0;
+  padding-block: 8px 24px;
+}
+.kazi-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.kazi-profile-actions .button {
+  min-height: 44px;
+}
+.kazi-legacy-profile {
+  min-width: 0;
+}
+.kazi-legacy-profile > h3 {
+  margin-bottom: 16px;
+}
+@media (max-width: 520px) {
+  .kazi-profile-actions > .button {
+    width: 100%;
+  }
+}
+
+.kazi-account-recovery {
+  display: grid;
+  gap: 16px;
+  margin-block: 24px;
+  min-width: 0;
+}

@@ -13,6 +13,16 @@ const session = vi.hoisted(() => ({
 }));
 vi.mock("@clerk/react", () => ({
   useAuth: () => session.clerk,
+  useUser: () => ({
+    ...session.clerk,
+    user: session.clerk.isSignedIn
+      ? {
+          fullName: "Test identity",
+          primaryEmailAddress: { emailAddress: "test@example.test" },
+        }
+      : null,
+  }),
+  useClerk: () => ({ signOut: vi.fn() }),
   SignIn: () => <div>Sign in</div>,
   useReverification: (request: unknown) => request,
 }));

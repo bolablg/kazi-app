@@ -1,56 +1,54 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { UserProfile, useClerk, useUser } from "@clerk/react";
-import { AccountIdentityContext } from "./IdentityScreens";
-import { prepareIdentitySignOut } from "./identityConfig";
+import { UserProfile } from "@clerk/react";
+import {
+  AccountSummary,
+  accountTheme,
+  type AccountState,
+} from "@iyanju/account-ui";
 import {
   ChevronDown,
   Users,
   Settings,
   Plug,
-  LogOut,
   UserRound,
   ShieldCheck,
 } from "lucide-react";
+import { AccountIdentityContext, useAccountIdentity } from "./IdentityScreens";
+import { identityConfig } from "./identityConfig";
+import {
+  centralManagementLinks,
+  kaziAccountService,
+  kaziRole,
+} from "./accountAdapter";
+import { ClerkAccountMenu, ClerkAccountSummary } from "./ClerkAccountSurface";
 import { useData } from "./data";
-import { Avatar, useUI } from "./components";
+import type { Member } from "../shared/model";
 
-function ProfilePhoto() {
-  const { user } = useUser();
-  return user?.imageUrl ? (
-    <img className="profile-photo" src={user.imageUrl} alt="Your profile" />
-  ) : (
-    <UserRound size={24} />
-  );
+function localIdentity(me: Member, local: boolean): AccountState {
+  return {
+    status: "legacy",
+    label: local ? "Kazi local development" : "Kazi demo account",
+    identity: { name: me.name, email: me.email },
+  };
 }
-function SignOut() {
-  const { signOut } = useClerk();
-  const { run } = useUI();
-  return (
-    <button
-      onClick={() =>
-        void run(() => {
-          prepareIdentitySignOut();
-          return signOut({ redirectUrl: "/" });
-        })
-      }
-    >
-      <LogOut size={15} />
-      Sign out
-    </button>
-  );
-}
-export function AccountMenu() {
-  const { state, actorId, demo, local } = useData();
-  const me = state.members.find((m) => m.id === actorId)!;
+const localActionIcons = {
+  account: UserRound,
+  settings: Settings,
+  connections: Plug,
+  people: Users,
+  privacy: ShieldCheck,
+} as const;
+/** These modes have no Clerk session. Only service navigation is offered. */
+function LocalAccountNavigation({ me, local }: { me: Member; local: boolean }) {
   const menu = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
-    const outside = (e: PointerEvent) => {
-      if (menu.current?.open && !menu.current.contains(e.target as Node))
+    const outside = (event: PointerEvent) => {
+      if (menu.current?.open && !menu.current.contains(event.target as Node))
         menu.current.open = false;
     };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && menu.current?.open) {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && menu.current?.open) {
         menu.current.open = false;
         menu.current.querySelector("summary")?.focus();
       }
@@ -62,169 +60,124 @@ export function AccountMenu() {
       document.removeEventListener("keydown", escape);
     };
   }, []);
+  const service = kaziAccountService(me.role, true);
   return (
-    <details className="account-menu" ref={menu}>
+    <details className="account-menu kazi-local-navigation" ref={menu}>
       <summary aria-label="User menu">
-        {demo || local ? (
-          <Avatar name={me.name} color="blue" />
-        ) : (
-          <ProfilePhoto />
-        )}
-        <span className="account-menu-name">
-          <strong>{me.name}</strong>
-          <small>
-            {local ? "Local development" : demo ? "Demo account" : me.email}
-          </small>
-        </span>
-        <ChevronDown size={14} />
+        <AccountSummary state={localIdentity(me, Boolean(local))} compact />
+        <ChevronDown size={14} aria-hidden="true" />
       </summary>
       <div className="account-popover">
-        <div className="account-popover-header">
-          <strong>{me.name}</strong>
-          <span>{me.email}</span>
-          <small className="role-badge">
-            {me.role === "owner"
-              ? "Owner"
-              : me.role === "admin"
-                ? "Manager"
-                : me.role}
-          </small>
+        <AccountSummary state={localIdentity(me, Boolean(local))} />
+        <div className="kazi-local-role">
+          <span>Kazi role</span>
+          <strong>{kaziRole(me.role)}</strong>
         </div>
-        <Link
-          to="/settings?tab=account"
-          onClick={(e) =>
-            e.currentTarget.closest("details")?.removeAttribute("open")
-          }
-        >
-          <UserRound size={15} />
-          My account
-        </Link>
-        <Link
-          to="/settings"
-          onClick={(e) =>
-            e.currentTarget.closest("details")?.removeAttribute("open")
-          }
-        >
-          <Settings size={15} />
-          Settings
-        </Link>
-        <Link
-          to="/connections"
-          onClick={(e) =>
-            e.currentTarget.closest("details")?.removeAttribute("open")
-          }
-        >
-          <Plug size={15} />
-          Connections
-        </Link>
-        <Link
-          to="/teams"
-          onClick={(e) =>
-            e.currentTarget.closest("details")?.removeAttribute("open")
-          }
-        >
-          <Users size={15} />
-          Team & people
-        </Link>
-        {!demo && !local && <SignOut />}
-        <Link
-          to="/privacy"
-          onClick={(event) =>
-            event.currentTarget.closest("details")?.removeAttribute("open")
-          }
-        >
-          <ShieldCheck size={15} />
-          Privacy policy
-        </Link>
-        {demo && (
-          <span className="account-demo-note">
-            Local demo · sign-in not configured
-          </span>
-        )}
+        <nav aria-label="Kazi settings">
+          {service.actions.map((action) => {
+            const Icon =
+              localActionIcons[action.id as keyof typeof localActionIcons] ??
+              Settings;
+            return (
+              <Link
+                key={action.id}
+                to={action.href!}
+                onClick={() => {
+                  if (menu.current) menu.current.open = false;
+                }}
+              >
+                <Icon size={15} aria-hidden="true" />
+                {action.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </details>
+  );
+}
+export function AccountMenu() {
+  const { state, actorId, demo, local } = useData();
+  const identity = useAccountIdentity();
+  const me = state.members.find((member) => member.id === actorId)!;
+  return (
+    <div className="kazi-account-slot">
+      {demo || local ? (
+        <LocalAccountNavigation me={me} local={Boolean(local)} />
+      ) : (
+        <ClerkAccountMenu
+          config={identity?.config ?? identityConfig}
+          service={kaziAccountService(me.role)}
+        />
+      )}
+    </div>
+  );
+}
+function LiveAccountSettings({ role }: { role: string }) {
+  const identity = useAccountIdentity();
+  const config = identity?.config ?? identityConfig;
+  const links = centralManagementLinks(config, location.origin);
+  return (
+    <section
+      className="kazi-account-settings"
+      aria-label="Account profile and security"
+    >
+      <h2>My account</h2>
+      <ClerkAccountSummary config={config} />
+      {config.provider === "central" ? (
+        links ? (
+          <div className="kazi-profile-actions">
+            <a className="button primary" href={links.profile}>
+              Profile &amp; security
+            </a>
+            <a className="button secondary" href={links.services}>
+              Your services
+            </a>
+          </div>
+        ) : (
+          <p role="status">
+            Account settings are unavailable for this address.
+          </p>
+        )
+      ) : (
+        <>
+          <AccountIdentityContext />
+          <div className="iy-account-theme kazi-legacy-profile">
+            <h3>Legacy Kazi profile &amp; security</h3>
+            <UserProfile
+              routing="hash"
+              fallback={<p role="status">Loading your account…</p>}
+              appearance={accountTheme}
+            />
+          </div>
+        </>
+      )}
+      <dl className="account-identity-details">
+        <div>
+          <dt>Kazi role</dt>
+          <dd>{kaziRole(role)}</dd>
+        </div>
+      </dl>
+    </section>
   );
 }
 export function AccountSettings() {
   const { state, actorId, demo, local } = useData();
   const me = state.members.find((member) => member.id === actorId)!;
-  if (!demo && !local)
-    return (
-      <section
-        className="embedded-account-profile"
-        aria-label="Account profile and security"
-      >
-        <AccountIdentityContext />
-        <UserProfile
-          routing="hash"
-          fallback={<p role="status">Loading your account…</p>}
-          appearance={{
-            variables: {
-              colorPrimary: "#8A3C0C",
-              colorForeground: "#111111",
-              colorMutedForeground: "#55565C",
-              fontFamily: '"Atlassian Sans", sans-serif',
-              borderRadius: "0.5rem",
-            },
-            elements: {
-              rootBox: { width: "100%", maxWidth: "none" },
-              cardBox: {
-                width: "100%",
-                maxWidth: "none",
-                boxShadow: "none",
-                border: "0",
-                borderRadius: "0",
-              },
-              card: {
-                boxShadow: "none",
-                borderRadius: "0",
-                backgroundColor: "#fff",
-              },
-              navbar: {
-                backgroundColor: "#fff9f5",
-                borderRight: "1px solid #e5e8ee",
-                boxShadow: "none",
-              },
-              scrollBox: { borderRadius: "0", boxShadow: "none" },
-              pageScrollBox: { backgroundColor: "#fff" },
-              navbarButton: {
-                minHeight: "44px",
-                borderRadius: "8px",
-                padding: "10px 12px",
-              },
-            },
-          }}
-        />
-      </section>
-    );
+  if (!demo && !local) return <LiveAccountSettings role={me.role} />;
   return (
     <div className="settings-form account-settings">
       <section className="settings-section">
         <h2>My account</h2>
-        <div className="account-profile account-identity">
-          <Avatar name={me.name} color="blue" />
-          <div>
-            <strong>{me.name}</strong>
-            <p>{me.email}</p>
-          </div>
-          <span className="badge neutral">
-            {local ? "Local development" : "Demo account"}
-          </span>
-        </div>
+        <AccountSummary state={localIdentity(me, Boolean(local))} />
         <dl className="account-identity-details">
           <div>
             <dt>Email</dt>
             <dd>{me.email}</dd>
           </div>
           <div>
-            <dt>Role</dt>
-            <dd>
-              {me.role === "owner"
-                ? "Owner"
-                : me.role === "admin"
-                  ? "Manager"
-                  : me.role}
-            </dd>
+            <dt>Kazi role</dt>
+            <dd>{kaziRole(me.role)}</dd>
           </div>
         </dl>
         <p className="inline-info">

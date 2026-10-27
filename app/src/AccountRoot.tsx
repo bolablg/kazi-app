@@ -7,6 +7,7 @@ import { LiveProvider } from "./data";
 import App from "./App";
 import { LoadingScreen } from "./LoadingScreen";
 import { WelcomeLayout } from "./WelcomeLayout";
+import { ClerkAccountRecovery } from "./ClerkAccountSurface";
 import { identityApi } from "./identityApi";
 import {
   centralAccountUrl,
@@ -46,7 +47,12 @@ export function AccountRoot({
     };
   }, [userId]);
   if (!isLoaded) return <LoadingScreen />;
-  if (config.error) return <IdentityConfigurationError />;
+  if (config.error)
+    return (
+      <IdentityConfigurationError
+        account={<ClerkAccountRecovery config={config} />}
+      />
+    );
   if ((!isSignedIn || !userId) && config.provider === "central")
     return <CentralSignIn config={config} />;
   if ((!isSignedIn || !userId) && route.pathname === identityPaths.legacyLink)
@@ -163,6 +169,7 @@ function VerifiedAccount({
       <div className="startup">
         <h1>Your secure session needs attention.</h1>
         <p>Reconnect to verify access to Kazi.</p>
+        <ClerkAccountRecovery config={config} />
         <button onClick={() => location.reload()}>Reconnect</button>
       </div>
     );
@@ -190,7 +197,11 @@ function ResolvedAccount({
   // the default UI provider. Both rehearsal and shared UI need the dual-issuer
   // backend resolver; the frontend mode never relaxes server identity checks.
   if (status.mode !== "shared" || status.provider !== config.provider)
-    return <IdentityConfigurationError />;
+    return (
+      <IdentityConfigurationError
+        account={<ClerkAccountRecovery config={config} />}
+      />
+    );
   if (route.pathname === identityPaths.legacyLink)
     return <LegacyLink config={config} status={status} url={url} />;
   // Even a ready central account must validate a pending link request. It may

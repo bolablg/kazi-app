@@ -15,6 +15,11 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
+      command: "npx vite --config tests/fixtures/account-ui/vite.config.ts",
+      url: "http://127.0.0.1:5176/tests/fixtures/account-ui/index.html",
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       command: "npm run preview",
       url: "http://127.0.0.1:4173",
       reuseExistingServer: !process.env.CI,

@@ -31,6 +31,7 @@
   "dependencies": {
     "@clerk/react": "6.18.1",
     "@dnd-kit/core": "6.3.1",
+    "@iyanju/account-ui": "https://raw.githubusercontent.com/bolablg/iyanju/f0923341528f940f47d5e7af9d8b57b95af86215/packages/account-ui/releases/iyanju-account-ui-1.0.1.tgz",
     "@js-temporal/polyfill": "0.5.1",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@noble/hashes": "2.4.0",
