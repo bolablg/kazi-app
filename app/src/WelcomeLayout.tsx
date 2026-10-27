@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { CalendarDays } from "lucide-react";
 import { Brand } from "./Brand";
 import { BrandAttribution } from "./BrandAttribution";
@@ -14,9 +14,17 @@ const days = [
 
 /** Shared presentation only: each caller retains its own authentication flow. */
 export function WelcomeLayout({ children }: { children: ReactNode }) {
+  const entry = useRef<HTMLElement>(null);
   return (
     <div className="welcome-page">
-      <a className="skip-link" href="#welcome-sign-in">
+      <a
+        className="skip-link"
+        href="#welcome-sign-in"
+        onClick={(event) => {
+          event.preventDefault();
+          entry.current?.focus();
+        }}
+      >
         Skip to sign in
       </a>
       <header className="welcome-header">
@@ -73,6 +81,7 @@ export function WelcomeLayout({ children }: { children: ReactNode }) {
         <section
           className="welcome-sign-in"
           id="welcome-sign-in"
+          ref={entry}
           tabIndex={-1}
           aria-label="Sign in to Kazi"
         >
