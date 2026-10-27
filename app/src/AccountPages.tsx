@@ -6,7 +6,14 @@ import {
   accountTheme,
   type AccountState,
 } from "@iyanju/account-ui";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  Users,
+  Settings,
+  Plug,
+  UserRound,
+  ShieldCheck,
+} from "lucide-react";
 import { AccountIdentityContext, useAccountIdentity } from "./IdentityScreens";
 import { identityConfig } from "./identityConfig";
 import {
@@ -25,6 +32,13 @@ function localIdentity(me: Member, local: boolean): AccountState {
     identity: { name: me.name, email: me.email },
   };
 }
+const localActionIcons = {
+  account: UserRound,
+  settings: Settings,
+  connections: Plug,
+  people: Users,
+  privacy: ShieldCheck,
+} as const;
 /** These modes have no Clerk session. Only service navigation is offered. */
 function LocalAccountNavigation({ me, local }: { me: Member; local: boolean }) {
   const menu = useRef<HTMLDetailsElement>(null);
@@ -60,17 +74,23 @@ function LocalAccountNavigation({ me, local }: { me: Member; local: boolean }) {
           <strong>{kaziRole(me.role)}</strong>
         </div>
         <nav aria-label="Kazi settings">
-          {service.actions.map((action) => (
-            <Link
-              key={action.id}
-              to={action.href!}
-              onClick={() => {
-                if (menu.current) menu.current.open = false;
-              }}
-            >
-              {action.label}
-            </Link>
-          ))}
+          {service.actions.map((action) => {
+            const Icon =
+              localActionIcons[action.id as keyof typeof localActionIcons] ??
+              Settings;
+            return (
+              <Link
+                key={action.id}
+                to={action.href!}
+                onClick={() => {
+                  if (menu.current) menu.current.open = false;
+                }}
+              >
+                <Icon size={15} aria-hidden="true" />
+                {action.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </details>
