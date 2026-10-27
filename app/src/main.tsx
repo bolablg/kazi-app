@@ -30,6 +30,7 @@ import "./daily-calendar.css";
 import "./sprints.css";
 import "./identity.css";
 import "./privacy.css";
+import "@iyanju/account-ui/styles.css";
 // A previously installed production worker must never serve stale files in dev.
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
   void navigator.serviceWorker
