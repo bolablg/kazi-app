@@ -6,8 +6,7 @@ import { useLocation } from "react-router-dom";
 import { LiveProvider } from "./data";
 import App from "./App";
 import { LoadingScreen } from "./LoadingScreen";
-import { Brand } from "./Brand";
-import { BrandAttribution } from "./BrandAttribution";
+import { WelcomeLayout } from "./WelcomeLayout";
 import { identityApi } from "./identityApi";
 import {
   centralAccountUrl,
@@ -54,64 +53,57 @@ export function AccountRoot({
     return <LegacyLinkSignIn config={config} />;
   if (!isSignedIn || !userId)
     return (
-      <div className="auth-page">
-        <div className="auth-story">
-          <span className="wordmark">
-            <Brand />
-          </span>
-          <h1>Welcome to Kazi</h1>
-          <p>Manage your tasks, projects, and connected tools.</p>
-          <a className="auth-privacy-link" href="/privacy">
-            Privacy policy
-          </a>
-          {config.central && (
-            <a
-              href={centralAccountUrl(config, location.origin, true)}
-              onClick={() =>
-                rememberReturn(sessionStorage, route.pathname, route.search)
-              }
-            >
-              Create an iYANJU account
-            </a>
-          )}
+      <WelcomeLayout>
+        <div className="welcome-clerk-panel">
+          <SignIn
+            routing="hash"
+            withSignUp={!config.central}
+            transferable={config.central ? false : undefined}
+            signUpUrl={
+              config.central
+                ? centralAccountUrl(config, location.origin, true)
+                : undefined
+            }
+            appearance={{
+              elements: {
+                rootBox: { width: "100%" },
+                cardBox: { width: "100%", boxShadow: "none", border: "0" },
+                card: { boxShadow: "none", border: "0", padding: "0" },
+                ...(config.central
+                  ? {
+                      socialButtons: { display: "none" },
+                      dividerRow: { display: "none" },
+                      footerAction: { display: "none" },
+                    }
+                  : {}),
+              },
+            }}
+            fallbackRedirectUrl={location.origin}
+            signUpFallbackRedirectUrl={location.origin}
+            forceRedirectUrl={
+              location.pathname === "/join"
+                ? location.origin + location.pathname + location.search
+                : undefined
+            }
+            signUpForceRedirectUrl={
+              location.pathname === "/join"
+                ? location.origin + location.pathname + location.search
+                : undefined
+            }
+          />
         </div>
-        <SignIn
-          routing="hash"
-          withSignUp={!config.central}
-          transferable={config.central ? false : undefined}
-          signUpUrl={
-            config.central
-              ? centralAccountUrl(config, location.origin, true)
-              : undefined
-          }
-          appearance={
-            config.central
-              ? {
-                  elements: {
-                    socialButtons: { display: "none" },
-                    dividerRow: { display: "none" },
-                    footerAction: { display: "none" },
-                    card: { boxShadow: "none" },
-                    cardBox: { boxShadow: "none" },
-                  },
-                }
-              : undefined
-          }
-          fallbackRedirectUrl={location.origin}
-          signUpFallbackRedirectUrl={location.origin}
-          forceRedirectUrl={
-            location.pathname === "/join"
-              ? location.origin + location.pathname + location.search
-              : undefined
-          }
-          signUpForceRedirectUrl={
-            location.pathname === "/join"
-              ? location.origin + location.pathname + location.search
-              : undefined
-          }
-        />
-        <BrandAttribution />
-      </div>
+        {config.central && (
+          <a
+            className="welcome-legacy-create"
+            href={centralAccountUrl(config, location.origin, true)}
+            onClick={() =>
+              rememberReturn(sessionStorage, route.pathname, route.search)
+            }
+          >
+            Create an iYANJU account
+          </a>
+        )}
+      </WelcomeLayout>
     );
   return (
     <ConnectedAccount
