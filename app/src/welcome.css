@@ -1,0 +1,391 @@
+.welcome-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #172231;
+  font-family: var(--font-ui);
+}
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px clamp(24px, 5vw, 88px);
+  background: #fffaf5;
+}
+.welcome-brand {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.welcome-brand .kazi-logo {
+  width: 126px;
+  height: auto;
+  max-width: none;
+}
+.welcome-privacy {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #59616c;
+  font-size: 13px;
+  text-decoration: none;
+}
+.welcome-privacy:hover {
+  color: #172231;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.welcome-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  flex: 1;
+  width: 100%;
+}
+.welcome-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(40px, 6vh, 72px);
+  min-width: 0;
+  padding: 48px clamp(28px, 5vw, 88px) 64px;
+  background: #fffaf5;
+}
+.welcome-story-copy {
+  max-width: 600px;
+}
+.welcome-story h2 {
+  margin: 0;
+  font-size: clamp(48px, 5.6vw, 84px);
+  line-height: 1.02;
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  color: #172231;
+}
+.welcome-story h2 > span {
+  color: #3064c3;
+}
+.welcome-story-caption {
+  margin: 24px 0 0;
+  font-size: clamp(16px, 1.45vw, 20px);
+  line-height: 1.5;
+  color: #59616c;
+}
+.welcome-week {
+  width: 100%;
+  max-width: 600px;
+  min-width: 0;
+  padding: 20px 20px 0;
+  border: 1px solid #ede7df;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+.welcome-week-heading,
+.welcome-week-heading > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.welcome-week-heading {
+  justify-content: space-between;
+  margin-bottom: 22px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #404957;
+}
+.welcome-week-heading > span:first-child > svg {
+  color: #8a3c0c;
+}
+.welcome-week-indicators {
+  display: flex;
+  gap: 4px;
+}
+.welcome-week-indicators i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff8a32;
+}
+.welcome-week-indicators i:nth-child(2) {
+  background: #ef69a5;
+}
+.welcome-week-indicators i:nth-child(3) {
+  background: #4279de;
+}
+.welcome-week-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.welcome-week-day {
+  min-width: 0;
+}
+.welcome-week-day > span {
+  display: block;
+  padding-bottom: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #737a85;
+  text-align: center;
+}
+.welcome-week-hours {
+  position: relative;
+  height: clamp(140px, 15vw, 200px);
+}
+.welcome-week-hour {
+  height: 25%;
+  border-top: 1px solid #f0f1f3;
+}
+.welcome-week-event {
+  position: absolute;
+  left: 0;
+  right: 0;
+  min-height: 60px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #ffe4cb;
+  color: #8a3c0c;
+}
+.welcome-week-event.pink {
+  background: #fce1ed;
+  color: #9e2c64;
+}
+.welcome-week-event.blue {
+  background: #e2ecff;
+  color: #2858a6;
+}
+.welcome-week-event-dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin-bottom: 7px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.welcome-week-event strong {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.welcome-week-event-line {
+  display: block;
+  height: 3px;
+  width: 70%;
+  margin-top: 8px;
+  background: currentColor;
+  opacity: 0.2;
+  border-radius: 4px;
+}
+.welcome-sign-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 48px clamp(32px, 5vw, 88px) 64px;
+  scroll-margin-top: 24px;
+}
+.welcome-sign-in-content {
+  width: 100%;
+  max-width: 400px;
+  min-width: 0;
+}
+.welcome-sign-in h1 {
+  margin: 0 0 12px;
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  color: #172231;
+}
+.welcome-sign-in .welcome-intro {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #59616c;
+}
+.welcome-sign-in .identity-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 32px;
+}
+.welcome-sign-in .identity-actions .button {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 18px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: none;
+  transition: background-color 0.15s;
+}
+.welcome-sign-in .identity-actions .button.primary {
+  background: #ff8a32;
+  color: #172231;
+  border-color: transparent;
+}
+.welcome-sign-in .identity-actions .button.primary:hover {
+  background: #f57b24;
+}
+.welcome-sign-in .identity-actions .button.secondary {
+  background: #fff;
+  border: 1px solid #dfe3e9;
+  color: #172231;
+}
+.welcome-sign-in .identity-actions .button.secondary:hover {
+  background: #f6f7f9;
+}
+.welcome-page :is(a, button, input):focus-visible {
+  outline: 2px solid #8a3c0c;
+  outline-offset: 4px;
+}
+.welcome-page > .brand-attribution {
+  padding: 20px 24px;
+  background: #fffaf5;
+}
+.welcome-page > .brand-attribution a {
+  font-size: 11px;
+  color: #73706d;
+}
+.welcome-clerk-panel :is(.cl-rootBox, .cl-cardBox, .cl-card) {
+  width: 100%;
+  max-width: 100%;
+  box-shadow: none;
+}
+.welcome-clerk-panel .cl-cardBox,
+.welcome-clerk-panel .cl-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.welcome-clerk-panel .cl-card {
+  padding: 0;
+}
+.welcome-clerk-panel :is(.cl-formFieldInput, .cl-socialButtonsBlockButton) {
+  min-height: 44px;
+  font-size: 14px;
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.welcome-clerk-panel .cl-formButtonPrimary {
+  min-height: 48px;
+  box-shadow: none;
+}
+.welcome-legacy-create {
+  display: block;
+  margin-top: 24px;
+  padding: 12px;
+  color: #8a3c0c;
+  font-size: 13px;
+  text-align: center;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1050px) {
+  .welcome-story {
+    padding-inline: 32px;
+  }
+  .welcome-sign-in {
+    padding-inline: 32px;
+  }
+  .welcome-week {
+    padding: 16px 12px 0;
+  }
+  .welcome-week-event {
+    padding: 8px 6px;
+  }
+}
+@media (max-width: 760px) {
+  .welcome-header {
+    padding: 20px 24px;
+    background: #fff;
+  }
+  .welcome-brand .kazi-logo {
+    width: 116px;
+  }
+  .welcome-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .welcome-story {
+    display: none;
+  }
+  .welcome-sign-in {
+    padding: 40px 24px 64px;
+    align-items: center;
+  }
+  .welcome-sign-in-content {
+    max-width: 420px;
+  }
+  .welcome-page > .brand-attribution {
+    background: #fff;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .welcome-clerk-panel input {
+    font-size: 16px;
+  }
+}
+@media (max-width: 380px) {
+  .welcome-header {
+    padding-inline: 20px;
+    gap: 16px;
+  }
+  .welcome-privacy {
+    font-size: 12px;
+  }
+  .welcome-brand .kazi-logo {
+    width: 100px;
+  }
+  .welcome-sign-in {
+    padding-inline: 24px;
+  }
+  .welcome-sign-in h1 {
+    font-size: 28px;
+  }
+}
+@media (max-height: 800px) and (min-width: 761px) {
+  .welcome-header {
+    padding-block: 20px;
+  }
+  .welcome-story {
+    padding-block: 24px;
+    gap: 28px;
+  }
+  .welcome-story h2 {
+    font-size: clamp(44px, 4.8vw, 66px);
+  }
+  .welcome-story-caption {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  .welcome-week-hours {
+    height: 160px;
+  }
+  .welcome-sign-in {
+    padding-block: 32px;
+  }
+}
+@media (max-height: 600px) and (min-width: 761px) {
+  .welcome-header {
+    padding-block: 12px;
+  }
+  .welcome-week {
+    display: none;
+  }
+  .welcome-story h2 {
+    font-size: 44px;
+  }
+  .welcome-sign-in {
+    padding-block: 24px;
+  }
+  .welcome-page > .brand-attribution {
+    padding-block: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-page * {
+    transition: none !important;
+  }
+}

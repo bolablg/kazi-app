@@ -266,6 +266,20 @@ it("legacy-primary rehearsal also disables local signup and transferable OAuth",
   ).toBeTruthy();
   expect(model.query).not.toHaveBeenCalled();
 });
+it("skip navigation focuses sign-in without changing Clerk's hash route", () => {
+  model.auth.isSignedIn = false;
+  model.auth.userId = null;
+  open("/tasks", "legacy");
+  window.history.replaceState({}, "", "/tasks#/sign-in/factor-one");
+  const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+  fireEvent(screen.getByRole("link", { name: "Skip to sign in" }), click);
+  expect(click.defaultPrevented).toBe(true);
+  expect(document.activeElement).toBe(
+    screen.getByRole("region", { name: "Sign in to Kazi" }),
+  );
+  expect(location.hash).toBe("#/sign-in/factor-one");
+  expect(model.create).not.toHaveBeenCalled();
+});
 it("requires an explicit choice before creating a new personal workspace", async () => {
   model.status = unlinked();
   const view = open();
