@@ -1,6 +1,15 @@
 import { useMemo, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
-import { CalendarDays, Clock3, Repeat2, Bell, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  Repeat2,
+  Bell,
+  Trash2,
+  Globe2,
+  ChevronDown,
+  CircleAlert,
+} from "lucide-react";
 import { Modal, duration, useUI } from "./components";
 import { InfoTip } from "./InfoTip";
 import { useData } from "./data";
@@ -78,6 +87,7 @@ export function CalendarSessionDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const task = state.tasks.find((item) => item.id === taskId);
+  const project = state.projects.find((item) => item.id === task?.projectId);
   const times = useMemo(() => {
     try {
       const start = calendarInstant(startText, zone),
@@ -205,6 +215,8 @@ export function CalendarSessionDialog({
       open
       onClose={onClose}
       title={editing ? "Edit calendar time" : "Reserve time"}
+      className="calendar-session-dialog"
+      icon={<CalendarDays size={22} aria-hidden="true" />}
     >
       <form
         className="calendar-session-form"
@@ -213,189 +225,241 @@ export function CalendarSessionDialog({
           void save();
         }}
       >
-        {editing ? (
-          <div className="calendar-session-task">
-            <CalendarDays size={20} />
-            <strong>{task?.title ?? editing.title}</strong>
-          </div>
-        ) : (
-          <label>
-            Task
-            <select
-              aria-label="Task to schedule"
-              value={taskId}
-              onChange={(event) => setTask(event.target.value)}
-              required
-            >
-              <option value="">Choose a task…</option>
-              {taskOptions.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {!editing && !taskOptions.length && (
-          <p className="calendar-session-guidance">
-            Move a task to To do or In progress to reserve time. Backlog ideas
-            stay in Backlog.
-          </p>
-        )}
-        <div className="calendar-session-times">
-          <label>
-            Start
-            <input
-              aria-label="Session start"
-              type="datetime-local"
-              step="900"
-              value={startText}
-              onChange={(event) => setStart(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            End
-            <input
-              aria-label="Session end"
-              type="datetime-local"
-              step="900"
-              value={endText}
-              onChange={(event) => setEnd(event.target.value)}
-              required
-            />
-          </label>
-        </div>
-        <div className="calendar-session-context">
-          <span>
-            <Clock3 size={14} />
-            {times
-              ? duration(Math.max(0, times.minutes))
-              : "Choose valid times"}
-          </span>
-          <span>{zone}</span>
-          <InfoTip label="About calendar reservations">
-            Reservations allocate planned time. They do not change a task’s
-            deadline or status and are not logged work time.
-          </InfoTip>
-        </div>
-        {editing?.seriesId ? (
-          <label>
-            <span>
-              <Repeat2 size={14} /> Change
-            </span>
-            <select
-              aria-label="Edit recurring sessions"
-              value={scope}
-              onChange={(event) => setScope(event.target.value as typeof scope)}
-            >
-              <option value="occurrence">This session</option>
-              <option value="following">This and following sessions</option>
-              <option value="series">Entire series</option>
-            </select>
-          </label>
-        ) : (
-          !editing && (
-            <div className="calendar-session-repeat">
-              <label>
-                <span>
-                  <Repeat2 size={14} /> Repeat focus session
+        <div className="calendar-session-body">
+          <div className="calendar-session-task-field">
+            {editing ? (
+              <div className="calendar-session-task">
+                <span className="calendar-session-label">Task</span>
+                <strong>{task?.title ?? editing.title}</strong>
+              </div>
+            ) : (
+              <label className="calendar-session-field">
+                <span>Task</span>
+                <span className="calendar-session-select">
+                  <select
+                    aria-label="Task to schedule"
+                    value={taskId}
+                    onChange={(event) => setTask(event.target.value)}
+                    required
+                  >
+                    <option value="">Choose a task…</option>
+                    {taskOptions.map((item) => (
+                      <option value={item.id} key={item.id}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} aria-hidden="true" />
                 </span>
-                <select
-                  aria-label="Repeat focus session"
-                  value={repeat}
-                  onChange={(event) =>
-                    setRepeat(event.target.value as typeof repeat)
-                  }
-                >
-                  <option value="none">Does not repeat</option>
-                  <option value="daily">Every working day</option>
-                  <option value="weekly">Weekly</option>
-                </select>
               </label>
-              {repeat !== "none" && (
-                <label>
-                  Sessions
-                  <input
-                    aria-label="Number of focus sessions"
-                    type="number"
-                    min={2}
-                    max={26}
-                    value={count}
-                    onChange={(event) => setCount(Number(event.target.value))}
-                  />
-                </label>
-              )}
-            </div>
-          )
-        )}
-        <label>
-          <span>
-            <Bell size={14} /> In-app reminder
-          </span>
-          <select
-            aria-label="Session reminder"
-            value={reminder}
-            onChange={(event) => setReminder(event.target.value)}
-          >
-            <option value="">None</option>
-            {[0, 5, 10, 15, 30, 60].map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {minutes ? `${minutes} minutes before` : "At start time"}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!native && (
-          <label className="check-label calendar-native-consent">
-            <input
-              type="checkbox"
-              checked={enableNative}
-              onChange={(event) => setEnableNative(event.target.checked)}
-            />
-            Reserve this time in my Kazi agenda
-          </label>
-        )}
-        {!!guidance.length && (
-          <div
-            className="calendar-session-checks"
-            aria-label="Reservation checks"
-          >
-            <strong>Before saving</strong>
-            <ul>
-              {guidance.slice(0, 4).map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
+            )}
+            {project && (
+              <div className="calendar-session-project">
+                <span
+                  className="calendar-session-project-dot"
+                  style={{ background: project.color }}
+                  aria-hidden="true"
+                />
+                <span>{project.title}</span>
+              </div>
+            )}
           </div>
-        )}
-        {error && (
-          <p role="alert" className="inline-error">
-            {error}
-          </p>
-        )}
+          {!editing && !taskOptions.length && (
+            <p className="calendar-session-guidance">
+              Move a task to To do or In progress to reserve time. Backlog ideas
+              stay in Backlog.
+            </p>
+          )}
+          <section
+            className="calendar-session-timing"
+            aria-label="Reservation time"
+          >
+            <div className="calendar-session-times">
+              <label className="calendar-session-field">
+                <span>Start</span>
+                <input
+                  aria-label="Session start"
+                  type="datetime-local"
+                  step="900"
+                  value={startText}
+                  onChange={(event) => setStart(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="calendar-session-field">
+                <span>End</span>
+                <input
+                  aria-label="Session end"
+                  type="datetime-local"
+                  step="900"
+                  value={endText}
+                  onChange={(event) => setEnd(event.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <div className="calendar-session-context">
+              <output
+                className="calendar-session-duration"
+                aria-label="Reservation duration"
+                aria-live="polite"
+              >
+                <Clock3 size={14} aria-hidden="true" />
+                {times && times.minutes > 0
+                  ? duration(times.minutes)
+                  : "Choose valid times"}
+              </output>
+              <span className="calendar-session-timezone">
+                <Globe2 size={14} aria-hidden="true" />
+                <span>{zone.replaceAll("_", " ")}</span>
+                <InfoTip label="About calendar reservations">
+                  Times use {zone.replaceAll("_", " ")}. Reservations allocate
+                  planned time. They do not change a task’s deadline or status
+                  and are not logged work time.
+                </InfoTip>
+              </span>
+            </div>
+          </section>
+          <div className="calendar-session-preferences">
+            {editing?.seriesId ? (
+              <label className="calendar-session-field">
+                <span>
+                  <Repeat2 size={15} aria-hidden="true" /> Apply changes to
+                </span>
+                <span className="calendar-session-select">
+                  <select
+                    aria-label="Edit recurring sessions"
+                    value={scope}
+                    onChange={(event) =>
+                      setScope(event.target.value as typeof scope)
+                    }
+                  >
+                    <option value="occurrence">This session</option>
+                    <option value="following">
+                      This and following sessions
+                    </option>
+                    <option value="series">Entire series</option>
+                  </select>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </span>
+              </label>
+            ) : (
+              !editing && (
+                <label className="calendar-session-field">
+                  <span>
+                    <Repeat2 size={15} aria-hidden="true" /> Repeat
+                  </span>
+                  <span className="calendar-session-select">
+                    <select
+                      aria-label="Repeat focus session"
+                      value={repeat}
+                      onChange={(event) =>
+                        setRepeat(event.target.value as typeof repeat)
+                      }
+                    >
+                      <option value="none">Does not repeat</option>
+                      <option value="daily">Every working day</option>
+                      <option value="weekly">Weekly</option>
+                    </select>
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </span>
+                </label>
+              )
+            )}
+            <label className="calendar-session-field">
+              <span>
+                <Bell size={15} aria-hidden="true" /> In-app reminder
+              </span>
+              <span className="calendar-session-select">
+                <select
+                  aria-label="Session reminder"
+                  value={reminder}
+                  onChange={(event) => setReminder(event.target.value)}
+                >
+                  <option value="">None</option>
+                  {[0, 5, 10, 15, 30, 60].map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {minutes ? `${minutes} minutes before` : "At start time"}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} aria-hidden="true" />
+              </span>
+            </label>
+          </div>
+          {!editing && repeat !== "none" && (
+            <label className="calendar-session-count calendar-session-field">
+              <span>
+                <Repeat2 size={15} aria-hidden="true" /> Number of sessions
+              </span>
+              <input
+                aria-label="Number of focus sessions"
+                type="number"
+                min={2}
+                max={26}
+                value={count}
+                onChange={(event) => setCount(Number(event.target.value))}
+              />
+            </label>
+          )}
+          {!native && (
+            <label className="calendar-native-consent">
+              <input
+                type="checkbox"
+                checked={enableNative}
+                onChange={(event) => setEnableNative(event.target.checked)}
+              />
+              <span>Reserve this time in my Kazi agenda</span>
+            </label>
+          )}
+          {!!guidance.length && (
+            <div
+              className="calendar-session-checks"
+              aria-label="Reservation checks"
+            >
+              <CircleAlert size={17} aria-hidden="true" />
+              <div>
+                <strong>Before saving</strong>
+                <ul>
+                  {guidance.slice(0, 4).map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {error && (
+            <p role="alert" className="inline-error">
+              {error}
+            </p>
+          )}
+        </div>
         <div className="calendar-session-actions">
           {editing && (
             <button
               type="button"
-              className="text-button danger-text"
+              className="text-button danger-text calendar-session-release"
               disabled={saving || !online}
               onClick={() => void release()}
             >
-              <Trash2 size={15} />
-              Release time
+              <Trash2 size={15} aria-hidden="true" /> Release time
             </button>
           )}
-          <span />
-          <button type="button" className="button secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="button primary"
-            disabled={saving || !online || !taskId || !times || !enableNative}
-          >
-            {saving ? "Saving…" : editing ? "Save changes" : "Reserve time"}
-          </button>
+          <div className="calendar-session-save-actions">
+            <button
+              type="button"
+              className="button secondary"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              className="button primary"
+              disabled={saving || !online || !taskId || !times || !enableNative}
+            >
+              {saving ? "Saving…" : editing ? "Save changes" : "Reserve time"}
+            </button>
+          </div>
         </div>
       </form>
     </Modal>

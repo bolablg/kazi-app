@@ -150,6 +150,8 @@ export function Modal({
   description,
   children,
   wide = false,
+  className,
+  icon,
 }: {
   open: boolean;
   onClose: () => void;
@@ -157,6 +159,8 @@ export function Modal({
   description?: string;
   children: ReactNode;
   wide?: boolean;
+  className?: string;
+  icon?: ReactNode;
 }) {
   return (
     <Dialog.Root
@@ -168,7 +172,7 @@ export function Modal({
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
         <Dialog.Content
-          className={cx("modal", wide && "wide")}
+          className={cx("modal", wide && "wide", className)}
           onEscapeKeyDown={(event) => {
             if (
               document.activeElement?.getAttribute("aria-expanded") === "true"
@@ -178,6 +182,7 @@ export function Modal({
         >
           <div className="modal-heading">
             <div>
+              {icon && <span className="modal-heading-icon">{icon}</span>}
               <Dialog.Title>{title}</Dialog.Title>
               <Dialog.Description
                 className={description ? undefined : "sr-only"}
