@@ -340,3 +340,15 @@ it("strict ordinary root summaries remain read-only and do not infer an alias fr
   });
   expect(await database(t)).toEqual(before);
 });
+
+it("distinguishes valid service exclusion from malformed propagation without exposing claims", async () => {
+  const { t } = await seeded();
+  await expect(
+    t.withIdentity(claims()).query(api.identity.status, {}),
+  ).rejects.toMatchObject({ data: { code: "SERVICE_NOT_ALLOWED" } });
+  await expect(
+    t
+      .withIdentity({ ...claims(), iyanju_access: null })
+      .query(api.identity.status, {}),
+  ).rejects.toMatchObject({ data: { code: "SERVICE_POLICY_INVALID" } });
+});

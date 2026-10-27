@@ -28,7 +28,10 @@ export function assertCentralServiceEligibility(
   const access = serviceAccessFromClaims(claims, subject, representation);
   if (!permitsService(access, "kazi"))
     throw new ConvexError({
-      code: "SERVICE_NOT_ALLOWED",
+      code:
+        access.kind === "invalid"
+          ? "SERVICE_POLICY_INVALID"
+          : "SERVICE_NOT_ALLOWED",
       message: "This iYANJU account is not authorized to use Kazi.",
     });
 }
