@@ -1,5 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { stripTypeScriptTypes } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   hostedMcpConfiguration,
   validateHostedEnvironment,
@@ -224,4 +229,160 @@ test("MCP hosted builds reject missing, malformed, and cross-environment routing
         VERCEL_BRANCH_URL,
       }),
     );
+});
+
+/** Emit only the actual production entrypoint and its local runtime modules.
+ * No bundler, tsx loader, node_modules tree, inherited credentials or network. */
+async function activationRuntimeFixture(
+  manifestEnvironment,
+  brokenImport = false,
+) {
+  const directory = await mkdtemp(join(tmpdir(), "kazi-activation-runtime-"));
+  try {
+    await writeFile(join(directory, "package.json"), '{"type":"module"}\n');
+    for (const relative of [
+      "api/account/service-activation.ts",
+      "server/service-activation-proxy.ts",
+      "shared/serviceActivation.ts",
+    ]) {
+      const source = await readFile(
+        new URL("../" + relative, import.meta.url),
+        "utf8",
+      );
+      let emitted = stripTypeScriptTypes(source, {
+        mode: "strip",
+        sourceUrl: relative,
+      });
+      if (brokenImport && relative === "server/service-activation-proxy.ts") {
+        assert.ok(emitted.includes('"../shared/serviceActivation.js"'));
+        emitted = emitted.replace(
+          '"../shared/serviceActivation.js"',
+          '"../shared/serviceActivation"',
+        );
+      }
+      const output = join(directory, relative.replace(/\.ts$/, ".js"));
+      await mkdir(dirname(output), { recursive: true });
+      await writeFile(output, emitted);
+    }
+    await writeFile(
+      join(directory, "server/mcp-deployment.js"),
+      `export default ${JSON.stringify({ environment: manifestEnvironment, upstream: "https://runtime-fixture.convex.site/mcp" })};\n`,
+    );
+    return directory;
+  } catch (error) {
+    await rm(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function runActivationEntrypoint(
+  directory,
+  environment,
+  authenticated = false,
+) {
+  return spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `
+    import assert from "node:assert/strict";
+    let calls = 0;
+    globalThis.fetch = async (url, init) => {
+      calls++;
+      assert.equal(String(url), "https://runtime-fixture.convex.site/account/service-activation");
+      assert.equal(init.method, "GET");
+      assert.equal(init.redirect, "manual");
+      assert.equal(init.credentials, "omit");
+      assert.deepEqual(Object.fromEntries(new Headers(init.headers)), {
+        accept: "application/json", authorization: "Bearer synthetic.payload.signature"
+      });
+      return Response.json({ version: 1, serviceId: "kazi", environment: "production",
+        activation: { activatedAt: null, firstObservedAt: 12345 } });
+    };
+    const entrypoint = await import("./api/account/service-activation.js");
+    const response = await entrypoint.default.fetch(new Request(
+      "https://kazi.iyanju.com/api/account/service-activation",
+      ${authenticated ? '{ headers: { Authorization: "Bearer synthetic.payload.signature", Cookie: "must-not-forward=1" } }' : "{}"}
+    ));
+    process.stdout.write(JSON.stringify({ status: response.status, body: await response.json(),
+      cache: response.headers.get("Cache-Control"), calls }));
+  `,
+    ],
+    {
+      cwd: directory,
+      // Keep native Node resolution free of inherited loaders and credentials.
+      env: { VERCEL_ENV: environment, NODE_NO_WARNINGS: "1" },
+      encoding: "utf8",
+      timeout: 10000,
+      maxBuffer: 65536,
+    },
+  );
+}
+
+for (const fixture of [
+  {
+    label: "preview stays unavailable",
+    manifest: "preview",
+    environment: "preview",
+    status: 503,
+  },
+  {
+    label: "production rejects missing authentication",
+    manifest: "production",
+    environment: "production",
+    status: 401,
+  },
+  {
+    label: "environment mismatch stays unavailable",
+    manifest: "production",
+    environment: "preview",
+    status: 503,
+  },
+  {
+    label: "production forwards the authorized summary",
+    manifest: "production",
+    environment: "production",
+    authenticated: true,
+    status: 200,
+  },
+]) {
+  test(`native Node ESM activation entrypoint: ${fixture.label}`, async () => {
+    const directory = await activationRuntimeFixture(fixture.manifest);
+    try {
+      const result = runActivationEntrypoint(
+        directory,
+        fixture.environment,
+        fixture.authenticated,
+      );
+      assert.ifError(result.error);
+      assert.equal(result.status, 0, result.stderr);
+      const response = JSON.parse(result.stdout);
+      assert.equal(response.status, fixture.status);
+      assert.equal(response.cache, "private, no-store");
+      assert.equal(response.calls, fixture.authenticated ? 1 : 0);
+      if (fixture.authenticated)
+        assert.deepEqual(response.body, {
+          version: 1,
+          serviceId: "kazi",
+          environment: "production",
+          activation: { activatedAt: null, firstObservedAt: 12345 },
+        });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+}
+
+test("native Node regression rejects the original extensionless runtime import", async () => {
+  const directory = await activationRuntimeFixture("production", true);
+  try {
+    const result = runActivationEntrypoint(directory, "production");
+    assert.ifError(result.error);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /ERR_MODULE_NOT_FOUND/);
+    assert.match(result.stderr, /shared\/serviceActivation/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

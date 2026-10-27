@@ -5,7 +5,8 @@
   "installCommand": "npm ci",
   "outputDirectory": "dist",
   "functions": {
-    "api/mcp.ts": { "supportsCancellation": true }
+    "api/mcp.ts": { "supportsCancellation": true },
+    "api/account/service-activation.ts": { "supportsCancellation": true }
   },
   "headers": [
     {

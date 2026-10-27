@@ -20,6 +20,7 @@ import type * as identityCore from "../identityCore.js";
 import type * as jobs from "../jobs.js";
 import type * as reports from "../reports.js";
 import type * as seed from "../seed.js";
+import type * as serviceActivation from "../serviceActivation.js";
 import type * as store from "../store.js";
 import type * as tokens from "../tokens.js";
 import type * as validators from "../validators.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   jobs: typeof jobs;
   reports: typeof reports;
   seed: typeof seed;
+  serviceActivation: typeof serviceActivation;
   store: typeof store;
   tokens: typeof tokens;
   validators: typeof validators;
