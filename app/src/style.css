@@ -5040,3 +5040,16 @@ strong {
     scroll-behavior: auto !important;
   }
 }
+/* Hide native scrollbars throughout the app while preserving native scrolling.
+   Important overrides keep component and account-widget scrollbar styles hidden. */
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important;
+  scrollbar-gutter: auto !important;
+}
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

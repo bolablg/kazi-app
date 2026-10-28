@@ -33,6 +33,86 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
 });
+it("publishes links on the production frontend domain and keeps the same private feed path", async () => {
+  vi.stubEnv("CONVEX_SITE_URL", "https://production-fixture.convex.site");
+  vi.stubEnv("APP_ORIGIN", "https://kazi.iyanju.com/");
+  const t = convexTest(schema, modules),
+    a = t.withIdentity(alice);
+  const workspaceId = (await a.mutation(api.commands.bootstrap, {}))!;
+  const link = await a.action(api.calendar.createFeed, {
+    workspaceId,
+    label: "Branded calendar",
+    includeDeadlines: false,
+  });
+  expect(link.url).toMatch(
+    /^https:\/\/kazi\.iyanju\.com\/agenda\/[a-f0-9]{64}\.ics$/,
+  );
+  expect((await t.fetch(new URL(link.url).pathname)).status).toBe(200);
+});
+
+it.each(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "TOKEN_ENCRYPTION_KEY"])(
+  "rejects missing %s before creating Google consent state with a readable error",
+  async (missing) => {
+    vi.stubEnv("APP_ORIGIN", "https://kazi.iyanju.com");
+    vi.stubEnv("GOOGLE_CLIENT_ID", "fixture.apps.googleusercontent.com");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "fixture-secret");
+    vi.stubEnv("TOKEN_ENCRYPTION_KEY", btoa("k".repeat(32)));
+    vi.stubEnv(missing, "");
+    const t = convexTest(schema, modules),
+      a = t.withIdentity(alice);
+    const workspaceId = (await a.mutation(api.commands.bootstrap, {}))!;
+    await expect(
+      a.action(api.calendar.connect, { workspaceId }),
+    ).rejects.toThrow("Google Calendar setup is incomplete");
+    expect(
+      await t.run((ctx) => ctx.db.query("oauthStates").collect()),
+    ).toHaveLength(0);
+  },
+);
+
+it("uses the same branded Google callback for consent and token exchange, then returns to availability settings", async () => {
+  vi.stubEnv("APP_ORIGIN", "https://kazi.iyanju.com");
+  vi.stubEnv("CONVEX_SITE_URL", "https://production-fixture.convex.site");
+  vi.stubEnv("GOOGLE_CLIENT_ID", "fixture.apps.googleusercontent.com");
+  vi.stubEnv("GOOGLE_CLIENT_SECRET", "fixture-secret");
+  vi.stubEnv("TOKEN_ENCRYPTION_KEY", btoa("k".repeat(32)));
+  const t = convexTest(schema, modules),
+    a = t.withIdentity(alice);
+  const workspaceId = (await a.mutation(api.commands.bootstrap, {}))!;
+  const url = new URL(await a.action(api.calendar.connect, { workspaceId }));
+  expect(url.origin).toBe("https://accounts.google.com");
+  expect(url.searchParams.get("redirect_uri")).toBe(
+    "https://kazi.iyanju.com/google/callback",
+  );
+  expect(url.searchParams.get("scope")).not.toContain("/auth/calendar.events ");
+  const google = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(Response.json({ refresh_token: "fixture-refresh" }));
+  try {
+    const response = await t.fetch(
+      `/google/callback?code=fixture-code&state=${url.searchParams.get("state")}`,
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("Location")).toBe(
+      "https://kazi.iyanju.com/connections?tab=calendar&calendar=connected",
+    );
+    expect(
+      new URLSearchParams(google.mock.calls[0][1]!.body as URLSearchParams).get(
+        "redirect_uri",
+      ),
+    ).toBe(url.searchParams.get("redirect_uri"));
+    expect(
+      await t.run((ctx) => ctx.db.query("calendarSecrets").collect()),
+    ).toHaveLength(1);
+    const replay = await t.fetch(
+      `/google/callback?code=fixture-code&state=${url.searchParams.get("state")}`,
+    );
+    expect(replay.headers.get("Location")).toContain("calendar=error");
+    expect(google).toHaveBeenCalledTimes(1);
+  } finally {
+    google.mockRestore();
+  }
+});
 it("calendar subscriptions require a secret, honor revocation and current membership, and expose no hashes", async () => {
   vi.stubEnv("CONVEX_SITE_URL", "https://kazi.example.test");
   const t = convexTest(schema, modules),

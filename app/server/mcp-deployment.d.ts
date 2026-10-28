@@ -3,5 +3,6 @@
 declare const deployment: {
   environment: "production" | "preview";
   upstream: string;
+  applicationUrl: string;
 };
 export default deployment;

@@ -14,6 +14,7 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { sha256, encrypt } from "./crypto";
+import { googleCallbackUrl } from "./calendarConfig";
 import { createKaziServer } from "../mcp/server";
 import { prefersMcpEventStream } from "../shared/mcpTransport";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -186,7 +187,7 @@ http.route({
           code,
           client_id: process.env.GOOGLE_CLIENT_ID ?? "",
           client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-          redirect_uri: process.env.CONVEX_SITE_URL + "/google/callback",
+          redirect_uri: googleCallbackUrl(),
           grant_type: "authorization_code",
         }),
       });
@@ -203,12 +204,12 @@ http.route({
         ...encrypted,
       });
       return Response.redirect(
-        process.env.APP_ORIGIN + "/connections?calendar=connected",
+        process.env.APP_ORIGIN + "/connections?tab=calendar&calendar=connected",
         303,
       );
     } catch {
       return Response.redirect(
-        process.env.APP_ORIGIN + "/connections?calendar=error",
+        process.env.APP_ORIGIN + "/connections?tab=calendar&calendar=error",
         303,
       );
     }
