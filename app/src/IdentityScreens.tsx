@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { SignIn, useClerk, useUser } from "@clerk/react";
+import { SignIn, useUser } from "@clerk/react";
 import { useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Link2 } from "lucide-react";
@@ -14,12 +14,14 @@ import { Brand } from "./Brand";
 import { BrandAttribution } from "./BrandAttribution";
 import { LoadingScreen } from "./LoadingScreen";
 import { WelcomeLayout } from "./WelcomeLayout";
+import { AccountSummary } from "@iyanju/account-ui";
+import { ClerkAccountSummary, ClerkSignOut } from "./ClerkAccountSurface";
+import { centralManagementLinks, clerkIdentity } from "./accountAdapter";
 import { identityApi } from "./identityApi";
 import type { IdentityStatus } from "./identityApi";
 import {
   centralAccountUrl,
   clearPendingLink,
-  prepareIdentitySignOut,
   consumeReturn,
   identityPaths,
   readPendingLink,
@@ -54,13 +56,18 @@ export function IdentityFrame({ children }: { children: ReactNode }) {
     </main>
   );
 }
-export function IdentityConfigurationError() {
+export function IdentityConfigurationError({
+  account,
+}: {
+  account?: ReactNode;
+}) {
   return (
     <IdentityFrame>
       <h1>The account connection needs attention</h1>
       <p role="alert">
         Kazi cannot safely open this account with its current configuration.
       </p>
+      {account}
       <div className="identity-actions">
         <button className="button secondary" onClick={() => location.reload()}>
           Try again
@@ -148,19 +155,8 @@ function RestartLink() {
   );
 }
 function SwitchAccount() {
-  const clerk = useClerk();
   return (
-    <button
-      className="button secondary"
-      onClick={() => {
-        prepareIdentitySignOut();
-        void clerk.signOut({
-          redirectUrl: location.origin + identityPaths.legacyLink,
-        });
-      }}
-    >
-      Use another Kazi account
-    </button>
+    <ClerkSignOut redirectUrl={location.origin + identityPaths.legacyLink} />
   );
 }
 
@@ -230,9 +226,13 @@ export function LegacyLink({
         linked.
       </p>
       <div className="identity-link-account">
-        <span>Existing Kazi account</span>
-        <strong>{user?.fullName || user?.username || "Kazi account"}</strong>
-        <small>{user?.primaryEmailAddress?.emailAddress}</small>
+        <AccountSummary
+          state={{
+            status: "legacy",
+            label: "Existing Kazi account",
+            identity: clerkIdentity(user ?? {}),
+          }}
+        />
       </div>
       {error && (
         <p className="identity-error" role="alert">
@@ -439,14 +439,18 @@ function ConfirmLink({
       <p>Your existing Kazi tasks, projects, and team access stay together.</p>
       <div className="identity-link-accounts">
         <div className="identity-link-account">
-          <span>Existing Kazi account</span>
-          <strong>{preview.legacyDisplay.name}</strong>
-          <small>{preview.legacyDisplay.email}</small>
+          <AccountSummary
+            state={{
+              status: "legacy",
+              label: "Existing Kazi account",
+              identity: preview.legacyDisplay,
+            }}
+          />
         </div>
         <div className="identity-link-account">
-          <span>iYANJU account</span>
-          <strong>{user.fullName || user.username || "iYANJU account"}</strong>
-          <small>{user.primaryEmailAddress?.emailAddress}</small>
+          <AccountSummary
+            state={{ status: "signed-in", identity: clerkIdentity(user) }}
+          />
         </div>
       </div>
       {error && (
@@ -478,14 +482,14 @@ export function AccountIdentityContext() {
   const identity = useContext(AccountIdentity);
   if (!identity?.config.central) return null;
   const { config, status } = identity;
-  const central = config.central!;
+  const links = centralManagementLinks(config, location.origin);
   const preserve = () =>
     rememberReturn(sessionStorage, "/settings", "?tab=account");
   if (config.provider === "central")
     return (
       <aside className="identity-account-context">
-        <p>Your profile and security settings apply to your iYANJU account.</p>
-        <a href={central.accountOrigin + "/account"}>Manage iYANJU account</a>
+        <ClerkAccountSummary config={config} />
+        {links && <a href={links.profile}>Profile &amp; security</a>}
       </aside>
     );
   if (status.hasCentralIdentity) return null;
