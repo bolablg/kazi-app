@@ -3,6 +3,10 @@ import { ConvexError } from "convex/values";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { identityConfig, type IdentityConfig } from "./identityConfig";
+import {
+  assertCentralServiceEligibility,
+  serviceAccessMode,
+} from "./serviceEligibility";
 
 type AuthCtx = Pick<QueryCtx, "auth"> & {
   meta: QueryCtx["meta"] | MutationCtx["meta"] | ActionCtx["meta"];
@@ -160,7 +164,13 @@ export async function verifiedPrincipal(
     identityFailure("AUTH_CLAIMS", "The authenticated session is invalid.");
   assertActiveSession(identity);
   const config = identityConfig();
+  const accessMode = serviceAccessMode();
   if (config.mode === "legacy") {
+    if (accessMode === "strict")
+      identityFailure(
+        "SERVICE_ACCESS_CONFIG",
+        "Strict service eligibility requires shared identity mode.",
+      );
     if (options.fresh)
       identityFailure("IDENTITY_DISABLED", "Account linking is not enabled.");
     return {
@@ -194,6 +204,12 @@ export async function verifiedPrincipal(
   if (typeof claims.azp !== "string" || !config.origins.includes(claims.azp))
     identityFailure("AUTH_ORIGIN", "This session is not authorized for Kazi.");
   assertActiveSession(claims);
+  if (provider === "central")
+    assertCentralServiceEligibility(
+      claims,
+      identity.subject,
+      authenticatedToken ? "jwt" : "convex",
+    );
   if (options.fresh) {
     const reason = reverificationReason(authenticatedToken, claims);
     if (reason)
