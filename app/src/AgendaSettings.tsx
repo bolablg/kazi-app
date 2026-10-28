@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   CalendarDays,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useData } from "./data";
 import { useUI } from "./components";
+import { actionErrorMessage } from "./actionError";
 
 export function CalendarSubscriptionsPage() {
   return (
@@ -65,6 +66,10 @@ function ScopedAgendaSettings({
   const [deadlines, setDeadlines] = useState(false);
   const [calendars, setCalendars] = useState<{ id: string; name: string }[]>();
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
+  const [searchParams] = useSearchParams();
+  const connectionResult = searchParams.get("calendar");
   useEffect(() => {
     setUrl("");
     setProject("");
@@ -302,23 +307,41 @@ function ScopedAgendaSettings({
             Kazi publishes through its own agenda; the connection reads
             availability only.
           </p>
-          {cal?.error && (
+          {connectionResult === "connected" && !connectionError && (
+            <p role="status" className="inline-info">
+              Google Calendar connected. Choose the calendars to check for
+              conflicts.
+            </p>
+          )}
+          {(connectionError || cal?.error || connectionResult === "error") && (
             <p role="alert" className="inline-error">
-              {cal.error}
+              {connectionError ||
+                cal?.error ||
+                "Google Calendar could not connect. Try again and complete Google's consent screen."}
             </p>
           )}
           <div className="integration-actions">
             <button
               className="button secondary"
+              disabled={!online || connecting}
               onClick={() =>
                 run(async () => {
-                  const link = await calendar("connect");
-                  if (typeof link === "string") location.assign(link);
+                  setConnecting(true);
+                  setConnectionError("");
+                  try {
+                    const link = await calendar("connect");
+                    if (typeof link === "string") location.assign(link);
+                  } catch (error) {
+                    setConnectionError(actionErrorMessage(error));
+                    throw error;
+                  } finally {
+                    setConnecting(false);
+                  }
                 })
               }
             >
               <Link2 size={15} />
-              Connect Google availability
+              {connecting ? "Connecting…" : "Connect Google availability"}
             </button>
             <button
               className="button secondary"

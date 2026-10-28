@@ -85,3 +85,31 @@ test("service-worker caches contain only static assets and no live account API d
     true,
   );
 });
+
+test("private calendar feeds and Google callbacks bypass the offline app shell", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  expect(
+    await page.evaluate(() => Boolean(navigator.serviceWorker.controller)),
+  ).toBe(true);
+  await context.setOffline(true);
+  try {
+    for (const path of [
+      `/agenda/${"a".repeat(64)}.ics`,
+      "/google/callback?code=fixture&state=fixture",
+    ]) {
+      const destination = await context.newPage();
+      await expect(destination.goto(path)).rejects.toThrow();
+      await expect(
+        destination.getByRole("heading", { name: "Overview", exact: true }),
+      ).toHaveCount(0);
+      await destination.close();
+    }
+  } finally {
+    await context.setOffline(false);
+  }
+});

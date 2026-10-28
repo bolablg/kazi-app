@@ -37,7 +37,7 @@ test("board columns scroll independently and show worker avatars without full na
   await expect(page.locator(".board-task select")).toHaveCount(0);
   await expect(column.locator(".board-column-cards")).toHaveCSS(
     "scrollbar-width",
-    "thin",
+    "none",
   );
   const bounds = await column
     .locator(".board-column-cards")

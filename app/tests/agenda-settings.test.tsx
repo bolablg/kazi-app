@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 import {
   act,
   cleanup,
@@ -9,15 +10,77 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AgendaSettings } from "../src/AgendaSettings";
+import { ConvexError } from "convex/values";
 import { seedState, DEMO_USER } from "../shared/fixtures";
 const data = vi.hoisted(() => ({ current: undefined as any }));
 vi.mock("../src/data", () => ({ useData: () => data.current }));
 vi.mock("../src/components", () => ({
   useUI: () => ({
-    run: async (operation: () => Promise<unknown>) => operation(),
+    run: async (operation: () => Promise<unknown>) =>
+      operation().catch(() => undefined),
   }),
 }));
 afterEach(cleanup);
+it("keeps a readable Google setup error visible and permits retry", async () => {
+  const state = seedState();
+  const message =
+    "Google Calendar setup is incomplete. The app administrator needs to configure Google Calendar before you can connect.";
+  const calendar = vi.fn().mockRejectedValue(new ConvexError(message));
+  data.current = {
+    state,
+    actorId: DEMO_USER,
+    teamId: "all",
+    teams: [state.workspace],
+    online: true,
+    demo: false,
+    feeds: [],
+    calendar,
+  };
+  render(
+    <MemoryRouter>
+      <AgendaSettings view="availability" />
+    </MemoryRouter>,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Connect Google availability" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(message);
+  expect(
+    screen.getByRole("button", { name: "Connect Google availability" }),
+  ).toBeEnabled();
+  expect(calendar).toHaveBeenCalledWith("connect");
+});
+
+it.each(["connected", "error"])(
+  "explains Google callback result %s in the availability tab",
+  (result) => {
+    const state = seedState();
+    data.current = {
+      state,
+      actorId: DEMO_USER,
+      teamId: "all",
+      teams: [state.workspace],
+      online: true,
+      demo: false,
+      feeds: [],
+      calendar: vi.fn(),
+    };
+    render(
+      <MemoryRouter
+        initialEntries={[`/connections?tab=calendar&calendar=${result}`]}
+      >
+        <AgendaSettings view="availability" />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole(result === "connected" ? "status" : "alert"),
+    ).toHaveTextContent(
+      result === "connected"
+        ? "Google Calendar connected"
+        : "Google Calendar could not connect",
+    );
+  },
+);
 it("team switching clears a displayed private link and ignores a link created in the previous scope", async () => {
   const state = seedState();
   let resolve!: (value: { url: string }) => void;

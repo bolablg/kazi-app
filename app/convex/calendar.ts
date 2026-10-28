@@ -21,6 +21,7 @@ import {
 } from "./store";
 import { encrypt, decrypt, randomToken, sha256 } from "./crypto";
 import type { Id } from "./_generated/dataModel";
+import { calendarOrigin, requireGoogleCalendar } from "./calendarConfig";
 const scopes = [
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/calendar.events.freebusy",
@@ -53,18 +54,15 @@ export const createFeedFor = internalAction({
   ): Promise<{ id: string; url: string; expiresAt: number }> => {
     if (!args.label.trim() || args.label.length > 80)
       throw new ConvexError("Enter a calendar link label up to 80 characters.");
-    if (!process.env.CONVEX_SITE_URL)
-      throw new ConvexError("Configure the backend HTTP origin first.");
+    const origin = calendarOrigin();
     const token = randomToken();
     const result = await ctx.runMutation(internal.calendar.saveFeed, {
       ...args,
       hash: await sha256(token),
     });
-    if (!process.env.CONVEX_SITE_URL)
-      throw new ConvexError("Configure the backend HTTP origin first.");
     return {
       ...result,
-      url: process.env.CONVEX_SITE_URL + "/agenda/" + token + ".ics",
+      url: origin + "/agenda/" + token + ".ics",
     };
   },
 });
@@ -212,6 +210,9 @@ export const connect = action({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<any> => {
     const user = await actionIdentity(ctx);
+    // Throw expected setup errors at the public action boundary so production
+    // clients receive the explanation instead of a nested-action server error.
+    requireGoogleCalendar();
     return ctx.runAction(internal.calendar.connectFor, {
       ...args,
       subject: user.subject,
@@ -226,14 +227,7 @@ export const connectFor = internalAction({
       ...args,
       subject: user.subject,
     });
-    if (
-      !process.env.GOOGLE_CLIENT_ID ||
-      !process.env.CONVEX_SITE_URL ||
-      !process.env.TOKEN_ENCRYPTION_KEY
-    )
-      throw new ConvexError(
-        "Google Calendar is not configured. Ask the workspace owner to complete the setup guide.",
-      );
+    const redirectUri = requireGoogleCalendar();
     const state = randomToken();
     await ctx.runMutation(internal.calendar.saveOAuthState, {
       ...args,
@@ -243,8 +237,8 @@ export const connectFor = internalAction({
     return (
       "https://accounts.google.com/o/oauth2/v2/auth?" +
       new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.CONVEX_SITE_URL + "/google/callback",
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        redirect_uri: redirectUri,
         response_type: "code",
         scope: scopes.join(" "),
         access_type: "offline",
