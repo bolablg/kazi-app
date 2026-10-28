@@ -3,6 +3,7 @@ import { httpAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { identityConfig } from "./identityConfig";
 import { boundAuthenticatedClaims, canonicalActor } from "./identityCore";
+import { assertCentralServiceEligibility } from "./serviceEligibility";
 import {
   serviceActivationHeaders,
   type ServiceActivationSummary,
@@ -115,6 +116,11 @@ export const summary = httpAction(async (ctx, request) => {
       claims = boundAuthenticatedClaims(metadata.authToken, identity);
     } catch {
       return failure(401);
+    }
+    try {
+      assertCentralServiceEligibility(claims, identity.subject, "jwt");
+    } catch {
+      return failure(403);
     }
     if (
       claims.azp !== rootOrigin ||
