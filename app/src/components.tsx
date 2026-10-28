@@ -2,6 +2,7 @@ import { TaskArtifacts, TaskActivity } from "./TaskCollaboration";
 import { PeoplePicker } from "./PeoplePicker";
 import { MentionInput } from "./Mentions";
 import { InfoTip } from "./InfoTip";
+import { actionErrorMessage } from "./actionError";
 import { taskPeople } from "../shared/people";
 import { PrioritySelect, StatusSelect } from "./PrioritySelect";
 import { resourceRole } from "../shared/teams";
@@ -112,12 +113,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
             if (success) notify(success);
             return r;
           } catch (e) {
-            notify(
-              e instanceof Error
-                ? e.message
-                : "This action could not be saved. Please try again.",
-              true,
-            );
+            notify(actionErrorMessage(e), true);
             return undefined;
           }
         },

@@ -73,7 +73,12 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//, /^\/mcp(?:\/|$)/],
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/mcp(?:[/?]|$)/,
+          /^\/agenda(?:\/|$)/,
+          /^\/google\/callback(?:[/?]|$)/,
+        ],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4000000,
       },

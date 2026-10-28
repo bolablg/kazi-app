@@ -11,7 +11,7 @@ function run(command, args) {
 const configuration = hostedMcpConfiguration(process.env);
 writeFileSync(
   new URL("../server/mcp-deployment.js", import.meta.url),
-  `// Generated for this deployment; do not reuse across environments.\nexport default ${JSON.stringify({ environment: configuration.environment, upstream: configuration.upstream })};\n`,
+  `// Generated for this deployment; do not reuse across environments.\nexport default ${JSON.stringify({ environment: configuration.environment, upstream: configuration.upstream, applicationUrl: configuration.applicationUrl })};\n`,
 );
 // Vite and the server manifest are generated from the same Convex injection.
 // Ignore any stale public MCP endpoint copied into platform environment values.
